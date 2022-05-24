@@ -1,8 +1,8 @@
 #pragma once
-#include "Common/Interfaces.hpp"
 #include "VKRAII.hpp"
 #include "VKTypes.hpp"
 
+#include <span>
 #include <unordered_map>
 
 namespace R1::VK {
@@ -39,5 +39,4 @@ private:
     PhysicalDevice& getDevice(DeviceID dev);
     const PhysicalDevice& getDevice(DeviceID dev) const;
 };
-static_assert(IInstance<Instance>);
 }

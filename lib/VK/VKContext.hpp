@@ -1,11 +1,9 @@
 #pragma once
-#include "Common/Interfaces.hpp"
 #include "VKRAII.hpp"
 #include "VKTypes.hpp"
+#include "VKPipeline.hpp"
 
-#undef None
-#undef Always
-#include "VKPipelineBuilder.hpp"
+#include <span>
 
 namespace R1::VK {
 constexpr std::array required_device_extensions = {
@@ -38,10 +36,11 @@ public:
 
     Swapchain* createSwapchain(SizeCallback&& size_cb, PresentMode pmode);
 
-    GraphicsPipelineBuilder createGraphicsPipelineBuilder();
+    std::vector<Pipeline> CreateGraphicsPipelines(
+        const GraphicsPipelineConfigs& pipeline_configs
+    );
 
     void init_draw();
     void draw();
 };
-static_assert(IContext<Context>);
 }

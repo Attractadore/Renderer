@@ -31,7 +31,7 @@ VkPipeline createPipeline(
     std::span<std::byte> frag_code,
     VkPipelineLayout layout
 ) {
-    VkShaderModule vert_shader_module, frag_shader_module;
+    ShaderModule vert_shader_module, frag_shader_module;
     {
         VkShaderModuleCreateInfo vert_create_info = {
             .sType = sType(vert_create_info),
@@ -45,27 +45,27 @@ VkPipeline createPipeline(
             .pCode = reinterpret_cast<const uint32_t*>(frag_code.data()),
         };
 
-        vkCreateShaderModule(dev, &vert_create_info, nullptr, &vert_shader_module);
-        vkCreateShaderModule(dev, &frag_create_info, nullptr, &frag_shader_module);
+        vkCreateShaderModule(dev, &vert_create_info, nullptr, &vert_shader_module.module);
+        vkCreateShaderModule(dev, &frag_create_info, nullptr, &frag_shader_module.module);
     }
 
-    auto gpb = ctx.createGraphicsPipelineBuilder();
-    gpb.setLayout({.layout = layout}).
-        setVertexStage({.module = vert_shader_module}).
-        setFragmentStage({.module = frag_shader_module}).
-        setVertexInputState({}).
-        setInputAssemblyState({}).
-        setRasterizationState({}).
-        setMultisampleState({}).
-        setColorState({ .attachments {
-            { .format = static_cast<ColorFormat>(color_fmt) }
-        }});
-    auto pipeline = gpb.build().pipeline;
+    GraphicsPipelineConfigurator gpc;
+    gpc.SetLayout({.layout = layout}).
+        SetVertexShaderState(
+            { .module = vert_shader_module }, {}, {}, {}, {}
+        ).
+        SetRasterizationState({}, {}).
+        SetFragmentShaderState(
+            { .module = frag_shader_module }, {}, {
+                { .format = static_cast<ColorFormat>(color_fmt) },
+            }
+        ).FinishCurrent();
+    auto pipelines = ctx.CreateGraphicsPipelines(gpc.FinishAll());
 
-    vkDestroyShaderModule(dev, vert_shader_module, nullptr);
-    vkDestroyShaderModule(dev, frag_shader_module, nullptr);
+    vkDestroyShaderModule(dev, vert_shader_module.module, nullptr);
+    vkDestroyShaderModule(dev, frag_shader_module.module, nullptr);
 
-    return pipeline;
+    return pipelines[0].pipeline;
 }
 
 VkImageView createSwapchainImageView(

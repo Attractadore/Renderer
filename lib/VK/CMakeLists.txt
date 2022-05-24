@@ -7,12 +7,12 @@ add_library(R1VKAPI
     VKContext.hpp
     VKInstance.hpp
     VKSwapchain.hpp
-    VKPipelineBuilder.hpp
+    VKPipeline.hpp
 
     VKContext.cpp
     VKInstance.cpp
     VKSwapchain.cpp
-    VKPipelineBuilder.cpp
+    VKPipeline.cpp
 )
 target_compile_features(R1VKAPI
     PUBLIC cxx_std_20

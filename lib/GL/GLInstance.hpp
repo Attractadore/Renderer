@@ -1,5 +1,4 @@
 #pragma once
-#include "Common/Interfaces.hpp"
 #include "EGLRAII.hpp"
 #include "GLTypes.hpp"
 
@@ -29,5 +28,4 @@ public:
 private:
     static bool DeviceIDIsValid(DeviceID dev);
 };
-static_assert(IInstance<Instance>);
 }

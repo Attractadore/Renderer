@@ -38,7 +38,7 @@ int main() {
     case SDL_SYSWM_X11: {
         {
             std::cout << "Xlib devices:\n";
-            auto i = R1::VK::Instance::makeXlibInstance(
+            auto i = R1::VK::Instance(
                 info.info.x11.display, info.info.x11.window
             );
             printDevices(i);
@@ -47,7 +47,7 @@ int main() {
 #ifdef HAVE_XLIB_XCB
         {
             std::cout << "XCB devices:\n";
-            auto i = R1::VK::Instance::makeXCBInstance(
+            auto i = R1::VK::Instance(
                 XGetXCBConnection(info.info.x11.display), info.info.x11.window
             );
             printDevices(i);

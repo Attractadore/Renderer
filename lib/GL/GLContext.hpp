@@ -1,5 +1,4 @@
 #pragma once
-#include "Common/Interfaces.hpp"
 #include "EGLRAII.hpp"
 #include "GLTypes.hpp"
 
@@ -17,5 +16,4 @@ public:
 private:
     void makeCurrent();
 };
-static_assert(IContext<Context>);
 }

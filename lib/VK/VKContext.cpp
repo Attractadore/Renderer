@@ -101,10 +101,6 @@ Swapchain* Context::createSwapchain(SizeCallback&& size_cb, PresentMode pmode) {
     init_draw();
     return m_swapchain.get();
 }
-
-GraphicsPipelineBuilder Context::createGraphicsPipelineBuilder() {
-    return GraphicsPipelineBuilder(m_device.get());
-}
 }
 
 #include "VKContextDraw.cpp"

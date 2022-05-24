@@ -122,7 +122,7 @@ consteval VkStructureType sType() {
 }
 
 template<typename T>
-consteval VkStructureType sType(const T&) {
+constexpr VkStructureType sType(const T&) {
     return sType<T>();
 }
 }
