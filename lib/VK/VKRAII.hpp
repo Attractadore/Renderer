@@ -12,76 +12,125 @@
 
 namespace R1::VK::Vk {
 namespace Detail {
-class WithInstanceDeleter {
-    VkInstance m_instance;
-
-public:
-    explicit WithInstanceDeleter(VkInstance instance):
-        m_instance{instance} {
-        assert(m_instance);
-    }
-
-    VkInstance get_instance() const { return m_instance; }
-};
-
-class WithDeviceDeleter {
-    VkDevice m_device;
-
-public:
-    explicit WithDeviceDeleter(VkDevice dev):
-        m_device{dev} {
-        assert(m_device);
-    }
-
-    VkDevice get_device() const { return m_device; }
-};
-
-struct InstanceDeleter {
+struct HandleDeleter {
     void operator()(VkInstance instance) const {
         vkDestroyInstance(instance, nullptr);
     }
-};
 
-struct SurfaceDeleter: public WithInstanceDeleter {
-    using WithInstanceDeleter::WithInstanceDeleter;
-    void operator()(VkSurfaceKHR surf) {
-        vkDestroySurfaceKHR(get_instance(), surf, nullptr);
-    }
-};
-
-struct DeviceDeleter {
     void operator()(VkDevice dev) const {
         vkDeviceWaitIdle(dev);
         vkDestroyDevice(dev, nullptr);
     }
 };
 
-struct SwapchainDeleter: WithDeviceDeleter {
-    using WithDeviceDeleter::WithDeviceDeleter;
+template<class ParentVulkanHandle>
+class WithParentHandleDeleter;
+
+template<>
+class WithParentHandleDeleter<VkInstance> {
+    VkInstance m_instance;
+
+public:
+    explicit WithParentHandleDeleter(VkInstance instance):
+        m_instance{instance} {
+        assert(m_instance);
+    }
+
+    VkInstance get_instance() const { return m_instance; }
+
+    void operator()(VkSurfaceKHR surf) const {
+        vkDestroySurfaceKHR(get_instance(), surf, nullptr);
+    }
+};
+
+template<>
+class WithParentHandleDeleter<VkDevice> {
+    VkDevice m_device;
+
+public:
+    explicit WithParentHandleDeleter(VkDevice dev):
+        m_device{dev} {
+        assert(m_device);
+    }
+
+    VkDevice get_device() const { return m_device; }
+
     void operator()(VkSwapchainKHR swc) const {
         vkDestroySwapchainKHR(get_device(), swc, nullptr);
     }
 };
 
-using InstanceBase  = Handle<VkInstance, InstanceDeleter>;
-using SurfaceBase   = Handle<VkSurfaceKHR, SurfaceDeleter>;
-using DeviceBase    = Handle<VkDevice, DeviceDeleter>;
-using SwapchainBase = Handle<VkSwapchainKHR, SwapchainDeleter>;
-}
+template<class VulkanHandle>
+using ParentHandleBase = Handle<VulkanHandle, Detail::HandleDeleter>;
 
-class Instance: Detail::InstanceBase {
+template<class VulkanHandle>
+class ParentHandle: ParentHandleBase<VulkanHandle> {
+    using Base = ParentHandleBase<VulkanHandle>;
+
 public:
-    explicit Instance(VkInstance instance):
-        Detail::InstanceBase{instance} {}
+    explicit ParentHandle(VulkanHandle handle):
+        Base{handle} {}
 
-    using Detail::InstanceBase::get;
-    using Detail::InstanceBase::operator bool;
+    using Base::get;
+    using Base::operator bool;
 };
 
-class Surface: Detail::SurfaceBase {
+template<class ParentVulkanHandle, class VulkanHandle>
+using WithParentHandleBase = Handle<VulkanHandle, Detail::WithParentHandleDeleter<ParentVulkanHandle>>;
+
+template<class ParentVulkanHandle, class VulkanHandle>
+class WithParentHandle: WithParentHandleBase<ParentVulkanHandle, VulkanHandle> {
+    using Base = WithParentHandleBase<ParentVulkanHandle, VulkanHandle>;
+
+public:
+    explicit WithParentHandle(ParentVulkanHandle phandle, VulkanHandle handle):
+        Base{handle, Detail::WithParentHandleDeleter<ParentVulkanHandle>{phandle}} {}
+
+    using Base::get;
+    using Base::reset;
+    using Base::operator bool;
+
+protected:
+    using Base::get_deleter;
+};
+
+template<class VulkanHandle>
+class WithInstanceHandle: public WithParentHandle<VkInstance, VulkanHandle> {
+    using Base = WithParentHandle<VkInstance, VulkanHandle>;
+
+public:
+    using Base::Base;
+
+    VkInstance get_instance() const {
+        return this->get_deleter().get_instance();
+    }
+};
+
+template<class VulkanHandle>
+class WithDeviceHandle: public WithParentHandle<VkDevice, VulkanHandle> {
+    using Base = WithParentHandle<VkDevice, VulkanHandle>;
+
+public:
+    using Base::Base;
+
+    VkDevice get_device() const {
+        return this->get_deleter().get_device();
+    }
+};
+}
+
+using Instance  = Detail::ParentHandle<VkInstance>;
+using Device    = Detail::ParentHandle<VkDevice>;
+
+namespace Detail {
+using SurfaceBase = WithInstanceHandle<VkSurfaceKHR>;
+}
+
+class Surface: public Detail::SurfaceBase {
 public:
     Surface(VkInstance instance, ::Display* dpy, ::Window win):
     Detail::SurfaceBase {
+        instance,
         [&] {
             VkXlibSurfaceCreateInfoKHR create_info = {
                 .sType = sType(create_info),
@@ -94,12 +143,12 @@ public:
                 throw std::runtime_error{"Failed to create Xlib surface"};
             }
             return surf;
-        } (),
-        Detail::SurfaceDeleter{instance}
+        } ()
     } {}
 
     Surface(VkInstance instance, xcb_connection_t* con, xcb_window_t win):
     Detail::SurfaceBase {
+        instance,
         [&] {
             VkXcbSurfaceCreateInfoKHR create_info = {
                 .sType = sType(create_info),
@@ -112,32 +161,9 @@ public:
                 throw std::runtime_error{"Failed to create XCB surface"};
             }
             return surf;
-        } (),
-        Detail::SurfaceDeleter{instance}
+        } ()
     } {}
-
-    using Detail::SurfaceBase::get;
 };
 
-class Device: Detail::DeviceBase {
-public:
-    explicit Device(VkDevice dev):
-        Detail::DeviceBase{dev} {}
-
-    using Detail::DeviceBase::get;
-    using Detail::DeviceBase::operator bool;
-};
-
-class Swapchain: Detail::SwapchainBase {
-public:
-    Swapchain(VkDevice dev, VkSwapchainKHR swc):
-        Detail::SwapchainBase{swc, Detail::SwapchainDeleter{dev}} {}
-
-    using Detail::SwapchainBase::get;
-    using Detail::SwapchainBase::reset;
-
-    VkDevice get_device() const {
-        return get_deleter().get_device();
-    }
-};
+using Swapchain = Detail::WithDeviceHandle<VkSwapchainKHR>;
 }
