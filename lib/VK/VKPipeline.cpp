@@ -14,7 +14,7 @@ void fillShaderStage(
     stage = {
         .sType = sType(stage),
         .stage = type,
-        .module = stage_info.module.module,
+        .module = stage_info.module->m_module.get(),
     };
 }
 }

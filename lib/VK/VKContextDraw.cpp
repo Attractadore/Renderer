@@ -27,27 +27,12 @@ VkPipelineLayout createPipelineLayout(VkDevice dev) {
 PipelineRef createPipeline(
     Context& ctx,
     VkDevice dev, VkFormat color_fmt,
-    std::span<std::byte> vert_code,
-    std::span<std::byte> frag_code,
+    std::span<const std::byte> vert_code,
+    std::span<const std::byte> frag_code,
     VkPipelineLayout layout
 ) {
-    ShaderModule vert_shader_module, frag_shader_module;
-    {
-        VkShaderModuleCreateInfo vert_create_info = {
-            .sType = sType(vert_create_info),
-            .codeSize = vert_code.size(),
-            .pCode = reinterpret_cast<const uint32_t*>(vert_code.data()),
-        };
-
-        VkShaderModuleCreateInfo frag_create_info = {
-            .sType = sType(frag_create_info),
-            .codeSize = frag_code.size(),
-            .pCode = reinterpret_cast<const uint32_t*>(frag_code.data()),
-        };
-
-        vkCreateShaderModule(dev, &vert_create_info, nullptr, &vert_shader_module.module);
-        vkCreateShaderModule(dev, &frag_create_info, nullptr, &frag_shader_module.module);
-    }
+    auto vert_shader_module = ctx.CreateShaderModule({ .code = vert_code });
+    auto frag_shader_module = ctx.CreateShaderModule({ .code = frag_code });
 
     GraphicsPipelineConfigurator gpc;
     gpc.SetLayout({.layout = layout}).
@@ -62,9 +47,6 @@ PipelineRef createPipeline(
         ).FinishCurrent();
     PipelineRef pipeline;
     ctx.CreateGraphicsPipelines(gpc.FinishAll(), &pipeline);
-
-    vkDestroyShaderModule(dev, vert_shader_module.module, nullptr);
-    vkDestroyShaderModule(dev, frag_shader_module.module, nullptr);
 
     return pipeline;
 }

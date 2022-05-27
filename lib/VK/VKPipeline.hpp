@@ -1,6 +1,4 @@
 #pragma once
-#include "Common/Ref.hpp"
-#include "VKRAII.hpp"
 #include "VKShaderModule.hpp"
 #include "VKUtil.hpp"
 
@@ -203,7 +201,7 @@ inline constexpr auto PipelineStateDynamic =
     Detail::PipelineStateDynamicT::Enable;
 
 struct ShaderStageInfo {
-    ShaderModule        module;
+    ShaderModuleRef     module;
     std::string_view    entry_point = "main";
 };
 

@@ -101,6 +101,21 @@ Swapchain* Context::createSwapchain(SizeCallback&& size_cb, PresentMode pmode) {
     init_draw();
     return m_swapchain.get();
 }
+
+ShaderModuleRef Context::CreateShaderModule(const ShaderModuleConfig& config) {
+    const auto& code = config.code;
+    VkShaderModule module = VK_NULL_HANDLE;
+    VkShaderModuleCreateInfo create_info = {
+        .sType = sType(create_info),
+        .codeSize = code.size(),
+        .pCode = reinterpret_cast<const uint32_t*>(code.data()),
+    };
+    vkCreateShaderModule(m_device.get(), &create_info, nullptr, &module);
+    if (!module) {
+        throw std::runtime_error{"Vulkan: Failed to create shader module\n"};
+    }
+    return ShaderModule::Create(Vk::ShaderModule{m_device.get(), module});
+}
 }
 
 #include "VKContextDraw.cpp"

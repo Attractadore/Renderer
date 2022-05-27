@@ -59,6 +59,10 @@ public:
         vkDestroySwapchainKHR(get_device(), swc, nullptr);
     }
 
+    void operator()(VkShaderModule module) const {
+        vkDestroyShaderModule(get_device(), module, nullptr);
+    }
+
     void operator()(VkPipeline pipeline) const {
         vkDestroyPipeline(get_device(), pipeline, nullptr);
     }
@@ -169,6 +173,7 @@ public:
     } {}
 };
 
-using Swapchain = Detail::WithDeviceHandle<VkSwapchainKHR>;
-using Pipeline  = Detail::WithDeviceHandle<VkPipeline>;
+using Swapchain     = Detail::WithDeviceHandle<VkSwapchainKHR>;
+using ShaderModule  = Detail::WithDeviceHandle<VkShaderModule>;
+using Pipeline      = Detail::WithDeviceHandle<VkPipeline>;
 }
