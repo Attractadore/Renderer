@@ -15,27 +15,18 @@ std::vector<std::byte> loadShader(const std::string& path) {
     return data;
 }
 
-VkPipelineLayout createPipelineLayout(VkDevice dev) {
-    VkPipelineLayoutCreateInfo create_info = {
-        .sType = sType(create_info),
-    };
-    VkPipelineLayout layout;
-    vkCreatePipelineLayout(dev, &create_info, nullptr, &layout);
-    return layout;
-}
-
 PipelineRef createPipeline(
     Context& ctx,
     VkDevice dev, VkFormat color_fmt,
     std::span<const std::byte> vert_code,
     std::span<const std::byte> frag_code,
-    VkPipelineLayout layout
+    PipelineLayoutRef layout
 ) {
     auto vert_shader_module = ctx.CreateShaderModule({ .code = vert_code });
     auto frag_shader_module = ctx.CreateShaderModule({ .code = frag_code });
 
     GraphicsPipelineConfigurator gpc;
-    gpc.SetLayout({.layout = layout}).
+    gpc.SetLayout(std::move(layout)).
         SetVertexShaderState(
             { .module = vert_shader_module }, {}, {}, {}, {}
         ).
@@ -129,7 +120,6 @@ struct Context::DrawData {
     VkDevice                                    device;
     VkFormat                                    image_format;
     std::vector<std::byte>                      vert_code, frag_code;
-    VkPipelineLayout                            pipeline_layout;
     PipelineRef                                 pipeline;
     std::unordered_map<VkImage, VkImageView>    image_views;
     unsigned                                    frame_index;
@@ -156,7 +146,6 @@ struct Context::DrawData {
         for (auto& [_, v]: image_views) {
             vkDestroyImageView(device, v, nullptr);
         }
-        vkDestroyPipelineLayout(device, pipeline_layout, nullptr);
     }
 };
 
@@ -166,12 +155,11 @@ void Context::init_draw() {
     m_draw_data->image_format = m_swapchain->description().surface_format.format;
     m_draw_data->vert_code = loadShader("vert.spv");
     m_draw_data->frag_code = loadShader("frag.spv");
-    m_draw_data->pipeline_layout = createPipelineLayout(m_device.get());
     m_draw_data->pipeline = createPipeline(
         *this,
         m_device.get(), m_draw_data->image_format,
         m_draw_data->vert_code, m_draw_data->frag_code,
-        m_draw_data->pipeline_layout
+        CreatePipelineLayout({})
     );
     m_draw_data->frame_index = 0;
     m_draw_data->frame_count = 2;

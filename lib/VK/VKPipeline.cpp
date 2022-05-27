@@ -24,8 +24,10 @@ void fillShaderStage(
 
 using GPC = GraphicsPipelineConfigurator;
 
-GPC& GPC::SetLayout(PipelineLayout layout) {
-    m_current_create_info.layout = layout.layout;
+GPC& GPC::SetLayout(PipelineLayoutRef layout) {
+    auto& cfg = m_current_config;
+    cfg.layout = std::move(layout);
+    m_current_create_info.layout = cfg.layout->m_layout.get();
     return *this;
 }
 

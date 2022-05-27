@@ -102,6 +102,18 @@ Swapchain* Context::createSwapchain(SizeCallback&& size_cb, PresentMode pmode) {
     return m_swapchain.get();
 }
 
+PipelineLayoutRef Context::CreatePipelineLayout(const PipelineLayoutConfig& config) {
+    VkPipelineLayout layout = VK_NULL_HANDLE;
+    VkPipelineLayoutCreateInfo create_info = {
+        .sType = sType(create_info),
+    };
+    vkCreatePipelineLayout(m_device.get(), &create_info, nullptr, &layout);
+    if (!layout) {
+        throw std::runtime_error{"Vulkan: Failed to create pipeline layout\n"};
+    }
+    return PipelineLayout::Create(Vk::PipelineLayout{m_device.get(), layout});
+}
+
 ShaderModuleRef Context::CreateShaderModule(const ShaderModuleConfig& config) {
     const auto& code = config.code;
     VkShaderModule module = VK_NULL_HANDLE;

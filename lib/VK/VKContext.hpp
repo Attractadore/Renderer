@@ -36,6 +36,7 @@ public:
 
     Swapchain* createSwapchain(SizeCallback&& size_cb, PresentMode pmode);
 
+    PipelineLayoutRef CreatePipelineLayout(const PipelineLayoutConfig& config);
     ShaderModuleRef CreateShaderModule(const ShaderModuleConfig& config);
 
     template<std::output_iterator<PipelineRef> Iter>

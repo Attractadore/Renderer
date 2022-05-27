@@ -66,6 +66,10 @@ template<> struct DeviceDestroyFunction<VkSwapchainKHR> {
     static constexpr auto function = vkDestroySwapchainKHR;
 };
 
+template<> struct DeviceDestroyFunction<VkPipelineLayout> {
+    static constexpr auto function = vkDestroyPipelineLayout;
+};
+
 template<> struct DeviceDestroyFunction<VkShaderModule> {
     static constexpr auto function = vkDestroyShaderModule;
 };
@@ -197,7 +201,8 @@ public:
     } {}
 };
 
-using Swapchain     = Detail::WithDeviceHandle<VkSwapchainKHR>;
-using ShaderModule  = Detail::WithDeviceHandle<VkShaderModule>;
-using Pipeline      = Detail::WithDeviceHandle<VkPipeline>;
+using Swapchain         = Detail::WithDeviceHandle<VkSwapchainKHR>;
+using PipelineLayout    = Detail::WithDeviceHandle<VkPipelineLayout>;
+using ShaderModule      = Detail::WithDeviceHandle<VkShaderModule>;
+using Pipeline          = Detail::WithDeviceHandle<VkPipeline>;
 }

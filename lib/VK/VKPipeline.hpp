@@ -14,9 +14,16 @@
 #undef Always
 
 namespace R1::VK {
-struct PipelineLayout {
-    VkPipelineLayout layout;
+struct PipelineLayoutConfig {};
+
+struct PipelineLayout: RefedBase<PipelineLayout> {
+    Vk::PipelineLayout m_layout;
+
+protected:
+    PipelineLayout(Vk::PipelineLayout layout):
+        m_layout{std::move(layout)} {}
 };
+using PipelineLayoutRef = Ref<PipelineLayout>;
 
 struct Pipeline: RefedBase<Pipeline> {
     Vk::Pipeline m_pipeline;
@@ -360,6 +367,7 @@ struct GraphicsPipelineConfig {
     static constexpr auto geometry_stage_idx                = 3;
     static constexpr auto fragment_stage_idx                = 4;
 
+    PipelineLayoutRef                       layout;
     std::array<
         std::string, stage_count
     > shader_entry_points;
@@ -438,7 +446,7 @@ class GraphicsPipelineConfigurator {
     VkGraphicsPipelineCreateInfo    m_current_create_info = {};
 
 public:
-    GraphicsPipelineConfigurator& SetLayout(PipelineLayout layout);
+    GraphicsPipelineConfigurator& SetLayout(PipelineLayoutRef layout);
     GraphicsPipelineConfigurator& SetVertexShaderState(
         ShaderStageInfo vertex_shader_info,
         const VertexInputInfo& vertex_input_info,
