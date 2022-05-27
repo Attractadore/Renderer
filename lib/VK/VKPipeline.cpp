@@ -1,4 +1,4 @@
-#include "VKContext.hpp"
+#include "VKPipeline.hpp"
 
 #include <algorithm>
 #include <ranges>
@@ -575,24 +575,5 @@ GraphicsPipelineConfigs GPC::FinishAll() {
     }
 
     return std::exchange(m_configs, {});
-}
-
-std::vector<Pipeline> Context::CreateGraphicsPipelines(
-    const GraphicsPipelineConfigs& pipeline_configs
-) {
-    auto cnt = pipeline_configs.create_infos.size();
-    std::vector<Pipeline> pipelines(cnt);
-    auto r = vkCreateGraphicsPipelines(
-        m_device.get(),
-        VK_NULL_HANDLE,
-        cnt,
-        pipeline_configs.create_infos.data(), 
-        nullptr,
-        reinterpret_cast<VkPipeline*>(pipelines.data())
-    );
-    if (r != VK_SUCCESS) {
-        throw std::runtime_error{"Vulkan: Failed to create pipelines"};
-    }
-    return pipelines;
 }
 }

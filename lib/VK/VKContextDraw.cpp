@@ -24,7 +24,7 @@ VkPipelineLayout createPipelineLayout(VkDevice dev) {
     return layout;
 }
 
-VkPipeline createPipeline(
+PipelineRef createPipeline(
     Context& ctx,
     VkDevice dev, VkFormat color_fmt,
     std::span<std::byte> vert_code,
@@ -60,12 +60,13 @@ VkPipeline createPipeline(
                 { .format = static_cast<ColorFormat>(color_fmt) },
             }
         ).FinishCurrent();
-    auto pipelines = ctx.CreateGraphicsPipelines(gpc.FinishAll());
+    PipelineRef pipeline;
+    ctx.CreateGraphicsPipelines(gpc.FinishAll(), &pipeline);
 
     vkDestroyShaderModule(dev, vert_shader_module.module, nullptr);
     vkDestroyShaderModule(dev, frag_shader_module.module, nullptr);
 
-    return pipelines[0].pipeline;
+    return pipeline;
 }
 
 VkImageView createSwapchainImageView(
@@ -147,7 +148,7 @@ struct Context::DrawData {
     VkFormat                                    image_format;
     std::vector<std::byte>                      vert_code, frag_code;
     VkPipelineLayout                            pipeline_layout;
-    VkPipeline                                  pipeline;
+    PipelineRef                                 pipeline;
     std::unordered_map<VkImage, VkImageView>    image_views;
     unsigned                                    frame_index;
     unsigned                                    frame_count;
@@ -173,7 +174,6 @@ struct Context::DrawData {
         for (auto& [_, v]: image_views) {
             vkDestroyImageView(device, v, nullptr);
         }
-        vkDestroyPipeline(device, pipeline, nullptr);
         vkDestroyPipelineLayout(device, pipeline_layout, nullptr);
     }
 };
@@ -216,7 +216,7 @@ void Context::draw() {
     VkSemaphore acquire_sem = m_draw_data->acquire_semaphores[idx];
     VkSemaphore draw_sem = m_draw_data->draw_semaphores[idx];
     VkCommandBuffer cmd_buffer = m_draw_data->command_buffers[idx];
-    VkPipeline pipeline = m_draw_data->pipeline;
+    VkPipeline pipeline = m_draw_data->pipeline->m_pipeline.get();
 
     vkWaitForFences(m_device.get(), 1, &fence, true, UINT64_MAX);
     vkResetFences(m_device.get(), 1, &fence);

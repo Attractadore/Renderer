@@ -58,6 +58,10 @@ public:
     void operator()(VkSwapchainKHR swc) const {
         vkDestroySwapchainKHR(get_device(), swc, nullptr);
     }
+
+    void operator()(VkPipeline pipeline) const {
+        vkDestroyPipeline(get_device(), pipeline, nullptr);
+    }
 };
 
 template<class VulkanHandle>
@@ -166,4 +170,5 @@ public:
 };
 
 using Swapchain = Detail::WithDeviceHandle<VkSwapchainKHR>;
+using Pipeline  = Detail::WithDeviceHandle<VkPipeline>;
 }

@@ -1,8 +1,8 @@
 #pragma once
-#include "VKRAII.hpp"
-#include "VKTypes.hpp"
 #include "VKPipeline.hpp"
+#include "VKTypes.hpp"
 
+#include <algorithm>
 #include <span>
 
 namespace R1::VK {
@@ -36,11 +36,45 @@ public:
 
     Swapchain* createSwapchain(SizeCallback&& size_cb, PresentMode pmode);
 
-    std::vector<Pipeline> CreateGraphicsPipelines(
-        const GraphicsPipelineConfigs& pipeline_configs
+    template<std::output_iterator<PipelineRef> Iter>
+    Iter CreateGraphicsPipelines(
+        const GraphicsPipelineConfigs& pipeline_configs, Iter out
     );
 
     void init_draw();
     void draw();
 };
+
+template<std::output_iterator<PipelineRef> Iter>
+Iter Context::CreateGraphicsPipelines(
+    const GraphicsPipelineConfigs& pipeline_configs, Iter out
+) {
+    auto cnt = pipeline_configs.create_infos.size();
+    std::vector<VkPipeline> pipelines(cnt);
+    std::vector<Vk::Pipeline> handles;
+    handles.reserve(cnt);
+    auto r = vkCreateGraphicsPipelines(
+        m_device.get(),
+        VK_NULL_HANDLE,
+        cnt,
+        pipeline_configs.create_infos.data(),
+        nullptr,
+        reinterpret_cast<VkPipeline*>(pipelines.data())
+    );
+    if (r != VK_SUCCESS) {
+        throw std::runtime_error{"Vulkan: Failed to create pipelines"};
+    }
+    std::ranges::transform(
+        pipelines, std::back_inserter(handles),
+        [&] (VkPipeline pipeline) {
+            return Vk::Pipeline{m_device.get(), pipeline};
+        }
+    );
+    return std::ranges::transform(
+        handles, out,
+        [&] (Vk::Pipeline& handle) {
+            return Pipeline::Create(std::move(handle));
+        }
+    ).out;
+}
 }

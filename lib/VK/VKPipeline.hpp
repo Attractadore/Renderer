@@ -1,4 +1,6 @@
 #pragma once
+#include "Common/Ref.hpp"
+#include "VKRAII.hpp"
 #include "VKShaderModule.hpp"
 #include "VKUtil.hpp"
 
@@ -6,7 +8,6 @@
 #include <functional>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -19,9 +20,14 @@ struct PipelineLayout {
     VkPipelineLayout layout;
 };
 
-struct Pipeline {
-    VkPipeline pipeline;
+struct Pipeline: RefedBase<Pipeline> {
+    Vk::Pipeline m_pipeline;
+
+protected:
+    Pipeline(Vk::Pipeline pipeline):
+        m_pipeline{std::move(pipeline)} {}
 };
+using PipelineRef = Ref<Pipeline>;
 
 enum class VertexInputRate {
     Vertex      = VK_VERTEX_INPUT_RATE_VERTEX,
