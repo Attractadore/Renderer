@@ -7,14 +7,17 @@
 namespace R1::VK {
 namespace {
 void fillShaderStage(
-    VkPipelineShaderStageCreateInfo& stage, std::string& entry_point,
-    const ShaderStageInfo& stage_info, VkShaderStageFlagBits type
+    VkPipelineShaderStageCreateInfo& stage,
+    std::string& entry_point,
+    ShaderModuleRef& module_ref,
+    ShaderStageInfo stage_info, VkShaderStageFlagBits type
 ) {
     entry_point = stage_info.entry_point;
+    module_ref = std::move(stage_info.module);
     stage = {
         .sType = sType(stage),
         .stage = type,
-        .module = stage_info.module->m_module.get(),
+        .module = module_ref->m_module.get(),
     };
 }
 }
@@ -27,7 +30,7 @@ GPC& GPC::SetLayout(PipelineLayout layout) {
 }
 
 GPC& GPC::SetVertexShaderState(
-    const ShaderStageInfo& vertex_shader_info,
+    ShaderStageInfo vertex_shader_info,
     const VertexInputInfo& vertex_input_info,
     std::initializer_list<VertexInputBindingDescription>
         vertex_input_binding_descriptions,
@@ -38,11 +41,12 @@ GPC& GPC::SetVertexShaderState(
     auto& cfg = m_current_config;
 
     auto idx = cfg.vertex_stage_idx;
-    const auto& vsi = vertex_shader_info;
     fillShaderStage(
         cfg.shader_stages[idx],
         cfg.shader_entry_points[idx],
-        vsi, VK_SHADER_STAGE_VERTEX_BIT 
+        cfg.shader_module_refs[idx],
+        std::move(vertex_shader_info),
+        VK_SHADER_STAGE_VERTEX_BIT
     );
 
     auto& vis = cfg.vertex_input_state;
@@ -106,26 +110,28 @@ GPC& GPC::SetVertexShaderState(
 }
 
 GPC& GPC::SetTessellationShaderState(
-    const ShaderStageInfo& tesselation_control_shader_info,
-    const ShaderStageInfo& tesselation_evaluation_shader_info,
+    ShaderStageInfo tesselation_control_shader_info,
+    ShaderStageInfo tesselation_evaluation_shader_info,
     const TesselationInfo& tesselation_info
 ) {
     auto& cfg = m_current_config;
 
     auto cidx = cfg.tesselation_control_stage_idx;
-    const auto& tcsi = tesselation_control_shader_info;
     fillShaderStage(
         cfg.shader_stages[cidx],
         cfg.shader_entry_points[cidx],
-        tcsi, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT 
+        cfg.shader_module_refs[cidx],
+        std::move(tesselation_control_shader_info),
+        VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT
     );
 
     auto eidx = cfg.tesselation_evaluation_stage_idx;
-    const auto& tesi = tesselation_evaluation_shader_info;
     fillShaderStage(
         cfg.shader_stages[eidx],
         cfg.shader_entry_points[eidx],
-        tesi, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT 
+        cfg.shader_module_refs[eidx],
+        std::move(tesselation_evaluation_shader_info),
+        VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT
     );
 
     auto& ts = cfg.tesselation_state;
@@ -139,16 +145,17 @@ GPC& GPC::SetTessellationShaderState(
 }
 
 GPC& GPC::SetGeometryShaderState(
-    const ShaderStageInfo& geometry_shader_info
+    ShaderStageInfo geometry_shader_info
 ) {
     auto& cfg = m_current_config;
 
     auto idx = m_current_config.geometry_stage_idx;
-    const auto& gsi = geometry_shader_info;
     fillShaderStage(
         cfg.shader_stages[idx],
         cfg.shader_entry_points[idx],
-        gsi, VK_SHADER_STAGE_GEOMETRY_BIT
+        cfg.shader_module_refs[idx],
+        std::move(geometry_shader_info),
+        VK_SHADER_STAGE_GEOMETRY_BIT
     );
 
     return *this;
@@ -314,7 +321,7 @@ GPC& GPC::SetStencilTestState(
 }
 
 GPC& GPC::SetFragmentShaderState(
-    const ShaderStageInfo& fragment_shader_info,
+    ShaderStageInfo fragment_shader_info,
     const ColorBlendInfo& color_blend_info,
     std::initializer_list<ColorAttachmentInfo>
         color_attachment_infos
@@ -325,7 +332,9 @@ GPC& GPC::SetFragmentShaderState(
     fillShaderStage(
         cfg.shader_stages[idx],
         cfg.shader_entry_points[idx],
-        fragment_shader_info, VK_SHADER_STAGE_FRAGMENT_BIT
+        cfg.shader_module_refs[idx],
+        std::move(fragment_shader_info),
+        VK_SHADER_STAGE_FRAGMENT_BIT
     );
 
     auto& cbs = cfg.color_blend_state;
@@ -528,6 +537,9 @@ GraphicsPipelineConfigs GPC::FinishAll() {
         for (size_t s = 0; s < cfg.stage_count; s++) {
             cfg.shader_stages[s].pName =
                 cfg.shader_entry_points[s].c_str();
+            if (!cfg.shader_stages[s].module) {
+                cfg.shader_module_refs[s].reset();
+            }
         }
         auto p = std::ranges::partition(cfg.shader_stages,
             [] (const auto& stage) {

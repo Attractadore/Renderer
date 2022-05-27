@@ -364,6 +364,10 @@ struct GraphicsPipelineConfig {
         std::string, stage_count
     > shader_entry_points;
     std::array<
+        ShaderModuleRef,
+        stage_count
+    > shader_module_refs;
+    std::array<
         VkPipelineShaderStageCreateInfo,
         stage_count
     > shader_stages;
@@ -436,7 +440,7 @@ class GraphicsPipelineConfigurator {
 public:
     GraphicsPipelineConfigurator& SetLayout(PipelineLayout layout);
     GraphicsPipelineConfigurator& SetVertexShaderState(
-        const ShaderStageInfo& vertex_shader_info,
+        ShaderStageInfo vertex_shader_info,
         const VertexInputInfo& vertex_input_info,
         std::initializer_list<VertexInputBindingDescription>
             vertex_input_binding_descriptions,
@@ -445,12 +449,12 @@ public:
         const InputAssemblyInfo& input_assembly_info
     );
     GraphicsPipelineConfigurator& SetTessellationShaderState(
-        const ShaderStageInfo& tesselation_control_shader_info,
-        const ShaderStageInfo& tesselation_evaluation_shader_info,
+        ShaderStageInfo tesselation_control_shader_info,
+        ShaderStageInfo tesselation_evaluation_shader_info,
         const TesselationInfo& tesselation_info
     );
     GraphicsPipelineConfigurator& SetGeometryShaderState(
-        const ShaderStageInfo& geometry_shader_info
+        ShaderStageInfo geometry_shader_info
     );
     GraphicsPipelineConfigurator& SetRasterizationState(
         const RasterizationInfo& rasterization_info,
@@ -465,7 +469,7 @@ public:
         const StencilAttachmentInfo& stencil_attachment_info
     );
     GraphicsPipelineConfigurator& SetFragmentShaderState(
-        const ShaderStageInfo& fragment_shader_info,
+        ShaderStageInfo fragment_shader_info,
         const ColorBlendInfo& color_blend_info,
         std::initializer_list<ColorAttachmentInfo>
             color_attachment_infos
