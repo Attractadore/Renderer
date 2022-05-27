@@ -31,7 +31,8 @@ template<typename T>
     requires std::derived_from<T, RefedBase<T, typename T::counter_type>>
 class Ref: private boost::intrusive_ptr<T> {
 public:
-    explicit Ref(T* p = nullptr) noexcept: boost::intrusive_ptr<T>{p, /*add_ref=*/ false} {}
+    Ref() noexcept: Ref{nullptr} {}
+    explicit Ref(T* p) noexcept: boost::intrusive_ptr<T>{p, /*add_ref=*/ false} {}
 
     Ref& operator=(T* p) noexcept {
         reset(p);
