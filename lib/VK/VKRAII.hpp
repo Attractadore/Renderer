@@ -26,6 +26,17 @@ struct HandleDeleter {
 template<class ParentVulkanHandle>
 class WithParentHandleDeleter;
 
+template<class VulkanHandle>
+struct InstanceDestroyFunction;
+
+template<class VulkanHandle>
+static constexpr auto InstanceDestroyFunctionV =
+    InstanceDestroyFunction<VulkanHandle>::function;
+
+template<> struct InstanceDestroyFunction<VkSurfaceKHR> {
+    static constexpr auto function = vkDestroySurfaceKHR;
+};
+
 template<>
 class WithParentHandleDeleter<VkInstance> {
     VkInstance m_instance;
@@ -38,9 +49,29 @@ public:
 
     VkInstance get_instance() const { return m_instance; }
 
-    void operator()(VkSurfaceKHR surf) const {
-        vkDestroySurfaceKHR(get_instance(), surf, nullptr);
+    template<class VulkanHandle>
+    void operator()(VulkanHandle handle) const {
+        InstanceDestroyFunctionV<VulkanHandle>(get_instance(), handle, nullptr);
     }
+};
+
+template<class VulkanHandle>
+struct DeviceDestroyFunction;
+
+template<class VulkanHandle>
+static constexpr auto DeviceDestroyFunctionV =
+    DeviceDestroyFunction<VulkanHandle>::function;
+
+template<> struct DeviceDestroyFunction<VkSwapchainKHR> {
+    static constexpr auto function = vkDestroySwapchainKHR;
+};
+
+template<> struct DeviceDestroyFunction<VkShaderModule> {
+    static constexpr auto function = vkDestroyShaderModule;
+};
+
+template<> struct DeviceDestroyFunction<VkPipeline> {
+    static constexpr auto function = vkDestroyPipeline;
 };
 
 template<>
@@ -55,16 +86,9 @@ public:
 
     VkDevice get_device() const { return m_device; }
 
-    void operator()(VkSwapchainKHR swc) const {
-        vkDestroySwapchainKHR(get_device(), swc, nullptr);
-    }
-
-    void operator()(VkShaderModule module) const {
-        vkDestroyShaderModule(get_device(), module, nullptr);
-    }
-
-    void operator()(VkPipeline pipeline) const {
-        vkDestroyPipeline(get_device(), pipeline, nullptr);
+    template<class VulkanHandle>
+    void operator()(VulkanHandle handle) const {
+        DeviceDestroyFunctionV<VulkanHandle>(get_device(), handle, nullptr);
     }
 };
 
