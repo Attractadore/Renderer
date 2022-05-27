@@ -17,7 +17,7 @@ std::vector<std::byte> loadShader(const std::string& path) {
 
 PipelineRef createPipeline(
     Context& ctx,
-    VkDevice dev, VkFormat color_fmt,
+    VkFormat color_fmt,
     std::span<const std::byte> vert_code,
     std::span<const std::byte> frag_code,
     PipelineLayoutRef layout
@@ -28,11 +28,11 @@ PipelineRef createPipeline(
     GraphicsPipelineConfigurator gpc;
     gpc.SetLayout(std::move(layout)).
         SetVertexShaderState(
-            { .module = vert_shader_module }, {}, {}, {}, {}
+            { .module = std::move(vert_shader_module) }, {}, {}, {}, {}
         ).
         SetRasterizationState({}, {}).
         SetFragmentShaderState(
-            { .module = frag_shader_module }, {}, {
+            { .module = std::move(frag_shader_module) }, {}, {
                 { .format = static_cast<ColorFormat>(color_fmt) },
             }
         ).FinishCurrent();
@@ -119,7 +119,6 @@ std::vector<VkSemaphore> createSemaphores(VkDevice dev, unsigned n) {
 struct Context::DrawData {
     VkDevice                                    device;
     VkFormat                                    image_format;
-    std::vector<std::byte>                      vert_code, frag_code;
     PipelineRef                                 pipeline;
     std::unordered_map<VkImage, VkImageView>    image_views;
     unsigned                                    frame_index;
@@ -153,12 +152,11 @@ void Context::init_draw() {
     m_draw_data = std::make_unique<Context::DrawData>();
     m_draw_data->device = m_device.get();
     m_draw_data->image_format = m_swapchain->description().surface_format.format;
-    m_draw_data->vert_code = loadShader("vert.spv");
-    m_draw_data->frag_code = loadShader("frag.spv");
     m_draw_data->pipeline = createPipeline(
         *this,
-        m_device.get(), m_draw_data->image_format,
-        m_draw_data->vert_code, m_draw_data->frag_code,
+        m_draw_data->image_format,
+        loadShader("vert.spv"),
+        loadShader("frag.spv"),
         CreatePipelineLayout({})
     );
     m_draw_data->frame_index = 0;
