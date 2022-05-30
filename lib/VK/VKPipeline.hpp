@@ -1,6 +1,7 @@
 #pragma once
 #include "VKShaderModule.hpp"
 #include "VKUtil.hpp"
+#include "VKFormat.hpp"
 
 #include <array>
 #include <functional>
@@ -37,13 +38,6 @@ using PipelineRef = Ref<Pipeline>;
 enum class VertexInputRate {
     Vertex      = VK_VERTEX_INPUT_RATE_VERTEX,
     Instance    = VK_VERTEX_INPUT_RATE_INSTANCE,
-};
-
-enum class VertexFormat {
-    Float   = VK_FORMAT_R32_SFLOAT,
-    Float2  = VK_FORMAT_R32G32_SFLOAT,
-    Float3  = VK_FORMAT_R32G32B32_SFLOAT,
-    Float4  = VK_FORMAT_R32G32B32A32_SFLOAT,
 };
 
 enum class PrimitiveTopology {
@@ -94,8 +88,6 @@ enum class CompareOp {
     GreaterOrEqual  = VK_COMPARE_OP_GREATER_OR_EQUAL,
 };
 
-enum class DepthFormat {};
-
 enum class StencilOp {
     Keep                = VK_STENCIL_OP_KEEP,
     Replace             = VK_STENCIL_OP_REPLACE,
@@ -106,8 +98,6 @@ enum class StencilOp {
     DecrementAndClamp   = VK_STENCIL_OP_DECREMENT_AND_CLAMP,
     DecrementAndWrap    = VK_STENCIL_OP_DECREMENT_AND_WRAP,
 };
-
-enum class StencilFormat {};
 
 enum class LogicOp {
     NoOp            = VK_LOGIC_OP_NO_OP,
@@ -156,13 +146,6 @@ enum class BlendOp {
     ReverseSubtract = VK_BLEND_OP_REVERSE_SUBTRACT,
     Min             = VK_BLEND_OP_MIN,
     Max             = VK_BLEND_OP_MAX,
-};
-
-enum class ColorFormat {
-    RGB8_UNORM      = VK_FORMAT_R8G8B8_UNORM,
-    RGBA8_UNORM     = VK_FORMAT_R8G8B8A8_UNORM,
-    BGR8_UNORM      = VK_FORMAT_B8G8R8_UNORM,
-    BGRA8_UNORM     = VK_FORMAT_B8G8R8A8_UNORM,
 };
 
 namespace Detail {
@@ -289,7 +272,7 @@ struct DepthTestInfo {
 };
 
 struct DepthAttachmentInfo {
-    DepthFormat format;
+    DepthStencilFormat format;
 };
 
 struct StencilTestInfo {
@@ -322,7 +305,7 @@ struct StencilTestInfo {
 };
 
 struct StencilAttachmentInfo {
-    StencilFormat format;
+    DepthStencilFormat format;
 };
 
 struct ColorBlendInfo {
