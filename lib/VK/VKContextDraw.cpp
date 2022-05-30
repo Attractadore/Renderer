@@ -90,28 +90,19 @@ std::vector<VkCommandBuffer> createCommandBuffers(
     return cmd_buffers;
 }
 
-std::vector<VkFence> createFences(VkDevice dev, unsigned n, bool signaled = true) {
-    std::vector<VkFence> fences(n);
-    for (auto& f: fences) {
-        VkFenceCreateInfo create_info = {
-            .sType = sType(create_info),
-            .flags = VkFenceCreateFlags(
-                signaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0
-            ),
-        };
-        vkCreateFence(dev, &create_info, nullptr, &f);
-    }
+std::vector<FenceRef> createFences(Context& ctx, unsigned n, bool signaled = true) {
+    std::vector<FenceRef> fences(n);
+    std::ranges::generate(fences,
+        [&] { return ctx.CreateFence({ .signaled = signaled }); }
+    );
     return fences;
 }
 
-std::vector<VkSemaphore> createSemaphores(VkDevice dev, unsigned n) {
-    std::vector<VkSemaphore> semaphores(n);
-    for (auto& s: semaphores) {
-        VkSemaphoreCreateInfo create_info = {
-            .sType = sType(create_info),
-        };
-        vkCreateSemaphore(dev, &create_info, nullptr, &s);
-    }
+std::vector<SemaphoreRef> createSemaphores(Context& ctx, unsigned n) {
+    std::vector<SemaphoreRef> semaphores(n);
+    std::ranges::generate(semaphores,
+        [&] { return ctx.CreateSemaphore({}); }
+    );
     return semaphores;
 }
 }
@@ -125,21 +116,12 @@ struct Context::DrawData {
     unsigned                                    frame_count;
     VkCommandPool                               command_pool;
     std::vector<VkCommandBuffer>                command_buffers;
-    std::vector<VkFence>                        fences;
-    std::vector<VkSemaphore>                    acquire_semaphores;
-    std::vector<VkSemaphore>                    draw_semaphores;
+    std::vector<FenceRef>                       fences;
+    std::vector<SemaphoreRef>                   acquire_semaphores;
+    std::vector<SemaphoreRef>                   draw_semaphores;
 
     ~DrawData() {
         vkDeviceWaitIdle(device);
-        for (auto& f: fences) {
-            vkDestroyFence(device, f, nullptr);
-        }
-        for (auto& s: acquire_semaphores) {
-            vkDestroySemaphore(device, s, nullptr);
-        }
-        for (auto& s: draw_semaphores) {
-            vkDestroySemaphore(device, s, nullptr);
-        }
         vkFreeCommandBuffers(device, command_pool, command_buffers.size(), command_buffers.data());
         vkDestroyCommandPool(device, command_pool, nullptr);
         for (auto& [_, v]: image_views) {
@@ -168,28 +150,28 @@ void Context::init_draw() {
         m_device.get(), m_draw_data->command_pool, m_draw_data->frame_count
     );
     m_draw_data->fences = createFences(
-        m_device.get(), m_draw_data->frame_count
+        *this, m_draw_data->frame_count
     );
     m_draw_data->acquire_semaphores = createSemaphores(
-        m_device.get(), m_draw_data->frame_count
+        *this, m_draw_data->frame_count
     );
     m_draw_data->draw_semaphores = createSemaphores(
-        m_device.get(), m_draw_data->frame_count
+        *this, m_draw_data->frame_count
     );
 }
 
 void Context::draw() {
     auto idx = m_draw_data->frame_index;
-    VkFence fence = m_draw_data->fences[idx];
-    VkSemaphore acquire_sem = m_draw_data->acquire_semaphores[idx];
-    VkSemaphore draw_sem = m_draw_data->draw_semaphores[idx];
+    auto& fence =       *m_draw_data->fences[idx];
+    auto& acquire_sem = *m_draw_data->acquire_semaphores[idx];
+    auto& draw_sem =    *m_draw_data->draw_semaphores[idx];
     VkCommandBuffer cmd_buffer = m_draw_data->command_buffers[idx];
     VkPipeline pipeline = m_draw_data->pipeline->m_pipeline.get();
 
-    vkWaitForFences(m_device.get(), 1, &fence, true, UINT64_MAX);
-    vkResetFences(m_device.get(), 1, &fence);
+    WaitForFence(fence);
+    ResetFence(fence);
 
-    auto [img, img_w, img_h] = m_swapchain->acquireImage(acquire_sem);
+    auto [img, img_w, img_h] = m_swapchain->acquireImage(acquire_sem.m_semaphore.get());
     auto& img_view = m_draw_data->image_views[img];
     if (!img_view) {
         img_view = createSwapchainImageView(
@@ -317,12 +299,12 @@ void Context::draw() {
         };
         VkSemaphoreSubmitInfo wait_info = {
             .sType = sType(wait_info),
-            .semaphore = acquire_sem,
+            .semaphore = acquire_sem.m_semaphore.get(),
             .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
         };
         VkSemaphoreSubmitInfo signal_info = {
             .sType = sType(signal_info),
-            .semaphore = draw_sem,
+            .semaphore = draw_sem.m_semaphore.get(),
             .stageMask = VK_PIPELINE_STAGE_2_NONE,
         };
         VkSubmitInfo2 submit_info = {
@@ -334,10 +316,11 @@ void Context::draw() {
             .signalSemaphoreInfoCount = 1,
             .pSignalSemaphoreInfos = &signal_info,
         };
-        vkQueueSubmit2(m_queues.graphics, 1, &submit_info, fence);
+        vkQueueSubmit2(m_queues.graphics, 1, &submit_info, fence.m_fence.get());
     }
 
-    m_swapchain->present(m_queues.graphics, img, {&draw_sem, 1});
+    VkSemaphore present_sem = draw_sem.m_semaphore.get();
+    m_swapchain->present(m_queues.graphics, img, {&present_sem, 1});
 
     m_draw_data->frame_index = (m_draw_data->frame_index + 1) % m_draw_data->frame_count;
 }

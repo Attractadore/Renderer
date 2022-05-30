@@ -1,5 +1,6 @@
 #pragma once
 #include "VKPipeline.hpp"
+#include "VKSync.hpp"
 #include "VKTypes.hpp"
 
 #include <algorithm>
@@ -43,6 +44,15 @@ public:
     Iter CreateGraphicsPipelines(
         const GraphicsPipelineConfigs& pipeline_configs, Iter out
     );
+
+    FenceRef CreateFence(const Fence::Config& config);
+    Fence::Status WaitForFence(Fence& fence, std::chrono::nanoseconds timeout = Fence::WaitNoTimeout);
+    template<typename Rep, typename Period>
+    Fence::Status WaitForFence(Fence& fence, std::chrono::duration<Rep, Period> timeout) {
+        return WaitForFence(fence, std::chrono::duration_cast<std::chrono::nanoseconds>(timeout));
+    }
+    void ResetFence(Fence& fence);
+    SemaphoreRef CreateSemaphore(const Semaphore::Config& config);
 
     void init_draw();
     void draw();

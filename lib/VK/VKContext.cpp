@@ -128,6 +128,52 @@ ShaderModuleRef Context::CreateShaderModule(const ShaderModuleConfig& config) {
     }
     return ShaderModule::Create(Vk::ShaderModule{m_device.get(), module});
 }
+
+FenceRef Context::CreateFence(const Fence::Config& config) {
+    VkFence fence = VK_NULL_HANDLE;
+    VkFenceCreateInfo create_info = {
+        .sType = sType(create_info),
+        .flags = VkFenceCreateFlags(
+            config.signaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0
+        ),
+    };
+    vkCreateFence(m_device.get(), &create_info, nullptr, &fence);
+    if (!fence) {
+        throw std::runtime_error{"Vulkan: Failed to create fence"};
+    }
+    return Fence::Create(Vk::Fence{m_device.get(), fence});
+}
+
+Fence::Status Context::WaitForFence(Fence& fence, std::chrono::nanoseconds timeout) {
+    VkFence h = fence.m_fence.get();
+    auto r = vkWaitForFences(m_device.get(), 1, &h, true, timeout.count());
+    if (r == VK_SUCCESS) {
+        return Fence::Status::Ready;
+    } else if (r == VK_TIMEOUT) {
+        return Fence::Status::NotReady;
+    } else {
+        throw std::runtime_error{"Vulkan: Failed to wait for fence"};
+    }
+}
+
+void Context::ResetFence(Fence& fence) {
+    VkFence h = fence.m_fence.get();
+    if (vkResetFences(m_device.get(), 1, &h)) {
+        throw std::runtime_error{"Vulkan: Failed to reset fence"};
+    }
+}
+
+SemaphoreRef Context::CreateSemaphore(const Semaphore::Config& config) {
+    VkSemaphore sem = VK_NULL_HANDLE;
+    VkSemaphoreCreateInfo create_info = {
+        .sType = sType(create_info),
+    };
+    vkCreateSemaphore(m_device.get(), &create_info, nullptr, &sem);
+    if (!sem) {
+        throw std::runtime_error{"Vulkan: Failed to create semaphore"};
+    }
+    return Semaphore::Create(Vk::Semaphore{m_device.get(), sem});
+}
 }
 
 #include "VKContextDraw.cpp"

@@ -78,6 +78,14 @@ template<> struct DeviceDestroyFunction<VkPipeline> {
     static constexpr auto function = vkDestroyPipeline;
 };
 
+template<> struct DeviceDestroyFunction<VkFence> {
+    static constexpr auto function = vkDestroyFence;
+};
+
+template<> struct DeviceDestroyFunction<VkSemaphore> {
+    static constexpr auto function = vkDestroySemaphore;
+};
+
 template<>
 class WithParentHandleDeleter<VkDevice> {
     VkDevice m_device;
@@ -205,4 +213,6 @@ using Swapchain         = Detail::WithDeviceHandle<VkSwapchainKHR>;
 using PipelineLayout    = Detail::WithDeviceHandle<VkPipelineLayout>;
 using ShaderModule      = Detail::WithDeviceHandle<VkShaderModule>;
 using Pipeline          = Detail::WithDeviceHandle<VkPipeline>;
+using Fence             = Detail::WithDeviceHandle<VkFence>;
+using Semaphore         = Detail::WithDeviceHandle<VkSemaphore>;
 }
