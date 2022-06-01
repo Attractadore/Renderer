@@ -286,6 +286,8 @@ ImageRef Swapchain::AcquireImage(SemaphoreRef signal_sem) {
         );
         if (r == VK_SUCCESS or r == VK_SUBOPTIMAL_KHR) {
             ImageRef img = m_images[idx];
+            // TODO: the previous semaphore used to acquire an image
+            // can still be in use when the image is acquired again
             m_signal_semaphores[idx] = std::move(signal_sem);
             m_acquired_count++;
             if (r == VK_SUBOPTIMAL_KHR) {
@@ -328,6 +330,11 @@ void Swapchain::PresentImage(VkQueue q, Image& img, SemaphoreRef present_sem) {
     if (!is_retired) {
         auto swc = m_swapchain.get();
         present(swc, idx);
+        // TODO: the previous semaphore used to present an image
+        // can still be in use when the image is presented again,
+        // and it is impossible to tell whether a previous present
+        // has finished (except by waiting on the semaphore signaled
+        // by acquire?)
         m_present_semaphores[idx] = std::move(present_sem);
         m_acquired_count--;
     } else {
@@ -344,6 +351,8 @@ void Swapchain::PresentImage(VkQueue q, Image& img, SemaphoreRef present_sem) {
         it->present_semaphores[idx] = std::move(present_sem);
         it->acquired_count--;
         if (!it->acquired_count) {
+            // TODO: swapchain destruction mustn't happen before
+            // all (present) operations on its images are completed
             m_retired_swapchains.erase(it);
         }
     }
