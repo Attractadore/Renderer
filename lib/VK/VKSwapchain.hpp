@@ -1,10 +1,13 @@
 #pragma once
-#include "VKRAII.hpp"
 #include "Common/Types.hpp"
+#include "VKImage.hpp"
+#include "VKSync.hpp"
 
 #include <span>
 #include <functional>
 #include <limits>
+
+#include <iostream>
 
 namespace R1::VK {
 VkSurfaceCapabilitiesKHR getSurfaceCapabilities(
@@ -34,7 +37,7 @@ I getSurfaceFormats(VkPhysicalDevice dev, VkSurfaceKHR surf, I it) {
         dev, surf, &surf_fmt_cnt, std::to_address(it)
     );
     if (r) {
-        return {};
+        return it;
     };
     return it + surf_fmt_cnt;
 }
@@ -46,58 +49,82 @@ I getSurfacePresentModes(VkPhysicalDevice dev, VkSurfaceKHR surf, I it) {
         dev, surf, &pmode_cnt, std::to_address(it)
     );
     if (r) {
-        return {};
+        return it;
     }
     return it + pmode_cnt;
 }
 
-struct SwapchainDescription {
-    unsigned                        width, height;
-    unsigned                        image_count;
-    VkImageUsageFlags               image_usage_flags;
-    VkSurfaceFormatKHR              surface_format;
-    VkSurfaceTransformFlagBitsKHR   surface_pre_transform;
-    VkCompositeAlphaFlagBitsKHR     composite_alpha;
-    VkPresentModeKHR                present_mode;
+namespace Detail {
+struct SwapchainCapabilites {
+    Image::Usage                image_usage;
+    std::vector<PresentMode>    present_modes;
 };
 
+struct SwapchainDescription {
+    Image::Description  image_description;
+    unsigned            image_count;
+    PresentMode         present_mode;
+};
+}
+
 class Swapchain {
+public:
+    using Capabilities = Detail::SwapchainCapabilites;
+    using Description = Detail::SwapchainDescription;
+
+private:
     VkPhysicalDevice                m_physical_device;
+
     VkSurfaceKHR                    m_surface;
+
+    SizeCallback                    m_size_callback;
+
     Vk::Swapchain                   m_swapchain;
-    std::vector<VkImage>            m_images;
+    Capabilities                    m_capabilities;
+    Description                     m_description;
+    // Swapchain images are owned by the swapchain and
+    // must not be destroyed
+    struct SwapchainImageRef: ImageRef {
+        SwapchainImageRef() = default;
+        SwapchainImageRef(ImageRef r):
+            ImageRef{std::move(r)} {}
+        SwapchainImageRef(const SwapchainImageRef&) = delete;
+        SwapchainImageRef(SwapchainImageRef&&) = default;
+        SwapchainImageRef& operator=(const SwapchainImageRef&) = delete;
+        SwapchainImageRef& operator=(SwapchainImageRef&&) = default;
+        ~SwapchainImageRef() {
+            if (auto p = get()) {
+                (void) p->m_image.release();
+            }
+        }
+    };
+    std::vector<SwapchainImageRef>  m_images;
+    std::vector<SemaphoreRef>       m_signal_semaphores;
+    std::vector<SemaphoreRef>       m_present_semaphores;
     unsigned                        m_acquired_count;
 
     // Retired swapchains can't be deleted until all of their acquired
     // images have been returned
     struct RetiredSwapchain {
         Vk::Swapchain swapchain;
-        std::vector<VkImage> images;
+        std::vector<SwapchainImageRef> images;
+        std::vector<SemaphoreRef> signal_semaphores;
+        std::vector<SemaphoreRef> present_semaphores;
         unsigned acquired_count;
     };
-    std::vector<RetiredSwapchain> m_retired_swapchains;
-
-    VkSurfaceCapabilitiesKHR        m_capabilities;
-    std::vector<VkSurfaceFormatKHR> m_formats;
-    std::vector<VkPresentModeKHR>   m_present_modes;
-    SwapchainDescription            m_description;
-    SizeCallback                    m_size_callback;
+    std::vector<RetiredSwapchain>           m_retired_swapchains;
 
 public:
     Swapchain(
         VkPhysicalDevice pdev, VkDevice dev, VkSurfaceKHR surf,
         SizeCallback&& size_cb,
-        VkImageUsageFlags img_usg_flgs, VkPresentModeKHR pmode
+        const Image::Usage& img_usg, PresentMode pmode
     );
 
-    const auto&         description() const { return m_description; }
-    size_t              imageCount() const { return m_images.size(); }
-    VkImage             image(size_t i) const { return m_images[i]; }
+    const auto&         GetDescription() const { return m_description; } 
 
-    using AcquireInfo = std::tuple<VkImage, unsigned, unsigned>;
-    AcquireInfo         acquireImage(VkSemaphore sem);
-
-    void                present(VkQueue q, VkImage img, std::span<VkSemaphore> sems);
+    ImageRef            AcquireImage(SemaphoreRef sem);
+    void                PresentImage(VkQueue q, Image& img, SemaphoreRef sem);
 
 private:
     RetiredSwapchain    create();

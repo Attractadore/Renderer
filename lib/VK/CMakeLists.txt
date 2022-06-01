@@ -5,14 +5,16 @@ find_package(X11 COMPONENTS xcb REQUIRED)
 
 add_library(R1VKAPI
     VKContext.hpp
+    VKImage.hpp
     VKInstance.hpp
-    VKSwapchain.hpp
     VKPipeline.hpp
+    VKSwapchain.hpp
 
     VKContext.cpp
+    VKImage.cpp
     VKInstance.cpp
-    VKSwapchain.cpp
     VKPipeline.cpp
+    VKSwapchain.cpp
 )
 target_compile_features(R1VKAPI
     PUBLIC cxx_std_20

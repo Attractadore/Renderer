@@ -86,6 +86,14 @@ template<> struct DeviceDestroyFunction<VkSemaphore> {
     static constexpr auto function = vkDestroySemaphore;
 };
 
+template<> struct DeviceDestroyFunction<VkImage> {
+    static constexpr auto function = vkDestroyImage;
+};
+
+template<> struct DeviceDestroyFunction<VkImageView> {
+    static constexpr auto function = vkDestroyImageView;
+};
+
 template<>
 class WithParentHandleDeleter<VkDevice> {
     VkDevice m_device;
@@ -132,6 +140,7 @@ public:
 
     using Base::get;
     using Base::reset;
+    using Base::release;
     using Base::operator bool;
 
 protected:
@@ -215,4 +224,6 @@ using ShaderModule      = Detail::WithDeviceHandle<VkShaderModule>;
 using Pipeline          = Detail::WithDeviceHandle<VkPipeline>;
 using Fence             = Detail::WithDeviceHandle<VkFence>;
 using Semaphore         = Detail::WithDeviceHandle<VkSemaphore>;
+using Image             = Detail::WithDeviceHandle<VkImage>;
+using ImageView         = Detail::WithDeviceHandle<VkImageView>;
 }

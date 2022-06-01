@@ -17,7 +17,7 @@ std::vector<std::byte> loadShader(const std::string& path) {
 
 PipelineRef createPipeline(
     Context& ctx,
-    VkFormat color_fmt,
+    ImageFormat color_fmt,
     std::span<const std::byte> vert_code,
     std::span<const std::byte> frag_code,
     PipelineLayoutRef layout
@@ -33,7 +33,7 @@ PipelineRef createPipeline(
         SetRasterizationState({}, {}).
         SetFragmentShaderState(
             { .module = std::move(frag_shader_module) }, {}, {
-                { .format = static_cast<ColorFormat>(color_fmt) },
+                { .format = color_fmt },
             }
         ).FinishCurrent();
     PipelineRef pipeline;
@@ -61,6 +61,14 @@ VkImageView createSwapchainImageView(
     VkImageView view;
     vkCreateImageView(dev, &create_info, nullptr, &view);
     return view;
+}
+
+const Image::View& GetSwapchainImageView(
+    Swapchain& swc, Image& img
+) {
+    return img.GetView({
+        .subresource_range = Image::View::Config::D2SubresourceRange{}
+    });
 }
 
 VkCommandPool createCommandPool(VkDevice dev, unsigned graphics_queue_family) {
@@ -109,7 +117,6 @@ std::vector<SemaphoreRef> createSemaphores(Context& ctx, unsigned n) {
 
 struct Context::DrawData {
     VkDevice                                    device;
-    VkFormat                                    image_format;
     PipelineRef                                 pipeline;
     std::unordered_map<VkImage, VkImageView>    image_views;
     unsigned                                    frame_index;
@@ -133,10 +140,9 @@ struct Context::DrawData {
 void Context::init_draw() {
     m_draw_data = std::make_unique<Context::DrawData>();
     m_draw_data->device = m_device.get();
-    m_draw_data->image_format = m_swapchain->description().surface_format.format;
     m_draw_data->pipeline = createPipeline(
         *this,
-        m_draw_data->image_format,
+        m_swapchain->GetDescription().image_description.format,
         loadShader("vert.spv"),
         loadShader("frag.spv"),
         CreatePipelineLayout({})
@@ -161,23 +167,20 @@ void Context::init_draw() {
 }
 
 void Context::draw() {
-    auto idx = m_draw_data->frame_index;
-    auto& fence =       *m_draw_data->fences[idx];
-    auto& acquire_sem = *m_draw_data->acquire_semaphores[idx];
-    auto& draw_sem =    *m_draw_data->draw_semaphores[idx];
-    VkCommandBuffer cmd_buffer = m_draw_data->command_buffers[idx];
-    VkPipeline pipeline = m_draw_data->pipeline->m_pipeline.get();
+    auto idx                    = m_draw_data->frame_index;
+    auto& fence                 = *m_draw_data->fences[idx];
+    auto& acquire_sem           = m_draw_data->acquire_semaphores[idx];
+    auto& draw_sem              = m_draw_data->draw_semaphores[idx];
+    VkCommandBuffer cmd_buffer  = m_draw_data->command_buffers[idx];
+    auto& pipeline              = *m_draw_data->pipeline;
 
     WaitForFence(fence);
     ResetFence(fence);
 
-    auto [img, img_w, img_h] = m_swapchain->acquireImage(acquire_sem.m_semaphore.get());
-    auto& img_view = m_draw_data->image_views[img];
-    if (!img_view) {
-        img_view = createSwapchainImageView(
-            m_device.get(), img, m_swapchain->description().surface_format.format
-        );
-    }
+    auto img                = m_swapchain->AcquireImage(acquire_sem);
+    auto img_w              = img->GetDescription().width;
+    auto img_h              = img->GetDescription().height;
+    const auto& img_view    = GetSwapchainImageView(*m_swapchain, *img);
 
     VkCommandBufferBeginInfo begin_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -192,7 +195,7 @@ void Context::draw() {
             .dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
             .dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
             .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-            .image = img,
+            .image = img->m_image.get(),
             .subresourceRange = {
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                 .baseMipLevel = 0,
@@ -212,7 +215,7 @@ void Context::draw() {
     VkClearValue clear_color = {0.2f, 0.2f, 0.8f, 1.0f};
     VkRenderingAttachmentInfo color_attachment = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = img_view,
+        .imageView = img_view.m_view.get(),
         .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -252,15 +255,7 @@ void Context::draw() {
         vkCmdSetScissorWithCount(cmd_buffer, 1, &scissor);
     }
 
-    VkImageSubresourceRange range = {
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .baseMipLevel = 0,
-        .levelCount = 1,
-        .baseArrayLayer = 0,
-        .layerCount = 1,
-    };
-
-    vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.m_pipeline.get());
     vkCmdDraw(cmd_buffer, 3, 1, 0, 0);
 
     vkCmdEndRendering(cmd_buffer);
@@ -273,7 +268,7 @@ void Context::draw() {
             .dstStageMask = VK_PIPELINE_STAGE_2_NONE,
             .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-            .image = img,
+            .image = img->m_image.get(),
             .subresourceRange = {
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                 .baseMipLevel = 0,
@@ -299,12 +294,12 @@ void Context::draw() {
         };
         VkSemaphoreSubmitInfo wait_info = {
             .sType = sType(wait_info),
-            .semaphore = acquire_sem.m_semaphore.get(),
+            .semaphore = acquire_sem->m_semaphore.get(),
             .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
         };
         VkSemaphoreSubmitInfo signal_info = {
             .sType = sType(signal_info),
-            .semaphore = draw_sem.m_semaphore.get(),
+            .semaphore = draw_sem->m_semaphore.get(),
             .stageMask = VK_PIPELINE_STAGE_2_NONE,
         };
         VkSubmitInfo2 submit_info = {
@@ -319,8 +314,7 @@ void Context::draw() {
         vkQueueSubmit2(m_queues.graphics, 1, &submit_info, fence.m_fence.get());
     }
 
-    VkSemaphore present_sem = draw_sem.m_semaphore.get();
-    m_swapchain->present(m_queues.graphics, img, {&present_sem, 1});
+    m_swapchain->PresentImage(m_queues.graphics, *img, draw_sem);
 
     m_draw_data->frame_index = (m_draw_data->frame_index + 1) % m_draw_data->frame_count;
 }

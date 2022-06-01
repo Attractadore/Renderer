@@ -204,7 +204,7 @@ struct VertexInputBindingDescription {
 struct VertexInputAttributeDescription {
     unsigned        location;
     unsigned        binding;
-    VertexFormat    format;
+    BufferFormat    format;
     unsigned        offset;
 };
 
@@ -272,7 +272,7 @@ struct DepthTestInfo {
 };
 
 struct DepthAttachmentInfo {
-    DepthStencilFormat format;
+    ImageFormat format;
 };
 
 struct StencilTestInfo {
@@ -305,7 +305,7 @@ struct StencilTestInfo {
 };
 
 struct StencilAttachmentInfo {
-    DepthStencilFormat format;
+    ImageFormat format;
 };
 
 struct ColorBlendInfo {
@@ -331,7 +331,7 @@ struct ColorAttachmentInfo {
         BlendOp     alpha_op;
     };
 
-    ColorFormat                 format;
+    ImageFormat                 format;
     ComponentFlags              color_mask = {1, 1, 1, 1};
     std::optional<BlendInfo>    blend;
 };

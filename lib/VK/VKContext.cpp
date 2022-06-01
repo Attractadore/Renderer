@@ -93,10 +93,9 @@ size_t Context::presentModes(std::span<PresentMode> out) const {
 
 Swapchain* Context::createSwapchain(SizeCallback&& size_cb, PresentMode pmode) {
     assert(!m_swapchain);
-    auto vk_pmode = PresentModeToVK(pmode);
     m_swapchain = std::make_unique<Swapchain>(
         m_physical_device, m_device.get(), m_surface,
-        std::move(size_cb), VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, vk_pmode
+        std::move(size_cb), Image::Usage { .color_attachment = true }, pmode
     );
     init_draw();
     return m_swapchain.get();
