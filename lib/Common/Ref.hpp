@@ -4,6 +4,7 @@
 #include <atomic>
 
 namespace R1 {
+namespace Detail {
 template<typename T>
 concept atomic_value = requires(const T v) {
     { v.is_lock_free() } -> std::same_as<bool>;
@@ -22,13 +23,20 @@ struct remove_atomic<A> {
 
 template<typename T>
 using remove_atomic_t = remove_atomic<T>::type;
-    
-template<class Derived, typename Counter = std::atomic<unsigned>>
-    requires std::unsigned_integral<remove_atomic_t<Counter>>
-class RefedBase;
 
 template<typename T>
-    requires std::derived_from<T, RefedBase<T, typename T::counter_type>>
+concept complete_type = requires(T) {
+    sizeof(T);
+};
+}
+    
+template<class Derived, typename Counter = std::atomic<unsigned>>
+    requires std::unsigned_integral<Detail::remove_atomic_t<Counter>>
+class RefedBase;
+
+template<typename T> requires
+    (not Detail::complete_type<T>) or
+    std::derived_from<T, RefedBase<T, typename T::counter_type>>
 class Ref: private boost::intrusive_ptr<T> {
 public:
     Ref() noexcept: Ref{nullptr} {}
@@ -51,13 +59,13 @@ public:
 };
 
 template<class Derived, typename Counter>
-    requires std::unsigned_integral<remove_atomic_t<Counter>>
+    requires std::unsigned_integral<Detail::remove_atomic_t<Counter>>
 class RefedBase {
     Counter m_counter = 1;
 
 public:
     using counter_type = Counter;
-    using counter_value_type = std::conditional_t<atomic_value<Counter>,
+    using counter_value_type = std::conditional_t<Detail::atomic_value<Counter>,
         typename Counter::value_type,
         Counter
     >;
@@ -90,6 +98,10 @@ public:
         return Ref<Derived>(
             new EnableNew(std::forward<Args>(args)...)
         );
+    }
+
+    counter_value_type GetUseCount() const {
+        return m_counter;
     }
 };
 }
