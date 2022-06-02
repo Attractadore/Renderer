@@ -16,4 +16,16 @@ ShaderModule CreateShaderModule(Context ctx, const ShaderModuleConfig& config) {
     }
     return module;
 }
+
+PipelineLayout CreatePipelineLayout(Context ctx, const PipelineLayoutConfig& config) {
+    VkPipelineLayoutCreateInfo create_info = {
+        .sType = sType(create_info),
+    };
+    VkPipelineLayout layout = VK_NULL_HANDLE;
+    vkCreatePipelineLayout(ctx->device.get(), &create_info, nullptr, &layout);
+    if (!layout) {
+        throw std::runtime_error{"Vulkan: Failed to create pipeline layout\n"};
+    }
+    return layout;
+}
 }

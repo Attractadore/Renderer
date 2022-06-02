@@ -52,4 +52,6 @@ struct ContextConfig {
 struct ShaderModuleConfig {
     std::span<const std::byte> code;
 };
+
+struct PipelineLayoutConfig {};
 }

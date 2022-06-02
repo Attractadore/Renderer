@@ -32,4 +32,6 @@ struct ContextImpl {
 using Context = ContextImpl*;
 
 using ShaderModule = VkShaderModule;
+
+using PipelineLayout = VkPipelineLayout;
 };
