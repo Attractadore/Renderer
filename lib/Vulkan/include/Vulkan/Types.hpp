@@ -30,4 +30,6 @@ struct ContextImpl {
     Vk::Device device;
 };
 using Context = ContextImpl*;
+
+using ShaderModule = VkShaderModule;
 };

@@ -15,6 +15,7 @@ target_include_directories(R1_VK_PrivateInterface
 add_library(R1_VK
     Context.cpp
     Instance.cpp
+    Pipeline.cpp
 )
 target_compile_features(R1_VK
     PUBLIC cxx_std_20

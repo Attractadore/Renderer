@@ -59,8 +59,8 @@ int main() {
         R1::VK::Instance i = nullptr;
         {
             std::cout << "Xlib devices:\n";
-            auto i = R1::VK::CreateInstanceXlib({},
-                info.info.x11.display
+            auto i = R1::VK::CreateInstanceXlib(
+                info.info.x11.display, {}
             );
             printDevices(i);
             R1::VK::DestroyInstance(i);
@@ -69,8 +69,8 @@ int main() {
 #ifdef HAVE_XLIB_XCB
         {
             std::cout << "XCB devices:\n";
-            auto i = R1::VK::CreateInstanceXCB({},
-                XGetXCBConnection(info.info.x11.display)
+            auto i = R1::VK::CreateInstanceXCB(
+                XGetXCBConnection(info.info.x11.display), {}
             );
             printDevices(i);
             R1::VK::DestroyInstance(i);

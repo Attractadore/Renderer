@@ -31,10 +31,10 @@ void printDevices(R1::VK::Instance instance) {
             .id = dev_desc.queue_families[0].id,
             .count = 1,
         };
-        auto ctx = R1::VK::CreateContext({
+        auto ctx = R1::VK::CreateContext(dev, {
             .queue_config = {&qcfg, 1},
             .wsi = true,
-        }, dev);
+        });
         if (!ctx) {
             std::cout << "Failed to create context for device\n";
         } else {
@@ -64,8 +64,8 @@ int main() {
         R1::VK::Instance i = nullptr;
         {
             std::cout << "Xlib devices:\n";
-            auto i = R1::VK::CreateInstanceXlib({},
-                info.info.x11.display
+            auto i = R1::VK::CreateInstanceXlib(
+                info.info.x11.display, {}
             );
             printDevices(i);
             R1::VK::DestroyInstance(i);
@@ -74,8 +74,8 @@ int main() {
 #ifdef HAVE_XLIB_XCB
         {
             std::cout << "XCB devices:\n";
-            auto i = R1::VK::CreateInstanceXCB({},
-                XGetXCBConnection(info.info.x11.display)
+            auto i = R1::VK::CreateInstanceXCB(
+                XGetXCBConnection(info.info.x11.display), {}
             );
             printDevices(i);
             R1::VK::DestroyInstance(i);

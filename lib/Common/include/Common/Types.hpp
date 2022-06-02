@@ -48,4 +48,8 @@ struct ContextConfig {
     std::span<const QueueConfig> queue_config;
     bool wsi: 1 = false;
 };
+
+struct ShaderModuleConfig {
+    std::span<const std::byte> code;
+};
 }
