@@ -1,5 +1,6 @@
 #pragma once
-#include "Common/Util.hpp"
+#include "Common/Array.hpp"
+#include "Common/Handle.hpp"
 
 #include <stdexcept>
 

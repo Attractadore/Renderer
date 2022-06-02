@@ -1,16 +1,13 @@
-#include "Context.hpp"
-#include "Instance.hpp"
 #include "Scene.hpp"
-#include "Swapchain.hpp"
 
-struct R1Instance: public R1::Instance {
-    using R1::Instance::Instance;
+struct R1Instance: public R1::GAPI::Instance {
+    using R1::GAPI::Instance::Instance;
 };
-struct R1Context: public R1::Context {};
+struct R1Context: public R1::GAPI::Context {};
 struct R1Scene: public R1::Scene {
     using R1::Scene::Scene;
 };
-struct R1Swapchain: public R1::Swapchain {};
+struct R1Swapchain: public R1::GAPI::Swapchain {};
 
 extern "C" {
 R1Instance* R1_CreateXlibInstance(::Display* dpy, ::Window win) {

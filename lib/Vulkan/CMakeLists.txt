@@ -20,11 +20,8 @@ target_compile_features(R1VKAPI
     PUBLIC cxx_std_20
 )
 target_link_libraries(R1VKAPI
-    PUBLIC APICommon Vulkan::Vulkan X11::xcb X11::X11
+    PUBLIC Common Vulkan::Vulkan X11::xcb X11::X11
 )
 
-target_link_libraries(R1
-    PRIVATE R1VKAPI
-)
-
+add_subdirectory(lib)
 add_subdirectory(progs)

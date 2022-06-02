@@ -1,3 +1,7 @@
+add_subdirectory(Common)
+add_subdirectory(Vulkan)
+add_subdirectory(OpenGL)
+
 set(R1PublicHeaders
     ${PROJECT_SOURCE_DIR}/include/R1/R1Types.h
     ${PROJECT_SOURCE_DIR}/include/R1/R1.h
@@ -21,10 +25,6 @@ target_compile_definitions(R1PrivateInterface
 )
 
 add_library(R1
-    Context.hpp
-    Instance.hpp
-    Scene.hpp
-
     R1.cpp
     Scene.cpp
 )
@@ -33,6 +33,9 @@ target_link_libraries(R1
     PRIVATE R1PrivateInterface
 )
 
-add_subdirectory(Common)
-add_subdirectory(VK)
-add_subdirectory(GL)
+target_link_libraries(R1
+    PRIVATE R1VKAPI
+)
+target_compile_definitions(R1
+    PRIVATE R1_USE_VULKAN
+)

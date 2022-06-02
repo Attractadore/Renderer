@@ -1,3 +1,4 @@
+#include "Common/Array.hpp"
 #include "VKContext.hpp"
 #include "VKInstance.hpp"
 

@@ -3,14 +3,15 @@ find_package(X11 COMPONENTS X11_xcb)
 
 if (TARGET SDL2::SDL2)
     add_executable(VKListDevices VKListDevices.cpp)
-    target_link_libraries(VKListDevices R1VKAPI SDL2::SDL2)
+    target_link_libraries(VKListDevices R1_VK SDL2::SDL2)
     target_include_directories(VKListDevices PRIVATE ..)
 
     if (TARGET X11::X11)
+        target_link_libraries(VKListDevices R1_VK_Xlib)
         target_compile_definitions(VKListDevices PRIVATE HAVE_X11)
     endif()
     if (TARGET X11::X11_xcb)
-        target_link_libraries(VKListDevices X11::X11_xcb)
+        target_link_libraries(VKListDevices R1_VK_XCB X11::X11_xcb)
         target_compile_definitions(VKListDevices PRIVATE HAVE_XLIB_XCB)
     endif()
     

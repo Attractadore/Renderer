@@ -18,7 +18,7 @@ target_compile_features(R1GLAPI
     PUBLIC cxx_std_20
 )
 target_link_libraries(R1GLAPI
-    PUBLIC APICommon OpenGL::EGL GL46 X11::X11 X11::xcb
+    PUBLIC Common OpenGL::EGL GL46 X11::X11 X11::xcb
 )
 
 add_subdirectory(progs)

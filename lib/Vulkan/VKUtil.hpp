@@ -1,6 +1,4 @@
 #pragma once
-#include "Common/Util.hpp"
-
 #include <concepts>
 
 #include <vulkan/vulkan.h>
