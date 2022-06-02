@@ -4,7 +4,7 @@
 #include <vulkan/vulkan_xcb.h>
 
 namespace R1::VK {
-Instance CreateInstanceXCB(const InstanceConfig& config, ::xcb_connection_t* c, int screen) {
+Instance CreateInstanceXCB(::xcb_connection_t* c, const InstanceConfig& config, int screen) {
     static constexpr std::array exts = {
         VK_KHR_SURFACE_EXTENSION_NAME,
         VK_KHR_XCB_SURFACE_EXTENSION_NAME,

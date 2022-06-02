@@ -4,7 +4,7 @@
 #include <vulkan/vulkan_xlib.h>
 
 namespace R1::VK {
-Instance CreateInstanceXlib(const InstanceConfig& config, ::Display* dpy, int screen) {
+Instance CreateInstanceXlib(::Display* dpy, const InstanceConfig& config, int screen) {
     static constexpr std::array exts = {
         VK_KHR_SURFACE_EXTENSION_NAME,
         VK_KHR_XLIB_SURFACE_EXTENSION_NAME,

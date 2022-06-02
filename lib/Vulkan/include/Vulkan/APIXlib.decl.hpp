@@ -4,5 +4,5 @@
 #include <X11/Xlib.h>
 
 namespace R1::VK {
-Instance CreateInstanceXlib(const InstanceConfig& config, ::Display* dpy, int screen = 0);
+Instance CreateInstanceXlib(::Display* dpy, const InstanceConfig& config, int screen = 0);
 }

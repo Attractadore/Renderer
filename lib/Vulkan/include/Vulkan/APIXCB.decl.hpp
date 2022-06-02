@@ -4,5 +4,5 @@
 #include <xcb/xcb.h>
 
 namespace R1::VK {
-Instance CreateInstanceXCB(const InstanceConfig& config, ::xcb_connection_t* c, int screen = 0);
+Instance CreateInstanceXCB(::xcb_connection_t* c, const InstanceConfig& config, int screen = 0);
 }

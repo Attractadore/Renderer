@@ -53,7 +53,7 @@ Vk::Device CreateDevice(
 }
 }
 
-Context CreateContext(const ContextConfig& config, Device dev) {
+Context CreateContext(Device dev, const ContextConfig& config) {
     auto ctx = std::make_unique<ContextImpl>(ContextImpl{
         .device = CreateDevice(config, dev),
     });
