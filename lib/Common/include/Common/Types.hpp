@@ -4,6 +4,7 @@
 
 #include <functional>
 #include <string>
+#include <span>
 
 namespace R1 {
 using SizeCallback = std::function<std::tuple<unsigned, unsigned>()>;
@@ -25,8 +26,10 @@ struct QueueCapabilities {
 };
 
 struct QueueFamily {
-    QueueCapabilities capabilities;
+    enum ID: unsigned;
+    ID id;
     unsigned count;
+    QueueCapabilities capabilities;
 };
 
 struct DeviceDescription {
@@ -36,5 +39,13 @@ struct DeviceDescription {
     bool wsi: 1 = false;
 };
 
-struct ContextConfig {};
+struct QueueConfig {
+    QueueFamily::ID id;
+    unsigned count;
+};
+
+struct ContextConfig {
+    std::span<const QueueConfig> queue_config;
+    bool wsi: 1 = false;
+};
 }

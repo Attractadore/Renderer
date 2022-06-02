@@ -1,5 +1,5 @@
-#include "API.hpp"
 #include "Common/Vector.hpp"
+#include "Instance.hpp"
 #include "Internal.hpp"
 #include "VKUtil.hpp"
 
@@ -89,10 +89,11 @@ VkInstance CreateInstance(
 
 std::vector<QueueFamily> GetDeviceQueueFamilies(VkPhysicalDevice dev) {
     auto queue_families = Enumerate<VkQueueFamilyProperties>(dev, vkGetPhysicalDeviceQueueFamilyProperties);
-    auto v = std::views::transform(queue_families, [] (const auto& qf) {
+    auto v = std::views::transform(queue_families, [&] (const auto& qf) {
         return QueueFamily {
-            .capabilities = QueueCapabilitiesFromVK(qf.queueFlags),
+            .id = static_cast<QueueFamily::ID>(&qf - &queue_families[0]),
             .count = qf.queueCount,
+            .capabilities = QueueCapabilitiesFromVK(qf.queueFlags),
         };
     });
     return vec_from_range(v);

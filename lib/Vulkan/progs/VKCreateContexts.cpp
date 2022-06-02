@@ -1,5 +1,4 @@
-#include "VKInstance.hpp"
-#include "VKContext.hpp"
+#include "Vulkan/API.hpp"
 
 #include <iostream>
 #include <vector>
@@ -7,17 +6,41 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_syswm.h>
 
+#if HAVE_X11
+#include "Vulkan/APIXlib.hpp"
 #ifdef HAVE_XLIB_XCB
 #include <X11/Xlib-xcb.h>
+#include "Vulkan/APIXCB.hpp"
+#endif
 #endif
 
-void printContexts(R1::VK::Instance& i) {
-    auto dev_cnt = i.deviceCount();
-    std::vector<R1::DeviceID> devs(dev_cnt);
-    i.devices(devs);
-    for (const auto& dev: devs) {
-        std::cout << "Create context for " << i.deviceName(dev) << "\n";
-        std::unique_ptr<R1::VK::Context> ctx{i.createContext(dev)};
+void printDevices(R1::VK::Instance instance) {
+    auto dev_cnt = R1::VK::GetDeviceCount(instance);
+    for (size_t i = 0; i < dev_cnt; i++) {
+        auto dev = R1::VK::GetDevice(instance, i);
+        const auto& dev_desc = R1::VK::GetDeviceDescription(dev);
+        std::cout << "Create context for device " << dev_desc.name << "\n";
+        if (dev_desc.queue_families.empty()) {
+            std::cout << "Device doesn't have any queues\n";
+            continue;
+        } else if (!dev_desc.wsi) {
+            std::cout << "Device doesn't support presentation\n";
+            continue;
+        }
+        R1::QueueConfig qcfg = {
+            .id = dev_desc.queue_families[0].id,
+            .count = 1,
+        };
+        auto ctx = R1::VK::CreateContext({
+            .queue_config = {&qcfg, 1},
+            .wsi = true,
+        }, dev);
+        if (!ctx) {
+            std::cout << "Failed to create context for device\n";
+        } else {
+            std::cout << "Success\n";
+        }
+        R1::VK::DestroyContext(ctx);
     }
 }
 
@@ -38,21 +61,24 @@ int main() {
     switch (info.subsystem) {
 #if HAVE_X11
     case SDL_SYSWM_X11: {
+        R1::VK::Instance i = nullptr;
         {
-            std::cout << "Xlib contexts:\n";
-            auto i = R1::VK::Instance(
-                info.info.x11.display, info.info.x11.window
+            std::cout << "Xlib devices:\n";
+            auto i = R1::VK::CreateInstanceXlib({},
+                info.info.x11.display
             );
-            printContexts(i);
+            printDevices(i);
+            R1::VK::DestroyInstance(i);
         }
 
 #ifdef HAVE_XLIB_XCB
         {
-            std::cout << "XCB contexts:\n";
-            auto i = R1::VK::Instance(
-                XGetXCBConnection(info.info.x11.display), info.info.x11.window
+            std::cout << "XCB devices:\n";
+            auto i = R1::VK::CreateInstanceXCB({},
+                XGetXCBConnection(info.info.x11.display)
             );
-            printContexts(i);
+            printDevices(i);
+            R1::VK::DestroyInstance(i);
         }
 #endif
         break;
@@ -64,4 +90,4 @@ int main() {
 
     SDL_DestroyWindow(window);
     SDL_Quit();
-}
+};

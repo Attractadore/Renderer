@@ -27,9 +27,7 @@ struct InstanceImpl {
 using Instance = InstanceImpl*;
 
 struct ContextImpl {
-    VkInstance instance;
-    VkPhysicalDevice physical_device;
-    VkDevice device;
+    Vk::Device device;
 };
 using Context = ContextImpl*;
 };

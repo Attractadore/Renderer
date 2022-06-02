@@ -133,5 +133,6 @@ public:
 };
 }
 
-using Instance = Detail::ParentHandle<VkInstance>;
+using Instance  = Detail::ParentHandle<VkInstance>;
+using Device    = Detail::ParentHandle<VkDevice>;
 }
