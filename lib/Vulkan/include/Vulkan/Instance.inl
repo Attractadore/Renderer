@@ -1,6 +1,4 @@
 #pragma once
-#include "Instance.decl.hpp"
-
 namespace R1::VK {
 inline void DestroyInstance(Instance instance) {
     delete instance;
