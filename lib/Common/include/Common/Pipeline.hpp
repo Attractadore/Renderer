@@ -1,4 +1,6 @@
 #pragma once
+#include "Format.hpp"
+
 #include <span>
 #include <string_view>
 
@@ -9,7 +11,6 @@ struct ShaderModuleConfig {
 
 struct PipelineLayoutConfig {};
 
-enum class Format;
 enum class VertexInputRate;
 enum class PrimitiveTopology;
 enum class PolygonMode;

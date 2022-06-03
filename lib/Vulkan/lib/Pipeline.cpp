@@ -526,4 +526,8 @@ void CreateGraphicsPipelines(
         throw std::runtime_error{"Vulkan: Failed to create pipelines"};
     }
 }
+
+void DestroyPipeline(Context ctx, Pipeline pipeline) {
+    vkDestroyPipeline(ctx->device.get(), pipeline, nullptr);
+}
 }

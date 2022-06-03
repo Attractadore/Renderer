@@ -1,6 +1,7 @@
 #pragma once
 #include "Common/Pipeline.hpp"
 #include "Context.hpp"
+#include "Format.hpp"
 
 namespace R1 {
 enum class VertexInputRate {
