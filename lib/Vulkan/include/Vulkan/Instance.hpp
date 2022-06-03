@@ -1,13 +1,9 @@
 #pragma once
 #include "Common/Instance.hpp"
 #include "Device.hpp"
-#include "VKRAII.hpp"
 
 namespace R1::VK {
-struct InstanceImpl {
-    Vk::Instance instance;
-    std::vector<DeviceImpl> devices;
-};
+struct InstanceImpl;
 using Instance = InstanceImpl*;
 
 InstanceDescription GetInstanceDescription();
@@ -18,5 +14,3 @@ Device GetDevice(Instance instance, size_t idx = 0);
 
 const DeviceDescription& GetDeviceDescription(Device dev);
 }
-
-#include "Instance.inl"

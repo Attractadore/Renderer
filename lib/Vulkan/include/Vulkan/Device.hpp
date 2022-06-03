@@ -14,10 +14,6 @@ enum class DeviceType {
 }
 
 namespace R1::VK {
-struct DeviceImpl {
-    VkInstance instance;
-    VkPhysicalDevice physical_device;
-    DeviceDescription description;
-};
+struct DeviceImpl;
 using Device = DeviceImpl*;
 }

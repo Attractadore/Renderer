@@ -4,6 +4,7 @@
 #include "Instance.hpp"
 #include "InstanceImpl.hpp"
 #include "VKUtil.hpp"
+#include "VKRAII.hpp"
 
 namespace R1::VK {
 class ExtensionProperties {
@@ -174,5 +175,22 @@ Instance CreateInstanceFromVK(Vk::Instance handle) {
     });
     instance->devices = EnumerateDevices(instance->instance.get());
     return instance.release();
+}
+
+void DestroyInstance(Instance instance) {
+    delete instance;
+}
+
+size_t GetDeviceCount(Instance instance) {
+    return instance->devices.size();
+}
+
+Device GetDevice(Instance instance, size_t idx) {
+    assert(idx < GetDeviceCount(instance));
+    return &instance->devices[idx];
+}
+
+const DeviceDescription& GetDeviceDescription(Device dev) {
+    return dev->description;
 }
 }

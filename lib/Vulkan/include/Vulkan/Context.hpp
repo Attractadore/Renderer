@@ -1,12 +1,9 @@
 #pragma once
 #include "Common/Context.hpp"
 #include "Device.hpp"
-#include "VKRAII.hpp"
 
 namespace R1::VK {
-struct ContextImpl {
-    Vk::Device device;
-};
+struct ContextImpl;
 using Context = ContextImpl*;
 
 Context CreateContext(Device dev, const ContextConfig& config);
