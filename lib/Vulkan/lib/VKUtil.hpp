@@ -60,6 +60,8 @@ consteval VkStructureType sType() {
         return VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     } if constexpr (std::same_as<T, VkGraphicsPipelineCreateInfo>) {
         return VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    } if constexpr (std::same_as<T, VkImageCreateInfo>) {
+        return VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     } if constexpr (std::same_as<T, VkImageViewCreateInfo>) {
         return VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     } if constexpr (std::same_as<T, VkCommandPoolCreateInfo>) {

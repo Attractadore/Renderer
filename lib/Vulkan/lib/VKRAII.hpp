@@ -58,6 +58,11 @@ static constexpr auto DeviceDestroyFunctionV =
     DeviceDestroyFunction<VulkanHandle>::function;
 
 template<>
+struct DeviceDestroyFunction<VkImage> {
+    static constexpr auto function = vkDestroyImage;
+};
+
+template<>
 class WithParentHandleDeleter<VkDevice> {
     VkDevice m_device;
 
@@ -72,6 +77,36 @@ public:
     template<class VulkanHandle>
     void operator()(VulkanHandle handle) const {
         DeviceDestroyFunctionV<VulkanHandle>(get_device(), handle, nullptr);
+    }
+};
+
+template<class VulkanHandle>
+struct AllocatorDestroyFunction;
+
+template<class VulkanHandle>
+static constexpr auto AllocatorDestroyFunctionV =
+    AllocatorDestroyFunction<VulkanHandle>::function;
+
+template<>
+struct AllocatorDestroyFunction<VmaAllocation> {
+    static constexpr auto function = vmaFreeMemory;
+};
+
+template<>
+class WithParentHandleDeleter<VmaAllocator> {
+    VmaAllocator m_allocator;
+
+public:
+    explicit WithParentHandleDeleter(VmaAllocator dev):
+        m_allocator{dev} {
+        assert(m_allocator);
+    }
+
+    VmaAllocator get_allocator() const { return m_allocator; }
+
+    template<class VulkanHandle>
+    void operator()(VulkanHandle handle) const {
+        AllocatorDestroyFunctionV<VulkanHandle>(m_allocator, handle);
     }
 };
 
@@ -100,7 +135,7 @@ class WithParentHandle: WithParentHandleBase<ParentVulkanHandle, VulkanHandle> {
     using Base = WithParentHandleBase<ParentVulkanHandle, VulkanHandle>;
 
 public:
-    explicit WithParentHandle(ParentVulkanHandle phandle, VulkanHandle handle):
+    WithParentHandle(ParentVulkanHandle phandle, VulkanHandle handle):
         Base{handle, Detail::WithParentHandleDeleter<ParentVulkanHandle>{phandle}} {}
 
     using Base::get;
@@ -135,9 +170,27 @@ public:
         return this->get_deleter().get_device();
     }
 };
+
+
+template<class VulkanHandle>
+class WithAllocatorHandle: public WithParentHandle<VmaAllocator, VulkanHandle> {
+    using Base = WithParentHandle<VmaAllocator, VulkanHandle>;
+
+public:
+    using Base::Base;
+
+    VmaAllocator get_allocator() const {
+        return this->get_deleter().get_allocator();
+    }
+};
+
 }
 
-using Instance  = Detail::ParentHandle<VkInstance>;
-using Device    = Detail::ParentHandle<VkDevice>;
-using Allocator = Detail::ParentHandle<VmaAllocator>;
+using Instance      = Detail::ParentHandle<VkInstance>;
+using Device        = Detail::ParentHandle<VkDevice>;
+using Allocator     = Detail::ParentHandle<VmaAllocator>;
+
+using Image         = Detail::WithDeviceHandle<VkImage>;
+
+using Allocation    = Detail::WithAllocatorHandle<VmaAllocation>;
 }

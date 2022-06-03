@@ -18,15 +18,18 @@ target_link_libraries(R1_VK_PrivateInterface
 add_library(R1_VK
     ContextImpl.hpp
     DeviceImpl.hpp
+    ImageImpl.hpp
     InstanceImpl.hpp
     PipelineImpl.hpp
     VKRAII.hpp
     VKUtil.hpp
 
     DeviceImpl.inl
+    ImageImpl.inl
     PipelineImpl.inl
 
     Context.cpp
+    Image.cpp
     Instance.cpp
     Pipeline.cpp
 )
