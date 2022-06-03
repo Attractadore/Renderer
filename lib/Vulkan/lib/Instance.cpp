@@ -1,10 +1,8 @@
 #include "Common/Declarations.hpp"
 #include "Common/Vector.hpp"
 #include "DeviceImpl.hpp"
-#include "Instance.hpp"
 #include "InstanceImpl.hpp"
 #include "VKUtil.hpp"
-#include "VKRAII.hpp"
 
 namespace R1::VK {
 class ExtensionProperties {
@@ -102,15 +100,18 @@ std::vector<QueueFamily> GetDeviceQueueFamilies(VkPhysicalDevice dev) {
     return vec_from_range(v);
 }
 
-DeviceDescription GetDeviceDescription(VkPhysicalDevice dev) {
+VKDeviceDescription GetDeviceDescription(VkPhysicalDevice dev) {
     VkPhysicalDeviceProperties props;
     vkGetPhysicalDeviceProperties(dev, &props);
     DeviceExtensionProperties ext_props{dev};
     return {
-        .name = props.deviceName,
-        .type = static_cast<DeviceType>(props.deviceType),
-        .queue_families = GetDeviceQueueFamilies(dev),
-        .wsi = ext_props.ExtensionSupported(VK_KHR_SWAPCHAIN_EXTENSION_NAME),
+        .common = {
+            .name = props.deviceName,
+            .type = static_cast<DeviceType>(props.deviceType),
+            .queue_families = GetDeviceQueueFamilies(dev),
+            .wsi = ext_props.ExtensionSupported(VK_KHR_SWAPCHAIN_EXTENSION_NAME),
+        },
+        .api_version = props.apiVersion,
     };
 };
 
@@ -191,6 +192,6 @@ Device GetDevice(Instance instance, size_t idx) {
 }
 
 const DeviceDescription& GetDeviceDescription(Device dev) {
-    return dev->description;
+    return dev->description.common;
 }
 }

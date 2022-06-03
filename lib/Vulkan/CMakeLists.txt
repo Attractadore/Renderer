@@ -23,5 +23,6 @@ target_link_libraries(R1VKAPI
     PUBLIC Common Vulkan::Vulkan X11::xcb X11::X11
 )
 
+add_subdirectory(external)
 add_subdirectory(lib)
 add_subdirectory(progs)

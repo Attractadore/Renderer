@@ -3,7 +3,7 @@
 
 #include <cassert>
 
-#include <vulkan/vulkan.h>
+#include "vk_mem_alloc.h"
 
 namespace R1::VK::Vk {
 namespace Detail {
@@ -15,6 +15,10 @@ struct HandleDeleter {
     void operator()(VkDevice dev) const {
         vkDeviceWaitIdle(dev);
         vkDestroyDevice(dev, nullptr);
+    }
+
+    void operator()(VmaAllocator alloc) const {
+        vmaDestroyAllocator(alloc);
     }
 };
 
@@ -135,4 +139,5 @@ public:
 
 using Instance  = Detail::ParentHandle<VkInstance>;
 using Device    = Detail::ParentHandle<VkDevice>;
+using Allocator = Detail::ParentHandle<VmaAllocator>;
 }

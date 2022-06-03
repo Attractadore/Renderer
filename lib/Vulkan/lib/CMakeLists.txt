@@ -11,6 +11,9 @@ add_library(R1_VK_PrivateInterface INTERFACE)
 target_include_directories(R1_VK_PrivateInterface
     INTERFACE ../include/Vulkan
 )
+target_link_libraries(R1_VK_PrivateInterface
+    INTERFACE VulkanMemoryAllocator
+)
 
 add_library(R1_VK
     ContextImpl.hpp

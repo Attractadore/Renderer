@@ -8,7 +8,7 @@ namespace {
 Vk::Device CreateDevice(
     const ContextConfig& config, Device parent 
 ) {
-    const auto& dev_desc = parent->description;
+    const auto& dev_desc = parent->description.common;
 
     float priority = 1.0f;
     auto v = std::views::transform(config.queue_config, [&](const auto& qcfg) {
@@ -52,15 +52,35 @@ Vk::Device CreateDevice(
 
     return Vk::Device{dev};
 }
+
+Vk::Allocator CreateAllocator(VkDevice device, Device parent) {
+    VmaAllocatorCreateInfo allocatorCreateInfo = {
+        .physicalDevice = parent->physical_device,
+        .device = device,
+        .instance = parent->instance,
+        .vulkanApiVersion = parent->description.api_version,
+    };
+
+    VmaAllocator allocator = nullptr;
+    vmaCreateAllocator(&allocatorCreateInfo, &allocator);
+
+    return Vk::Allocator{allocator};
+}
 }
 
-Context CreateContext(Device dev, const ContextConfig& config) {
-    auto ctx = std::make_unique<ContextImpl>(ContextImpl{
-        .device = CreateDevice(config, dev),
-    });
-    if (!ctx->device) {
+Context CreateContext(Device parent, const ContextConfig& config) {
+    auto dev = CreateDevice(config, parent);
+    if (!dev) {
         throw std::runtime_error{"Vulkan: Failed to create context"};
     }
+    auto alloc = CreateAllocator(dev.get(), parent);
+    if (!alloc) {
+        throw std::runtime_error{"Vulkan: Failed to create context"};
+    }
+    auto ctx = std::make_unique<ContextImpl>(ContextImpl{
+        .device = std::move(dev),
+        .allocator = std::move(alloc),
+    });
     return ctx.release();
 }
 
