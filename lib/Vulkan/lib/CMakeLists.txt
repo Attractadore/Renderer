@@ -13,6 +13,14 @@ target_include_directories(R1_VK_PrivateInterface
 )
 
 add_library(R1_VK
+    DeviceImpl.hpp
+    InstanceImpl.hpp
+    PipelineImpl.hpp
+    VKUtil.hpp
+
+    DeviceImpl.inl
+    PipelineImpl.inl
+
     Context.cpp
     Instance.cpp
     Pipeline.cpp

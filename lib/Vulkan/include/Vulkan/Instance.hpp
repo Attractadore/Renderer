@@ -1,7 +1,15 @@
 #pragma once
-#include "Types.hpp"
+#include "Common/Instance.hpp"
+#include "Device.hpp"
+#include "VKRAII.hpp"
 
 namespace R1::VK {
+struct InstanceImpl {
+    Vk::Instance instance;
+    std::vector<DeviceImpl> devices;
+};
+using Instance = InstanceImpl*;
+
 InstanceDescription GetInstanceDescription();
 void DestroyInstance(Instance instance);
 

@@ -1,6 +1,7 @@
 #pragma once
-#include "Common/Types.hpp"
-#include "VKRAII.hpp"
+#include "Common/Device.hpp"
+
+#include <vulkan/vulkan.h>
 
 namespace R1 {
 enum class DeviceType {
@@ -19,19 +20,4 @@ struct DeviceImpl {
     DeviceDescription description;
 };
 using Device = DeviceImpl*;
-
-struct InstanceImpl {
-    Vk::Instance instance;
-    std::vector<DeviceImpl> devices;
-};
-using Instance = InstanceImpl*;
-
-struct ContextImpl {
-    Vk::Device device;
-};
-using Context = ContextImpl*;
-
-using ShaderModule = VkShaderModule;
-
-using PipelineLayout = VkPipelineLayout;
-};
+}

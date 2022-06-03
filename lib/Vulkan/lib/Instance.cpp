@@ -1,6 +1,8 @@
+#include "Common/Declarations.hpp"
 #include "Common/Vector.hpp"
+#include "DeviceImpl.hpp"
 #include "Instance.hpp"
-#include "Internal.hpp"
+#include "InstanceImpl.hpp"
 #include "VKUtil.hpp"
 
 namespace R1::VK {
@@ -92,8 +94,8 @@ std::vector<QueueFamily> GetDeviceQueueFamilies(VkPhysicalDevice dev) {
     auto v = std::views::transform(queue_families, [&] (const auto& qf) {
         return QueueFamily {
             .id = static_cast<QueueFamily::ID>(&qf - &queue_families[0]),
-            .count = qf.queueCount,
             .capabilities = QueueCapabilitiesFromVK(qf.queueFlags),
+            .count = qf.queueCount,
         };
     });
     return vec_from_range(v);
@@ -124,9 +126,7 @@ std::vector<DeviceImpl> EnumerateDevices(VkInstance instance) {
     );
     return vec_from_range(v);
 }
-}
 
-namespace Detail {
 Vk::Instance CreateVkInstance(
     const InstanceConfig& config, 
     std::span<const char* const> layers,
@@ -136,6 +136,36 @@ Vk::Instance CreateVkInstance(
         CreateInstance(config, layers, exts)
     };
 }
+
+std::span<const char* const> GetRequiredInstanceLayers() {
+    static constexpr auto layers = [] {
+        if constexpr (R1::Debug) {
+            return std::array {
+                "VK_LAYER_KHRONOS_validation"
+            };
+        } else {
+            return std::array<const char*, 0>{};
+        }
+    } ();
+    return layers;
+}
+
+std::span<const char* const> GetRequiredInstanceExtensions() {
+    static constexpr std::array<const char*, 0> exts;
+    return exts;
+}
+}
+
+Vk::Instance CreateVkInstanceWithExtensions(
+    const InstanceConfig& config, std::span<const char* const> user_exts
+) {
+    auto layers = GetRequiredInstanceLayers();
+
+    auto req_exts = GetRequiredInstanceExtensions();
+    std::vector exts(req_exts.begin(), req_exts.end());
+    exts.insert(exts.end(), user_exts.begin(), user_exts.end());
+
+    return CreateVkInstance(config, layers, exts);
 }
 
 Instance CreateInstanceFromVK(Vk::Instance handle) {

@@ -1,5 +1,5 @@
 #pragma once
-#include "Types.hpp"
+#include "Instance.hpp"
 
 #include <X11/Xlib.h>
 

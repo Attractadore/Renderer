@@ -1,5 +1,5 @@
 #include "APIXlib.hpp"
-#include "Internal.hpp"
+#include "InstanceImpl.hpp"
 
 #include <vulkan/vulkan_xlib.h>
 

@@ -1,5 +1,5 @@
 #include "APIXCB.hpp"
-#include "Internal.hpp"
+#include "InstanceImpl.hpp"
 
 #include <vulkan/vulkan_xcb.h>
 
