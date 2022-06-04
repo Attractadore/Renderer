@@ -68,6 +68,8 @@ consteval VkStructureType sType() {
         return VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     } if constexpr (std::same_as<T, VkCommandBufferAllocateInfo>) {
         return VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    } if constexpr (std::same_as<T, VkCommandBufferBeginInfo>) {
+        return VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     } if constexpr (std::same_as<T, VkFenceCreateInfo>) {
         return VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     } if constexpr (std::same_as<T, VkSemaphoreCreateInfo>) {
