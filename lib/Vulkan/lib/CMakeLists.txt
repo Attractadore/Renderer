@@ -35,6 +35,7 @@ add_library(R1_VK
     Image.cpp
     Instance.cpp
     Pipeline.cpp
+    Sync.cpp
 )
 target_compile_features(R1_VK
     PUBLIC cxx_std_20
