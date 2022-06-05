@@ -8,9 +8,18 @@ struct ImageImpl {
     Vk::Allocation  allocation;
 };
 
-VkImageCreateFlags ImageCapabilitiesToVK(const ImageCapabilities& caps);
-VkImageUsageFlags  ImageUsageToVK(const ImageUsage& usage);
-VkImageAspectFlags ImageAspectsToVK(const ImageAspects& aspects);
+constexpr VkImageCreateFlags ImageCapabilitiesToVK(
+    const ImageCapabilities& caps
+);
+constexpr VkImageUsageFlags  ImageUsageToVK(
+    const ImageUsage& usage
+);
+constexpr VkImageAspectFlags ImageAspectsToVK(
+    const ImageAspects& aspects
+);
+constexpr VkImageSubresourceRange ImageSubresourceRangeToVK(
+    const ImageSubresourceRange& range
+);
 }
 
 #include "ImageImpl.inl"

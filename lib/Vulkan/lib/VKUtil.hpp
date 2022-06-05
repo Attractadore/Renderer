@@ -74,10 +74,18 @@ consteval VkStructureType sType() {
         return VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     } if constexpr (std::same_as<T, VkSemaphoreCreateInfo>) {
         return VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    } if constexpr (std::same_as<T, VkMemoryBarrier2>) {
+        return VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
+    } if constexpr (std::same_as<T, VkBufferMemoryBarrier2>) {
+        return VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
     } if constexpr (std::same_as<T, VkImageMemoryBarrier2>) {
         return VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
     } if constexpr (std::same_as<T, VkDependencyInfo>) {
         return VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    } if constexpr (std::same_as<T, VkRenderingInfo>) {
+        return VK_STRUCTURE_TYPE_RENDERING_INFO;
+    } if constexpr (std::same_as<T, VkRenderingAttachmentInfo>) {
+        return VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
     } if constexpr (std::same_as<T, VkCommandBufferSubmitInfo>) {
         return VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
     } if constexpr (std::same_as<T, VkSemaphoreSubmitInfo>) {

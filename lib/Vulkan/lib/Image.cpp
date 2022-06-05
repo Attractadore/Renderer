@@ -85,13 +85,7 @@ ImageView CreateImageView(Context ctx, Image image, const ImageViewConfig& confi
             .b = static_cast<VkComponentSwizzle>(config.components.b),
             .a = static_cast<VkComponentSwizzle>(config.components.a),
         },
-        .subresourceRange = {
-            .aspectMask = ImageAspectsToVK(config.subresource_range.aspects),
-            .baseMipLevel = config.subresource_range.first_mip_level,
-            .levelCount = config.subresource_range.mip_level_count,
-            .baseArrayLayer = config.subresource_range.first_array_layer,
-            .layerCount = config.subresource_range.array_layer_count,
-        },
+        .subresourceRange = ImageSubresourceRangeToVK(config.subresource_range),
     };
 
     VkImageView view = VK_NULL_HANDLE;

@@ -1,6 +1,6 @@
 #include "CommandImpl.hpp"
+#include "Common/Vector.hpp"
 #include "ContextImpl.hpp"
-#include "VKUtil.hpp"
 
 namespace R1::VK {
 CommandPool CreateCommandPool(
@@ -102,5 +102,76 @@ void EndCommandBuffer(
         throw std::runtime_error{
             "Vulkan: Failed to record command buffer"};
     }
+}
+
+void CmdPipelineBarrier(CommandBuffer cmd_buffer, const DependencyConfig& config) {
+    auto memory_barriers = vec_from_range(
+        std::views::transform(
+            config.memory_barriers, MemoryBarrierToVK));
+    auto buffer_barriers = vec_from_range(
+        std::views::transform(
+            config.buffer_barriers, BufferBarrierToVK));
+    auto image_barriers = vec_from_range(
+        std::views::transform(
+            config.image_barriers, ImageBarrierToVK));
+    VkDependencyInfo dep_info = {
+        .sType = sType(dep_info),
+        .dependencyFlags = config.by_region ? VK_DEPENDENCY_BY_REGION_BIT: 0u,
+        .memoryBarrierCount =
+            static_cast<uint32_t>(memory_barriers.size()),
+        .pMemoryBarriers = memory_barriers.data(),
+        .bufferMemoryBarrierCount =
+            static_cast<uint32_t>(buffer_barriers.size()),
+        .pBufferMemoryBarriers = buffer_barriers.data(),
+        .imageMemoryBarrierCount =
+            static_cast<uint32_t>(image_barriers.size()),
+        .pImageMemoryBarriers = image_barriers.data(),
+    };
+    vkCmdPipelineBarrier2(cmd_buffer, &dep_info);
+}
+
+void CmdBeginRendering(CommandBuffer cmd_buffer, const RenderingConfig& config) {
+    auto color_attachments = vec_from_range(
+        std::views::transform(
+            config.color_attachments, RenderingAttachmentToVK));
+    auto depth_attachment =
+        RenderingAttachmentToVK(config.depth_attachment);
+    auto stencil_attachment =
+        RenderingAttachmentToVK(config.stencil_attachment);
+    VkRenderingInfo rendering_info = {
+        .sType = sType(rendering_info),
+        .flags = RenderingContinuationToVK(config.continuation),
+        .renderArea = Rect2DToVK(config.render_area),
+        .colorAttachmentCount =
+            static_cast<uint32_t>(color_attachments.size()),
+        .pColorAttachments = color_attachments.data(),
+        .pDepthAttachment = &depth_attachment,
+        .pStencilAttachment = &stencil_attachment,
+    };
+    vkCmdBeginRendering(cmd_buffer, &rendering_info);
+}
+
+void CmdEndRendering(CommandBuffer cmd_buffer) {
+    vkCmdEndRendering(cmd_buffer);
+}
+
+void CmdSetViewports(CommandBuffer cmd_buffer, std::span<const Viewport> viewports) {
+    vkCmdSetViewportWithCount(
+        cmd_buffer, viewports.size(),
+        reinterpret_cast<const VkViewport*>(viewports.data()));
+}
+
+void CmdSetScissors(CommandBuffer cmd_buffer, std::span<const Rect2D> scissors) {
+    vkCmdSetScissorWithCount(
+        cmd_buffer, scissors.size(),
+        reinterpret_cast<const VkRect2D*>(scissors.data()));
+}
+
+void CmdBindGraphicsPipeline(CommandBuffer cmd_buffer, Pipeline pipeline) {
+    vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+}
+
+void CmdDraw(CommandBuffer cmd_buffer, const DrawConfig& config) {
+    vkCmdDraw(cmd_buffer, config.vertex_count, config.instance_count, config.first_vertex, config.first_instance);
 }
 }
