@@ -87,4 +87,11 @@ Context CreateContext(Device parent, const ContextConfig& config) {
 void DestroyContext(Context ctx) {
     delete ctx;
 }
+
+void ContextWaitIdle(Context ctx) {
+    auto r = vkDeviceWaitIdle(ctx->device.get());
+    if (r) {
+        throw std::runtime_error{"Vulkan: Failed to wait for idle context"};
+    }
+}
 }

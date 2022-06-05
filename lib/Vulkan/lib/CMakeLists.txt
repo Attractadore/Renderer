@@ -36,6 +36,7 @@ add_library(R1_VK
     Instance.cpp
     Pipeline.cpp
     Sync.cpp
+    Queue.cpp
 )
 target_compile_features(R1_VK
     PUBLIC cxx_std_20

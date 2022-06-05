@@ -8,4 +8,6 @@ using Context = ContextImpl*;
 
 Context CreateContext(Device dev, const ContextConfig& config);
 void DestroyContext(Context ctx);
+
+void ContextWaitIdle(Context ctx);
 }
