@@ -1,70 +1,50 @@
-#include "Scene.hpp"
+#include "R1.h"
+#include "Types.hpp"
 
-struct R1Instance: public R1::GAPI::Instance {
-    using R1::GAPI::Instance::Instance;
+namespace {
+R1Device* ToPublic(R1::Rendering::Device* device) {
+    return reinterpret_cast<R1Device*>(device);
+}
+
+R1::Rendering::Device* ToPrivate(R1Device* device) {
+    return reinterpret_cast<R1::Rendering::Device*>(device);
+}
 };
-struct R1Context: public R1::GAPI::Context {};
-struct R1Scene: public R1::Scene {
-    using R1::Scene::Scene;
-};
-struct R1Swapchain: public R1::GAPI::Swapchain {};
 
 extern "C" {
-R1Instance* R1_CreateXlibInstance(::Display* dpy, ::Window win) {
-    return new R1Instance(dpy, win);
-}
-
 void R1_DestroyInstance(R1Instance* instance) {
-    delete instance; 
+    delete instance;
 }
 
-size_t R1_GetInstanceDeviceCount(const R1Instance* instance) {
-    return instance->deviceCount();
+size_t R1_GetDeviceCount(const R1Instance* instance) {
+    return instance->GetDeviceCount();
 }
 
-size_t R1_GetInstanceDevices(const R1Instance* instance, R1DeviceID* devices, size_t count) {
-    return instance->devices({devices, count});
+R1Device* R1_GetDevice(R1Instance* instance, size_t idx) {
+    return ToPublic(&instance->GetDevice(idx));
 }
 
-const char* R1_GetInstanceDeviceName(const R1Instance* instance, R1DeviceID dev) {
-    return instance->deviceName(dev);
+const char* R1_GetDeviceName(R1Device* device) {
+    return ToPrivate(device)->GetName().c_str();
 }
 
-R1Context* R1_CreateContext(R1Instance* instance, R1DeviceID dev) {
-    return static_cast<R1Context*>(instance->createContext(dev));
+R1Context* R1_CreateContext(R1Device* device) {
+    return new R1Context{*ToPrivate(device)};
 }
 
 void R1_DestroyContext(R1Context* ctx) {
-    delete ctx;
+    delete ctx; 
 }
 
-R1Swapchain* R1_CreateContextSwapchain(
-    R1Context* ctx, R1SwapchainSizeCallback size_cb, void* usrptr, R1PresentMode pmode
-) {
-    return static_cast<R1Swapchain*>(ctx->createSwapchain(
-        R1::SizeCallback{
-            [=] () {
-                int w = -1, h = -1;
-                size_cb(&w, &h, usrptr);
-                if (w < 0 or h < 0) {
-                    throw std::runtime_error{"Failed to query surface size"};
-                }
-                return std::tuple<unsigned, unsigned>{w, h};
-            }
-        },
-        static_cast<R1::PresentMode>(pmode)
-    ));
+void R1_DestroySurface(R1Surface* surface){
+    delete surface;
 }
 
-R1Scene* R1_CreateScene(R1Context* ctx) {
-    return new R1Scene(ctx);
+R1Swapchain* R1_CreateSwapchain(R1Context* ctx, R1Surface* surf) {
+    return new R1Swapchain{ctx->get(), surf->get()};
 }
 
-void R1_DestroyScene(R1Scene* scene) {
-    delete scene;
-}
-
-void R1_SceneDraw(R1Scene* scene) {
-    scene->draw();
+void R1_DestroySwapchain(R1Swapchain* swapchain) {
+    delete swapchain;
 }
 }

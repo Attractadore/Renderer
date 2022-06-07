@@ -1,6 +1,4 @@
-add_subdirectory(Common)
-add_subdirectory(Vulkan)
-add_subdirectory(OpenGL)
+add_subdirectory(Rendering)
 
 set(R1PublicHeaders
     ${PROJECT_SOURCE_DIR}/include/R1/R1Types.h
@@ -20,22 +18,30 @@ add_library(R1PrivateInterface INTERFACE
 target_include_directories(R1PrivateInterface 
     INTERFACE ${PROJECT_SOURCE_DIR}/include/R1
 )
-target_compile_definitions(R1PrivateInterface
-    INTERFACE R1_DEBUG=1
-)
 
 add_library(R1
+    Context.cpp
     R1.cpp
     Scene.cpp
+    Swapchain.cpp
 )
 target_link_libraries(R1
     PUBLIC R1PublicInterface
-    PRIVATE R1PrivateInterface
+    PRIVATE R1PrivateInterface R1Rendering
 )
 
-target_link_libraries(R1
-    PRIVATE R1VKAPI
+add_library(R1Xlib
+    R1Xlib.cpp
 )
-target_compile_definitions(R1
-    PRIVATE R1_USE_VULKAN
+target_link_libraries(R1Xlib
+    PUBLIC R1 R1PublicInterface
+    PRIVATE R1PrivateInterface R1RenderingXlib
+)
+
+add_library(R1XCB
+    R1XCB.cpp
+)
+target_link_libraries(R1XCB
+    PUBLIC R1 R1PublicInterface
+    PRIVATE R1PrivateInterface R1RenderingXCB
 )

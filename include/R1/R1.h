@@ -3,28 +3,27 @@
 extern "C" {
 #endif
 #include "R1Types.h"
-#include "R1PresentModes.h"
 
-#include <X11/Xlib.h>
-#include <xcb/xcb.h>
+#include <stddef.h>
 
-R1Instance*     R1_CreateXlibInstance(Display* dpy, Window win);
-R1Instance*     R1_CreateXCBInstance(xcb_connection_t* c, xcb_window_t win);
 void            R1_DestroyInstance(R1Instance* instance);
 
-size_t          R1_GetInstanceDeviceCount(const R1Instance* instance);
-size_t          R1_GetInstanceDevices(const R1Instance* instance, R1DeviceID* devs, size_t cnt);
-const char*     R1_GetInstanceDeviceName(const R1Instance* instance, R1DeviceID dev);
+size_t          R1_GetDeviceCount(const R1Instance* instance);
+R1Device*       R1_GetDevice(R1Instance* instance, size_t idx);
+const char*     R1_GetDeviceName(R1Device* device);
 
-R1Context*      R1_CreateContext(R1Instance* instance, R1DeviceID dev);
+R1Context*      R1_CreateContext(R1Device* device);
 void            R1_DestroyContext(R1Context* ctx);
-size_t          R1_GetSwapchainPresentModeCount(const R1Context* ctx);
-size_t          R1_GetSwapchainPresentModes(const R1Context* ctx, R1PresentMode* pmodes, size_t cnt);
-R1Swapchain*    R1_CreateContextSwapchain(R1Context* ctx, R1SwapchainSizeCallback size_cb, void* usrptr, R1PresentMode pmode);
+
+// TODO: add queries for surface properties
+void            R1_DestroySurface(R1Surface* surface);
+
+R1Swapchain*    R1_CreateSwapchain(R1Context* ctx, R1Surface* surface);
+void            R1_DestroySwapchain(R1Swapchain* swapchain);
 
 R1Scene*        R1_CreateScene(R1Context* cxt);
 void            R1_DestroyScene(R1Scene* scene);
-void            R1_SceneDraw(R1Scene* scene);
+void            R1_SceneDraw(R1Scene* scene, R1Swapchain* swapchain);
 
 #ifdef __cplusplus
 }

@@ -1,4 +1,5 @@
 #include "R1/R1.h"
+#include "R1/R1Xlib.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_syswm.h>
@@ -14,8 +15,23 @@ R1Instance* createX11Instance(SDL_Window* window) {
     }
 
     auto dpy = info.info.x11.display;
+    return R1_CreateInstanceXlib(dpy, 0);
+}
+
+R1Surface* createX11Surface(R1Instance* instance, SDL_Window* window) {
+    SDL_SysWMinfo info;
+    SDL_VERSION(&info.version);
+    SDL_GetWindowWMInfo(window, &info);
+    if (info.subsystem != SDL_SYSWM_X11) {
+        return nullptr;
+    }
+
+    auto dpy = info.info.x11.display;
     auto win = info.info.x11.window;
-    return R1_CreateXlibInstance(dpy, win);
+    return R1_CreateSurfaceXlib(
+        instance, dpy, win,
+        reinterpret_cast<R1SurfaceSizeCallback>(SDL_GetWindowSize),
+        window);
 }
 
 int main() {
@@ -26,25 +42,38 @@ int main() {
         640, 480,
         SDL_WINDOW_RESIZABLE
     );
-    auto get_window_size = [] (int32_t* w, int32_t* h, void* usrptr) {
-        auto window = reinterpret_cast<SDL_Window*>(usrptr);
-        SDL_GetWindowSize(window, w, h);
-    };
 
-    auto i = createX11Instance(window);
-    if (!i) {
+    auto instance = createX11Instance(window);
+    if (!instance) {
         std::cerr << "Failed to create X11 renderer instance\n";
         return -1;
     }
-    R1DeviceID dev;
-    if (!R1_GetInstanceDevices(i, &dev, 1)) {
+    if (!R1_GetDeviceCount(instance)) {
+        std::cerr << "Failed to create renderer context: no devices\n";
+        return -1;
+    }
+    auto dev = R1_GetDevice(instance, 0);
+    std::cout << "Running on " << R1_GetDeviceName(dev) << "\n";
+    auto ctx = R1_CreateContext(dev);
+    if (!ctx) {
         std::cerr << "Failed to create renderer context\n";
         return -1;
     }
-    std::cout << "Running on " << R1_GetInstanceDeviceName(i, dev) << "\n";
-    auto c = R1_CreateContext(i, dev);
-             R1_CreateContextSwapchain(c, get_window_size, window, R1_PRESENT_MODE_VSYNC);
-    auto s = R1_CreateScene(c);
+    auto surf = createX11Surface(instance, window);
+    if (!surf) {
+        std::cerr << "Failed to create X11 surface\n";
+        return -1;
+    }
+#if 0
+    auto swc = R1_CreateSwapchain(ctx, surf);
+    if (!swc) {
+        std::cerr << "Failed to create swapchain\n";
+    }
+    auto scene = R1_CreateScene(ctx);
+    if (!scene) {
+        std::cerr << "Failed to create scene\n";
+        return -1;
+    }
 
     bool quit = false;
     while (!quit) {
@@ -54,12 +83,15 @@ int main() {
                 quit = true;
             }
         }
-        R1_SceneDraw(s);
+        R1_SceneDraw(scene, swc);
     }
 
-    R1_DestroyScene(s);
-    R1_DestroyContext(c);
-    R1_DestroyInstance(i);
+    R1_DestroyScene(scene);
+    R1_DestroySwapchain(swc);
+#endif
+    R1_DestroySurface(surf);
+    R1_DestroyContext(ctx);
+    R1_DestroyInstance(instance);
 
     SDL_DestroyWindow(window);
     SDL_Quit();
