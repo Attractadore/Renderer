@@ -5,21 +5,16 @@
 #include <functional>
 
 namespace R1 {
-// TODO
-template<class D, typename... Args>
-concept DeleterInterface = true;
-
 namespace Detail {
 template<class D>
 struct RootHandleDeleter {
     template<class H>
-        requires DeleterInterface<D, H>
     void operator()(H handle) const noexcept {
         std::invoke(D::template DoDelete<H>, handle);
     }
 };
 
-template<class P, DeleterInterface D>
+template<class P, class D>
 class ChildHandleDeleter {
     P m_parent;
 
@@ -30,7 +25,6 @@ public:
     P get_parent() const noexcept { return m_parent; }
 
     template<class H>
-        requires DeleterInterface<D, P, H>
     void operator()(H handle) const noexcept {
         if (handle) {
             assert(m_parent);
@@ -40,7 +34,7 @@ public:
 };
 }
 
-template<class H, DeleterInterface<H> D>
+template<class H, class D>
 class RootHandle: Handle<H, Detail::RootHandleDeleter<D>> {
     using Deleter = Detail::RootHandleDeleter<D>;
     using Base = Handle<H, Deleter>;
@@ -55,7 +49,7 @@ public:
     using Base::operator bool;
 };
 
-template<class P, class H, DeleterInterface<P, H> D>
+template<class P, class H, class D>
 class ChildHandle: Handle<H, Detail::ChildHandleDeleter<P, D>> {
     using Deleter = Detail::ChildHandleDeleter<P, D>;
     using Base = Handle<H, Deleter>;

@@ -1,200 +1,102 @@
 #pragma once
-#include "Common/Handle.hpp"
-
-#include <cassert>
+#include "Common/RAII.hpp"
 
 #include "vk_mem_alloc.h"
 
 namespace R1::VK::Vk {
 namespace Detail {
-struct HandleDeleter {
-    void operator()(VkInstance instance) const {
-        vkDestroyInstance(instance, nullptr);
-    }
+template<class H>
+constexpr int DoRootDeleteF = 0;
 
-    void operator()(VkDevice dev) const {
-        vkDeviceWaitIdle(dev);
-        vkDestroyDevice(dev, nullptr);
-    }
-
-    void operator()(VmaAllocator alloc) const {
-        vmaDestroyAllocator(alloc);
+struct RootHandleDeleter {
+    template<class H>
+    static void DoDelete(H handle) noexcept {
+        DoRootDeleteF<H>(handle, nullptr);
     }
 };
 
-template<class ParentVulkanHandle>
-class WithParentHandleDeleter;
+template<class H>
+constexpr int DoInstanceDeleteF = 0;
 
-template<class VulkanHandle>
-struct InstanceDestroyFunction;
-
-template<class VulkanHandle>
-static constexpr auto InstanceDestroyFunctionV =
-    InstanceDestroyFunction<VulkanHandle>::function;
-
-template<>
-class WithParentHandleDeleter<VkInstance> {
-    VkInstance m_instance;
-
-public:
-    explicit WithParentHandleDeleter(VkInstance instance):
-        m_instance{instance} {
-        assert(m_instance);
-    }
-
-    VkInstance get_instance() const { return m_instance; }
-
-    template<class VulkanHandle>
-    void operator()(VulkanHandle handle) const {
-        InstanceDestroyFunctionV<VulkanHandle>(get_instance(), handle, nullptr);
+struct InstanceChildHandleDeleter {
+    template<class H>
+    static void DoDelete(VkInstance instance, H handle) noexcept {
+        DoInstanceDeleteF<H>(instance, handle, nullptr);
     }
 };
 
-template<class VulkanHandle>
-struct DeviceDestroyFunction;
+template<class H>
+constexpr int DoDeviceDeleteF = 0;
 
-template<class VulkanHandle>
-static constexpr auto DeviceDestroyFunctionV =
-    DeviceDestroyFunction<VulkanHandle>::function;
-
-template<>
-struct DeviceDestroyFunction<VkImage> {
-    static constexpr auto function = vkDestroyImage;
-};
-
-template<>
-struct DeviceDestroyFunction<VkSwapchainKHR> {
-    static constexpr auto function = vkDestroySwapchainKHR;
-};
-
-template<>
-class WithParentHandleDeleter<VkDevice> {
-    VkDevice m_device;
-
-public:
-    explicit WithParentHandleDeleter(VkDevice dev):
-        m_device{dev} {
-        assert(m_device);
-    }
-
-    VkDevice get_device() const { return m_device; }
-
-    template<class VulkanHandle>
-    void operator()(VulkanHandle handle) const {
-        DeviceDestroyFunctionV<VulkanHandle>(get_device(), handle, nullptr);
+struct DeviceChildHandleDeleter {
+    template<class H>
+    static void DoDelete(VkDevice device, H handle) noexcept {
+        DoDeviceDeleteF<H>(device, handle, nullptr);
     }
 };
 
-template<class VulkanHandle>
-struct AllocatorDestroyFunction;
+template<class H>
+constexpr int DoAllocatorDeleteF = 0;
 
-template<class VulkanHandle>
-static constexpr auto AllocatorDestroyFunctionV =
-    AllocatorDestroyFunction<VulkanHandle>::function;
-
-template<>
-struct AllocatorDestroyFunction<VmaAllocation> {
-    static constexpr auto function = vmaFreeMemory;
-};
-
-template<>
-class WithParentHandleDeleter<VmaAllocator> {
-    VmaAllocator m_allocator;
-
-public:
-    explicit WithParentHandleDeleter(VmaAllocator dev):
-        m_allocator{dev} {
-        assert(m_allocator);
-    }
-
-    VmaAllocator get_allocator() const { return m_allocator; }
-
-    template<class VulkanHandle>
-    void operator()(VulkanHandle handle) const {
-        AllocatorDestroyFunctionV<VulkanHandle>(m_allocator, handle);
+struct AllocatorChildHandleDeleter {
+    template<class H>
+    static void DoDelete(VmaAllocator allocator, H handle) noexcept {
+        DoAllocatorDeleteF<H>(allocator, handle);
     }
 };
 
-template<class VulkanHandle>
-using ParentHandleBase =
-    Handle<VulkanHandle, Detail::HandleDeleter>;
+template<class H>
+using RootHandle = RootHandle<H, RootHandleDeleter>;
 
-template<class VulkanHandle>
-class ParentHandle: ParentHandleBase<VulkanHandle> {
-    using Base = ParentHandleBase<VulkanHandle>;
+template<class H>
+using InstanceHandleBase = ChildHandle<VkInstance, H, InstanceChildHandleDeleter>;
+template<class H>
+struct InstanceHandle: InstanceHandleBase<H>{
+    using InstanceHandleBase<H>::InstanceHandleBase;
 
-public:
-    explicit ParentHandle(VulkanHandle handle):
-        Base{handle} {}
-
-    using Base::get;
-    using Base::operator bool;
-};
-
-template<class ParentVulkanHandle, class VulkanHandle>
-using WithParentHandleBase =
-    Handle<VulkanHandle, Detail::WithParentHandleDeleter<ParentVulkanHandle>>;
-
-template<class ParentVulkanHandle, class VulkanHandle>
-class WithParentHandle: WithParentHandleBase<ParentVulkanHandle, VulkanHandle> {
-    using Base = WithParentHandleBase<ParentVulkanHandle, VulkanHandle>;
-
-public:
-    WithParentHandle(ParentVulkanHandle phandle, VulkanHandle handle):
-        Base{handle, Detail::WithParentHandleDeleter<ParentVulkanHandle>{phandle}} {}
-
-    using Base::get;
-    using Base::reset;
-    using Base::release;
-    using Base::operator bool;
-
-protected:
-    using Base::get_deleter;
-};
-
-template<class VulkanHandle>
-class WithInstanceHandle: public WithParentHandle<VkInstance, VulkanHandle> {
-    using Base = WithParentHandle<VkInstance, VulkanHandle>;
-
-public:
-    using Base::Base;
-
-    VkInstance get_instance() const {
-        return this->get_deleter().get_instance();
+    VkInstance get_instance() const noexcept {
+        return this->get_deleter().get_handle();
     }
 };
 
-template<class VulkanHandle>
-class WithDeviceHandle: public WithParentHandle<VkDevice, VulkanHandle> {
-    using Base = WithParentHandle<VkDevice, VulkanHandle>;
+template<class H>
+using DeviceHandleBase = ChildHandle<VkDevice, H, DeviceChildHandleDeleter>;
+template<class H>
+struct DeviceHandle: ChildHandle<VkDevice, H, DeviceChildHandleDeleter> {
+    using ChildHandle<VkDevice, H, DeviceChildHandleDeleter>::ChildHandle;
 
-public:
-    using Base::Base;
-
-    VkDevice get_device() const {
-        return this->get_deleter().get_device();
+    VkDevice get_device() const noexcept {
+        return this->get_deleter().get_handle();
     }
 };
 
-template<class VulkanHandle>
-class WithAllocatorHandle: public WithParentHandle<VmaAllocator, VulkanHandle> {
-    using Base = WithParentHandle<VmaAllocator, VulkanHandle>;
+template<class H>
+using AllocatorHandleBase = ChildHandle<VmaAllocator, H, AllocatorChildHandleDeleter>;
+template<class H>
+struct AllocatorHandle: ChildHandle<VmaAllocator, H, AllocatorChildHandleDeleter> {
+    using ChildHandle<VmaAllocator, H, AllocatorChildHandleDeleter>::ChildHandle;
 
-public:
-    using Base::Base;
-
-    VmaAllocator get_allocator() const {
-        return this->get_deleter().get_allocator();
+    VmaAllocator get_allocator() const noexcept {
+        return this->get_deleter().get_handle();
     }
 };
 }
 
-using Instance      = Detail::ParentHandle<VkInstance>;
-using Device        = Detail::ParentHandle<VkDevice>;
-using Allocator     = Detail::ParentHandle<VmaAllocator>;
+template<> inline constexpr auto Detail::DoRootDeleteF<VkInstance>          = vkDestroyInstance;
+template<> inline constexpr auto Detail::DoRootDeleteF<VkDevice>            = vkDestroyDevice;
+template<> inline constexpr auto Detail::DoRootDeleteF<VmaAllocator>        = [] (VmaAllocator alloc, auto) { return vmaDestroyAllocator(alloc); };
+using Instance      = Detail::RootHandle<VkInstance>;
+using Device        = Detail::RootHandle<VkDevice>;
+using Allocator     = Detail::RootHandle<VmaAllocator>;
 
-using Image         = Detail::WithDeviceHandle<VkImage>;
-using Swapchain     = Detail::WithDeviceHandle<VkSwapchainKHR>;
+template<> inline constexpr auto Detail::DoInstanceDeleteF<VkSurfaceKHR>    = vkDestroySurfaceKHR;
+using Surface       = Detail::InstanceHandle<VkSurfaceKHR>;
 
-using Allocation    = Detail::WithAllocatorHandle<VmaAllocation>;
+template<> inline constexpr auto Detail::DoDeviceDeleteF<VkImage>           = vkDestroyImage;
+template<> inline constexpr auto Detail::DoDeviceDeleteF<VkSwapchainKHR>    = vkDestroySwapchainKHR;
+using Image         = Detail::DeviceHandle<VkImage>;
+using Swapchain     = Detail::DeviceHandle<VkSwapchainKHR>;
+
+template<> inline constexpr auto Detail::DoAllocatorDeleteF<VmaAllocation>  = vmaFreeMemory;
+using Allocation    = Detail::AllocatorHandle<VmaAllocation>;
 }
