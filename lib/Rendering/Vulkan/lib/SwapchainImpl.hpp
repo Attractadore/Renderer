@@ -5,7 +5,6 @@
 
 namespace R1::VK {
 struct SwapchainImpl {
-    VkDevice                device;
     Vk::Swapchain           handle;
     std::vector<ImageImpl>  images;
     Queue                   present_queue;

@@ -55,21 +55,22 @@ void InitSwapchain(
     Swapchain swc,
     VkSwapchainKHR old_swapchain = VK_NULL_HANDLE
 ) {
+    auto dev = swc->handle.get_device();
     auto [width, height] = swc->surface_size_cb();
     swc->description.width = width;
     swc->description.height = height;
     swc->handle = CreateSwapchainHandle(
-        swc->device, swc->description, old_swapchain);
+        dev, swc->description, old_swapchain);
     if (!swc->handle) {
         throw std::runtime_error{"Vulkan: Failed to create swapchain"};
     }
 
     auto images = Enumerate<VkImage>(
-        swc->device, swc->handle.get(), vkGetSwapchainImagesKHR);
+        dev, swc->handle.get(), vkGetSwapchainImagesKHR);
     auto v = std::views::transform(images,
         [&](VkImage image) {
             return ImageImpl {
-                .image{swc->device, image},
+                .image{dev, image},
                 .allocation{nullptr, nullptr},
             };
         });
@@ -93,7 +94,6 @@ Swapchain CreateSwapchain(
 ) {
     auto dev = ctx->device.get();
     auto swc = std::make_unique<SwapchainImpl>(SwapchainImpl{
-        .device = dev,
         .handle{dev, nullptr},
         .present_queue = config.present_queue,
         .surface_size_cb = std::move(size_cb),
@@ -145,7 +145,7 @@ unsigned AcquireImage(
     while (true) {
         uint32_t image_idx = 0;
         auto r = vkAcquireNextImageKHR(
-            swapchain->device, swapchain->handle.get(),
+            swapchain->handle.get_device(), swapchain->handle.get(),
             timeout.count(),
             signal_semaphore, signal_fence,
             &image_idx); 
