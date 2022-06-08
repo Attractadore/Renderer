@@ -11,6 +11,21 @@ enum class PresentMode;
 enum class CompositeAlpha;
 enum class Transform;
 
+struct SurfaceFormat {
+    Format format;
+    ColorSpace color_space;
+};
+
+struct SurfaceDescription {
+    std::vector<Transform>      supported_transforms;
+    std::vector<CompositeAlpha> supported_composite_alphas;
+    std::vector<SurfaceFormat>  supported_formats;
+    std::vector<PresentMode>    supported_present_modes;
+    unsigned                    min_image_count;
+    unsigned                    max_image_count;
+    ImageUsage                  supported_image_usage;
+};
+
 struct SwapchainCapabilities {
     bool image_mutable_format: 1;
     bool clipped: 1;

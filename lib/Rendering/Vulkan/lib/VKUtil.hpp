@@ -154,4 +154,17 @@ std::vector<T> Enumerate(F f) {
     }
     throw std::runtime_error{"Vulkan: failed to enumerate"};
 }
+
+template<typename E, typename F>
+std::vector<E> ExtractEnum(
+    F flags
+) {
+    std::vector<E> enums;
+    for (VkSurfaceTransformFlagsKHR i = 1; i; i <<= 1) {
+        if (flags & i) {
+            enums.push_back(static_cast<E>(i));
+        }
+    };
+    return enums;
+}
 }

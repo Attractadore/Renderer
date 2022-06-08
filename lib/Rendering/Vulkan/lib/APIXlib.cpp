@@ -1,5 +1,6 @@
 #include "APIXlib.hpp"
 #include "InstanceImpl.hpp"
+#include "SwapchainImpl.hpp"
 
 #include <vulkan/vulkan_xlib.h>
 
@@ -33,9 +34,12 @@ Surface CreateSurfaceXlib(
     VkSurfaceKHR surface = VK_NULL_HANDLE;
     vkCreateXlibSurfaceKHR(
         instance->instance.get(), &create_info, nullptr, &surface);
-    if (!surface) {
+    Vk::Surface handle{instance->instance.get(), surface};
+    if (!handle) {
         throw std::runtime_error{"Vulkan: Failed to create Xlib surface"};
     }
-    return surface;
+    return std::make_unique<SurfaceImpl>(SurfaceImpl{
+        .handle = std::move(handle),
+    }).release();
 }
 }

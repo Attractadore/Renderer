@@ -14,6 +14,7 @@ constexpr VkImageCreateFlags ImageCapabilitiesToVK(
 constexpr VkImageUsageFlags  ImageUsageToVK(
     const ImageUsage& usage
 );
+constexpr ImageUsage ImageUsageFromVK(VkImageUsageFlags flags);
 constexpr VkImageAspectFlags ImageAspectsToVK(
     const ImageAspects& aspects
 );

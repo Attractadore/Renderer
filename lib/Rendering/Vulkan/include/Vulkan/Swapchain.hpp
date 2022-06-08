@@ -4,11 +4,15 @@
 #include "Queue.hpp"
 
 namespace R1::VK {
-using Surface = VkSurfaceKHR;
+struct SurfaceImpl;
+using Surface = SurfaceImpl*;
 struct SwapchainImpl;
 using Swapchain = SwapchainImpl*;
 
-void DestroySurface(Instance instance, Surface surface);
+void DestroySurface(Surface surface);
+
+const SurfaceDescription& GetSurfaceDescription(Surface surface, Device device);
+Transform GetSurfaceCurrentTransform(Surface surface, Device device);
 
 using SwapchainConfig = SwapchainConfigBase<Queue>;
 Swapchain CreateSwapchain(

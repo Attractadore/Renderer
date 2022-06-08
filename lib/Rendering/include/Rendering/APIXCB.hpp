@@ -19,8 +19,7 @@ inline Surface CreateSurface(
     xcb_window_t window,
     SurfaceSizeCallback size_cb
 ) {
-    HSurface surface{
-        instance, GAPI::CreateSurfaceXCB(instance, conn, window)};
+    HSurface surface{GAPI::CreateSurfaceXCB(instance, conn, window)};
     return Surface{std::move(surface), std::move(size_cb)};
 }
 }

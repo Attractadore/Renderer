@@ -1,5 +1,6 @@
 #include "APIXCB.hpp"
 #include "InstanceImpl.hpp"
+#include "SwapchainImpl.hpp"
 
 #include <vulkan/vulkan_xcb.h>
 
@@ -29,9 +30,12 @@ Surface CreateSurfaceXCB(
     VkSurfaceKHR surface = VK_NULL_HANDLE;
     vkCreateXcbSurfaceKHR(
         instance->instance.get(), &create_info, nullptr, &surface);
-    if (!surface) {
+    Vk::Surface handle{instance->instance.get(), surface};
+    if (!handle) {
         throw std::runtime_error{"Vulkan: Failed to create XCB surface"};
     }
-    return surface;
+    return std::make_unique<SurfaceImpl>(SurfaceImpl{
+        .handle = std::move(handle),
+    }).release();
 }
 }

@@ -39,11 +39,11 @@ struct InstanceHandle: ChildHandle<GAPI::Instance, H, InstanceChildHandleDeleter
 
 template<> inline constexpr auto Detail::DoRootDeleteF<GAPI::Instance>      = GAPI::DestroyInstance;
 template<> inline constexpr auto Detail::DoRootDeleteF<GAPI::Context>       = GAPI::DestroyContext;
+template<> inline constexpr auto Detail::DoRootDeleteF<GAPI::Surface>       = GAPI::DestroySurface;
 template<> inline constexpr auto Detail::DoRootDeleteF<GAPI::Swapchain>     = GAPI::DestroySwapchain;
 using HInstance     = Detail::RootHandle<GAPI::Instance>;
 using HContext      = Detail::RootHandle<GAPI::Context>;
+using HSurface      = Detail::RootHandle<GAPI::Surface>;
 using HSwapchain    = Detail::RootHandle<GAPI::Swapchain>;
 
-template<> inline constexpr auto Detail::DoInstanceDeleteF<GAPI::Surface>   = GAPI::DestroySurface;
-using HSurface      = Detail::InstanceHandle<GAPI::Surface>;
 }

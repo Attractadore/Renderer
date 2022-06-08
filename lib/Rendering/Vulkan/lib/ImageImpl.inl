@@ -27,6 +27,19 @@ constexpr inline VkImageUsageFlags ImageUsageToVK(
     return flags;
 }
 
+constexpr ImageUsage ImageUsageFromVK(VkImageUsageFlags flags) {
+    ImageUsage usg;
+    usg.transfer_src = flags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    usg.transfer_dst = flags & VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    usg.sampled = flags & VK_IMAGE_USAGE_SAMPLED_BIT;
+    usg.storage = flags & VK_IMAGE_USAGE_STORAGE_BIT;
+    usg.color_attachment = flags & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    usg.depth_attachment = flags & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    usg.stencil_attachment = flags & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    usg.input_attachment = flags & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+    return usg;
+}
+
 constexpr inline VkImageAspectFlags ImageAspectsToVK(
     const ImageAspects& aspects
 ) {

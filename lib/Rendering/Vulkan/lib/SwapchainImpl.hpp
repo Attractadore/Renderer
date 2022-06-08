@@ -4,6 +4,11 @@
 #include "VKRAII.hpp"
 
 namespace R1::VK {
+struct SurfaceImpl {
+    Vk::Surface                                     handle;
+    std::unordered_map<Device, SurfaceDescription>  descriptions;
+};
+
 struct SwapchainImpl {
     Vk::Swapchain           handle;
     std::vector<ImageImpl>  images;

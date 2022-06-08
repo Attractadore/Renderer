@@ -1,13 +1,74 @@
+#include "Common/Vector.hpp"
 #include "ContextImpl.hpp"
-#include "InstanceImpl.hpp"
+#include "DeviceImpl.hpp"
+#include "ImageImpl.hpp"
 #include "SwapchainImpl.hpp"
 #include "VKUtil.hpp"
 
-#include <ranges>
-
 namespace R1::VK {
-void DestroySurface(Instance instance, Surface surface) {
-    vkDestroySurfaceKHR(instance->instance.get(), surface, nullptr);
+void DestroySurface(Surface surface) {
+    delete surface;
+}
+
+namespace {
+SurfaceDescription FillSurfaceDescriptions(Surface surface, Device device) {
+    auto surf = surface->handle.get();
+    auto pdev = device->physical_device;
+
+    VkSurfaceCapabilitiesKHR caps;
+    auto r = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(pdev, surf, &caps);
+    if (r) {
+        throw std::runtime_error{
+            "Vulkan: Failed to get surface capabilities"};
+    }
+
+    auto formats = Enumerate<VkSurfaceFormatKHR>(
+        pdev, surf, vkGetPhysicalDeviceSurfaceFormatsKHR);
+    auto present_modes = Enumerate<VkPresentModeKHR>(
+        pdev, surf, vkGetPhysicalDeviceSurfacePresentModesKHR);
+
+    auto format_v = std::views::transform(formats,
+        [] (VkSurfaceFormatKHR sf) {
+            return SurfaceFormat {
+                .format = static_cast<Format>(sf.format),
+                .color_space = static_cast<ColorSpace>(sf.colorSpace),
+            };
+        });
+    auto present_mode_v = std::views::transform(present_modes,
+        [] (VkPresentModeKHR pm) { return static_cast<PresentMode>(pm); });
+
+    return {
+        .supported_transforms = ExtractEnum<Transform>(caps.supportedTransforms),
+        .supported_composite_alphas = ExtractEnum<CompositeAlpha>(caps.supportedCompositeAlpha),
+        .supported_formats = vec_from_range(format_v),
+        .supported_present_modes = vec_from_range(present_mode_v),
+        .min_image_count = caps.minImageCount,
+        .max_image_count = caps.maxImageCount,
+        .supported_image_usage = ImageUsageFromVK(caps.supportedUsageFlags),
+    };
+}
+}
+
+const SurfaceDescription& GetSurfaceDescription(Surface surface, Device device) {
+    auto& descs = surface->descriptions;
+    auto it = descs.find(device);
+    if (it == descs.end()) {
+        auto it = descs.emplace(
+            device,
+            FillSurfaceDescriptions(surface, device)).first;
+    };
+    return it->second;
+}
+
+Transform GetSurfaceCurrentTransform(Surface surface, Device device) {
+    VkSurfaceCapabilitiesKHR caps;
+    auto r = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+        device->physical_device, surface->handle.get(), &caps);
+    if (r) {
+        throw std::runtime_error{
+            "Vulkan: Failed to get surface capabilities"};
+    }
+    return static_cast<Transform>(caps.currentTransform);
 }
 
 namespace {
@@ -19,7 +80,7 @@ Vk::Swapchain CreateSwapchainHandle(
     VkSwapchainCreateInfoKHR create_info = {
         .sType = sType(create_info),
         .flags = SwapchainCapabilitiesToVK(desc.capabilities),
-        .surface = desc.surface,
+        .surface = desc.surface->handle.get(),
         .minImageCount = desc.image_count,
         .imageFormat = static_cast<VkFormat>(desc.format),
         .imageColorSpace = static_cast<VkColorSpaceKHR>(desc.color_space),
