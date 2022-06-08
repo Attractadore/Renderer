@@ -1,0 +1,44 @@
+#pragma once
+#include "GAPI.hpp"
+
+namespace R1::Rendering {
+namespace Detail {
+struct FormatTraits {
+    bool is_color: 1 = false;
+    bool is_srgb: 1 = false;
+};
+
+constexpr inline FormatTraits GetFormatTraits(Format fmt) {
+    using enum Format;
+    switch (fmt) {
+        case RGB8_UNORM:
+        case RGBA8_UNORM:
+        case BGR8_UNORM:
+        case BGRA8_UNORM: {
+            return {
+                .is_color = true,
+            };
+        }
+        case RGB8_SRGB:
+        case RGBA8_SRGB:
+        case BGR8_SRGB:
+        case BGRA8_SRGB: {
+            return {
+                .is_color = true,
+                .is_srgb = true,
+            };
+        }
+        default:
+            assert(!"Unknown format");
+    }
+}
+}
+
+constexpr inline bool IsColorFormat(Format fmt) {
+    return Detail::GetFormatTraits(fmt).is_color;
+}
+
+constexpr inline bool IsSRGBFormat(Format fmt) {
+    return Detail::GetFormatTraits(fmt).is_srgb;
+}
+}
