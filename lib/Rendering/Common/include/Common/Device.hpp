@@ -9,13 +9,17 @@ struct QueueCapabilities {
     bool graphics: 1;
     bool compute: 1;
     bool transfer: 1;
+
+    bool operator==(const QueueCapabilities&) const = default;
 };
 
 struct QueueFamily {
-    enum ID: unsigned;
+    enum ID: unsigned { Unknown = static_cast<unsigned>(-1) };
     ID id;
     QueueCapabilities capabilities;
     unsigned count;
+
+    bool operator==(const QueueFamily&) const = default;
 };
 
 struct DeviceDescription {

@@ -1,7 +1,5 @@
 #include "Instance.hpp"
 
-#include <algorithm>
-
 namespace R1::Rendering {
 const std::string& Device::GetName() const {
     return GetDescription().name;
@@ -9,6 +7,17 @@ const std::string& Device::GetName() const {
 
 const DeviceDescription& Device::GetDescription() const {
     return GAPI::GetDeviceDescription(m_device);
+}
+
+QueueFamily::ID Device::FindQueueFamilyWithCapabilities(
+    const QueueCapabilities& caps
+) const noexcept {
+    for (const auto& qf: GetDescription().queue_families) {
+        if (qf.capabilities == caps) {
+            return qf.id;
+        }
+    }
+    return QueueFamily::ID::Unknown;
 }
 
 Instance::Instance(HInstance instance):

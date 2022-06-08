@@ -4,6 +4,13 @@
 #include "Queue.hpp"
 
 namespace R1 {
+enum class CompositeAlpha {
+    Opaque          = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+    PreMultiplied   = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
+    PostMultiplied  = VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
+    Inherit         = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
+};
+
 enum class PresentMode {
     Immediate   = VK_PRESENT_MODE_IMMEDIATE_KHR,
     Mailbox     = VK_PRESENT_MODE_MAILBOX_KHR,

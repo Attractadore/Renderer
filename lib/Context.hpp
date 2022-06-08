@@ -6,7 +6,8 @@ class Context {
     Rendering::Context m_context;
 
 public:
-    explicit Context(Rendering::Device& device);
+    explicit Context(Rendering::Device& device):
+        m_context{device} {}
 
     Rendering::Context& get() noexcept { return m_context; }
 };

@@ -40,7 +40,7 @@ class RootHandle: Handle<H, Detail::RootHandleDeleter<D>> {
     using Base = Handle<H, Deleter>;
 
 public:
-    explicit RootHandle(H handle):
+    explicit RootHandle(H handle = nullptr):
         Base{handle} {}
 
     using Base::get;
@@ -55,7 +55,7 @@ class ChildHandle: Handle<H, Detail::ChildHandleDeleter<P, D>> {
     using Base = Handle<H, Deleter>;
 
 public:
-    ChildHandle(P parent, H handle):
+    ChildHandle(P parent = nullptr, H handle = nullptr):
         Base{handle, Deleter{parent}} {}
 
     using Base::get;

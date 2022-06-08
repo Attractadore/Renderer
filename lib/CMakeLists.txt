@@ -20,7 +20,6 @@ target_include_directories(R1PrivateInterface
 )
 
 add_library(R1
-    Context.cpp
     R1.cpp
     Scene.cpp
     Swapchain.cpp

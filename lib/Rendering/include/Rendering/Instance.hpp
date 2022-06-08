@@ -14,6 +14,25 @@ public:
     const std::string& GetName() const;
     const DeviceDescription& GetDescription() const;
 
+    QueueFamily::ID FindQueueFamilyWithCapabilities(
+        const QueueCapabilities& caps
+    ) const noexcept;
+    
+    QueueFamily::ID FindGraphicsQueueFamily() const noexcept {
+        return FindQueueFamilyWithCapabilities(
+            { .graphics = true, .compute = true, .transfer = true });
+    }
+    
+    QueueFamily::ID FindComputeQueueFamily() const noexcept {
+        return FindQueueFamilyWithCapabilities(
+            { .graphics = false, .compute = true, .transfer = true });
+    }
+    
+    QueueFamily::ID FindTransferQueueFamily() const noexcept {
+        return FindQueueFamilyWithCapabilities(
+            { .graphics = false, .compute = false, .transfer = true });
+    }
+
     GAPI::Device get() noexcept { return m_device; }
 };
 

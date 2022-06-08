@@ -11,6 +11,7 @@ target_include_directories(R1Rendering_PrivateInterface
 add_library(R1Rendering
     Instance.cpp
     Context.cpp
+    Swapchain.cpp
 )
 target_link_libraries(R1Rendering
     PUBLIC R1Rendering_PublicInterface R1_VK
