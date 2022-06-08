@@ -9,12 +9,22 @@ struct SurfaceImpl {
     std::unordered_map<Device, SurfaceDescription>  descriptions;
 };
 
+struct SwapchainImageImpl: ImageImpl {
+    SwapchainImageImpl(ImageImpl img):
+        ImageImpl{std::move(img)} {}
+    SwapchainImageImpl(SwapchainImageImpl&& other) = default;
+    SwapchainImageImpl& operator=(SwapchainImageImpl&& other) = default;
+    ~SwapchainImageImpl() {
+        (void)image.release();
+    }
+};
+
 struct SwapchainImpl {
-    Vk::Swapchain           handle;
-    std::vector<ImageImpl>  images;
-    Queue                   present_queue;
-    SurfaceSizeCallback     surface_size_cb;
-    SwapchainDescription    description;
+    Vk::Swapchain                   handle;
+    std::vector<SwapchainImageImpl> images;
+    Queue                           present_queue;
+    SurfaceSizeCallback             surface_size_cb;
+    SwapchainDescription            description;
 };
 
 constexpr VkSwapchainCreateFlagsKHR SwapchainCapabilitiesToVK(

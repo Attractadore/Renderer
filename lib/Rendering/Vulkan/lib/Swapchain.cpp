@@ -53,7 +53,7 @@ const SurfaceDescription& GetSurfaceDescription(Surface surface, Device device) 
     auto& descs = surface->descriptions;
     auto it = descs.find(device);
     if (it == descs.end()) {
-        auto it = descs.emplace(
+        it = descs.emplace(
             device,
             FillSurfaceDescriptions(surface, device)).first;
     };
