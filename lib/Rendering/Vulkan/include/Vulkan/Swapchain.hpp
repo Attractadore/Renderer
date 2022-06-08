@@ -3,6 +3,15 @@
 #include "Instance.hpp"
 #include "Queue.hpp"
 
+namespace R1 {
+enum class PresentMode {
+    Immediate   = VK_PRESENT_MODE_IMMEDIATE_KHR,
+    Mailbox     = VK_PRESENT_MODE_MAILBOX_KHR,
+    FIFO        = VK_PRESENT_MODE_FIFO_KHR,
+    FIFORelaxed = VK_PRESENT_MODE_FIFO_RELAXED_KHR,
+};
+}
+
 namespace R1::VK {
 struct SurfaceImpl;
 using Surface = SurfaceImpl*;
