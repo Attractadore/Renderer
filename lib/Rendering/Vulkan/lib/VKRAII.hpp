@@ -55,29 +55,29 @@ struct InstanceHandle: InstanceHandleBase<H>{
     using InstanceHandleBase<H>::InstanceHandleBase;
 
     VkInstance get_instance() const noexcept {
-        return this->get_deleter().get_handle();
+        return this->get_deleter().get_parent();
     }
 };
 
 template<class H>
 using DeviceHandleBase = ChildHandle<VkDevice, H, DeviceChildHandleDeleter>;
 template<class H>
-struct DeviceHandle: ChildHandle<VkDevice, H, DeviceChildHandleDeleter> {
-    using ChildHandle<VkDevice, H, DeviceChildHandleDeleter>::ChildHandle;
+struct DeviceHandle: DeviceHandleBase<H> {
+    using DeviceHandleBase<H>::DeviceHandleBase;
 
     VkDevice get_device() const noexcept {
-        return this->get_deleter().get_handle();
+        return this->get_deleter().get_parent();
     }
 };
 
 template<class H>
 using AllocatorHandleBase = ChildHandle<VmaAllocator, H, AllocatorChildHandleDeleter>;
 template<class H>
-struct AllocatorHandle: ChildHandle<VmaAllocator, H, AllocatorChildHandleDeleter> {
-    using ChildHandle<VmaAllocator, H, AllocatorChildHandleDeleter>::ChildHandle;
+struct AllocatorHandle: AllocatorHandleBase<H> {
+    using AllocatorHandleBase<H>::AllocatorHandleBase;
 
     VmaAllocator get_allocator() const noexcept {
-        return this->get_deleter().get_handle();
+        return this->get_deleter().get_parent();
     }
 };
 }
