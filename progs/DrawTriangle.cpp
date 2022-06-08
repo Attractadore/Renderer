@@ -64,11 +64,11 @@ int main() {
         std::cerr << "Failed to create X11 surface\n";
         return -1;
     }
-#if 0
     auto swc = R1_CreateSwapchain(ctx, surf);
     if (!swc) {
         std::cerr << "Failed to create swapchain\n";
     }
+#if 0
     auto scene = R1_CreateScene(ctx);
     if (!scene) {
         std::cerr << "Failed to create scene\n";
@@ -87,8 +87,8 @@ int main() {
     }
 
     R1_DestroyScene(scene);
-    R1_DestroySwapchain(swc);
 #endif
+    R1_DestroySwapchain(swc);
     R1_DestroySurface(surf);
     R1_DestroyContext(ctx);
     R1_DestroyInstance(instance);
