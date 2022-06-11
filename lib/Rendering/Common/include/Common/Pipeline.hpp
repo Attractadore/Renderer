@@ -25,7 +25,7 @@ enum class BlendOp;
 template<class ShaderModuleT>
 struct ShaderStageInfoBase {
     ShaderModuleT       module;
-    std::string_view    entry_point = "main";
+    std::string_view    entry_point;
 };
 
 struct VertexInputBindingDescription {

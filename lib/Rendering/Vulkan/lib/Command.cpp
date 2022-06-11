@@ -142,6 +142,7 @@ void CmdBeginRendering(CommandBuffer cmd_buffer, const RenderingConfig& config) 
         .sType = sType(rendering_info),
         .flags = RenderingContinuationToVK(config.continuation),
         .renderArea = Rect2DToVK(config.render_area),
+        .layerCount = 1,
         .colorAttachmentCount =
             static_cast<uint32_t>(color_attachments.size()),
         .pColorAttachments = color_attachments.data(),

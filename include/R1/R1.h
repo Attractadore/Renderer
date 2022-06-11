@@ -23,7 +23,7 @@ void            R1_DestroySwapchain(R1Swapchain* swapchain);
 
 R1Scene*        R1_CreateScene(R1Context* cxt);
 void            R1_DestroyScene(R1Scene* scene);
-void            R1_SceneDraw(R1Scene* scene, R1Swapchain* swapchain);
+void            R1_DrawScene(R1Scene* scene, R1Swapchain* swapchain);
 
 #ifdef __cplusplus
 }

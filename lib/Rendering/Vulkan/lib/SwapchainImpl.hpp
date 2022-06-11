@@ -12,8 +12,14 @@ struct SurfaceImpl {
 struct SwapchainImageImpl: ImageImpl {
     SwapchainImageImpl(ImageImpl img):
         ImageImpl{std::move(img)} {}
+    SwapchainImageImpl(const SwapchainImageImpl&) = delete;
     SwapchainImageImpl(SwapchainImageImpl&& other) = default;
-    SwapchainImageImpl& operator=(SwapchainImageImpl&& other) = default;
+    SwapchainImageImpl& operator=(const SwapchainImageImpl&) = delete;
+    SwapchainImageImpl& operator=(SwapchainImageImpl&& other) {
+        (void)image.release();
+        ImageImpl::operator=(std::move(other));
+        return *this;
+    }
     ~SwapchainImageImpl() {
         (void)image.release();
     }

@@ -23,6 +23,10 @@ ShaderModule CreateShaderModule(Context ctx, const ShaderModuleConfig& config) {
     return module;
 }
 
+void DestroyShaderModule(Context ctx, ShaderModule module) {
+    vkDestroyShaderModule(ctx->device.get(), module, nullptr);
+}
+
 PipelineLayout CreatePipelineLayout(Context ctx, const PipelineLayoutConfig& config) {
     VkPipelineLayoutCreateInfo create_info = {
         .sType = sType(create_info),
@@ -33,6 +37,10 @@ PipelineLayout CreatePipelineLayout(Context ctx, const PipelineLayoutConfig& con
         throw std::runtime_error{"Vulkan: Failed to create pipeline layout\n"};
     }
     return layout;
+}
+
+void DestroyPipelineLayout(Context ctx, PipelineLayout layout) {
+    vkDestroyPipelineLayout(ctx->device.get(), layout, nullptr);
 }
 
 namespace {
@@ -208,7 +216,7 @@ GPC& GPC::SetRasterizationState(
         .minSampleShading = mi.sample_shading.min,
         // This must be updated in FinishAll
         .pSampleMask =
-            reinterpret_cast<const uint32_t*>(&cfg.sample_mask),
+            reinterpret_cast<const uint32_t*>(cfg.sample_mask),
         .alphaToCoverageEnable = mi.alpha_to_coverage,
         .alphaToOneEnable = mi.alpha_to_one,
     };

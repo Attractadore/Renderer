@@ -47,4 +47,16 @@ R1Swapchain* R1_CreateSwapchain(R1Context* ctx, R1Surface* surf) {
 void R1_DestroySwapchain(R1Swapchain* swapchain) {
     delete swapchain;
 }
+
+R1Scene* R1_CreateScene(R1Context* ctx) {
+    return new R1Scene{*ctx};
+}
+
+void R1_DrawScene(R1Scene* scene, R1Swapchain* swapchain) {
+    scene->Draw(*swapchain);
+}
+
+void R1_DestroyScene(R1Scene* scene) {
+    delete scene;
+}
 }

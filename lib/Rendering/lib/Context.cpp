@@ -58,18 +58,18 @@ Context::Context(Device& device):
     m_context{CreateContext(device)}
 {
     using QueueFamily::ID::Unknown;
-    auto graphics_queue_family = device.FindGraphicsQueueFamily();
-    auto compute_queue_family = device.FindComputeQueueFamily();
-    if (compute_queue_family == Unknown) {
-        compute_queue_family = graphics_queue_family;
+    m_graphics_queue_family = device.FindGraphicsQueueFamily();
+    m_compute_queue_family = device.FindComputeQueueFamily();
+    if (m_compute_queue_family == Unknown) {
+        m_compute_queue_family = m_graphics_queue_family;
     }
-    auto transfer_queue_family = device.FindTransferQueueFamily();
-    if (transfer_queue_family == Unknown) {
-        transfer_queue_family = graphics_queue_family;
+    m_transfer_queue_family = device.FindTransferQueueFamily();
+    if (m_transfer_queue_family == Unknown) {
+        m_transfer_queue_family = m_graphics_queue_family;
     }
 
-    m_graphics_queue = GAPI::GetQueue(m_context.get(), graphics_queue_family, 0);
-    m_compute_queue = GAPI::GetQueue(m_context.get(), compute_queue_family, 0);
-    m_transfer_queue = GAPI::GetQueue(m_context.get(), transfer_queue_family, 0);
+    m_graphics_queue = GAPI::GetQueue(m_context.get(), m_graphics_queue_family, 0);
+    m_compute_queue = GAPI::GetQueue(m_context.get(), m_compute_queue_family, 0);
+    m_transfer_queue = GAPI::GetQueue(m_context.get(), m_transfer_queue_family, 0);
 }
 }

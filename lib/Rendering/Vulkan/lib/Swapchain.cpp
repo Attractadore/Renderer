@@ -130,10 +130,10 @@ void InitSwapchain(
         dev, swc->handle.get(), vkGetSwapchainImagesKHR);
     auto v = std::views::transform(images,
         [&](VkImage image) {
-            return ImageImpl {
+            return SwapchainImageImpl{ImageImpl{
                 .image{dev, image},
                 .allocation{nullptr, nullptr},
-            };
+            }};
         });
     swc->images.assign(v.begin(), v.end());
     swc->description.image_count = swc->images.size();

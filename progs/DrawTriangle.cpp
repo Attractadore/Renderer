@@ -40,7 +40,7 @@ int main() {
         "Triangle", 
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
         640, 480,
-        SDL_WINDOW_RESIZABLE
+        0
     );
 
     auto instance = createX11Instance(window);
@@ -68,7 +68,6 @@ int main() {
     if (!swc) {
         std::cerr << "Failed to create swapchain\n";
     }
-#if 0
     auto scene = R1_CreateScene(ctx);
     if (!scene) {
         std::cerr << "Failed to create scene\n";
@@ -83,11 +82,10 @@ int main() {
                 quit = true;
             }
         }
-        R1_SceneDraw(scene, swc);
+        R1_DrawScene(scene, swc);
     }
 
     R1_DestroyScene(scene);
-#endif
     R1_DestroySwapchain(swc);
     R1_DestroySurface(surf);
     R1_DestroyContext(ctx);
