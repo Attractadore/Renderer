@@ -30,7 +30,9 @@ R1Surface* createX11Surface(R1Instance* instance, SDL_Window* window) {
     auto win = info.info.x11.window;
     return R1_CreateSurfaceXlib(
         instance, dpy, win,
-        reinterpret_cast<R1SurfaceSizeCallback>(SDL_GetWindowSize),
+        [] (void* usrptr, int* w, int* h) {
+            SDL_GetWindowSize(reinterpret_cast<SDL_Window*>(usrptr), w, h);
+        },
         window);
 }
 
@@ -40,7 +42,7 @@ int main() {
         "Triangle", 
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
         640, 480,
-        0
+        SDL_WINDOW_RESIZABLE
     );
 
     auto instance = createX11Instance(window);
@@ -68,7 +70,7 @@ int main() {
     if (!swc) {
         std::cerr << "Failed to create swapchain\n";
     }
-    auto scene = R1_CreateScene(ctx);
+    auto scene = R1_CreateScene(ctx, swc);
     if (!scene) {
         std::cerr << "Failed to create scene\n";
         return -1;
@@ -82,7 +84,7 @@ int main() {
                 quit = true;
             }
         }
-        R1_DrawScene(scene, swc);
+        R1_DrawScene(scene);
     }
 
     R1_DestroyScene(scene);

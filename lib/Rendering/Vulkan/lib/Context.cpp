@@ -79,6 +79,7 @@ Context CreateContext(Device parent, const ContextConfig& config) {
     }
     auto ctx = std::make_unique<ContextImpl>(ContextImpl{
         .device = std::move(dev),
+        .adapter = parent->physical_device,
         .allocator = std::move(alloc),
     });
     return ctx.release();

@@ -48,12 +48,12 @@ void R1_DestroySwapchain(R1Swapchain* swapchain) {
     delete swapchain;
 }
 
-R1Scene* R1_CreateScene(R1Context* ctx) {
-    return new R1Scene{*ctx};
+R1Scene* R1_CreateScene(R1Context* ctx, R1Swapchain* swapchain) {
+    return new R1Scene{*ctx, *swapchain};
 }
 
-void R1_DrawScene(R1Scene* scene, R1Swapchain* swapchain) {
-    scene->Draw(*swapchain);
+void R1_DrawScene(R1Scene* scene) {
+    scene->Draw();
 }
 
 void R1_DestroyScene(R1Scene* scene) {

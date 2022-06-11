@@ -3,29 +3,32 @@
 #include "DeviceImpl.hpp"
 #include "ImageImpl.hpp"
 #include "SwapchainImpl.hpp"
+#include "InstanceImpl.hpp"
 #include "VKUtil.hpp"
 
 namespace R1::VK {
-void DestroySurface(Surface surface) {
-    delete surface;
-}
-
 namespace {
-SurfaceDescription FillSurfaceDescriptions(Surface surface, Device device) {
-    auto surf = surface->handle.get();
-    auto pdev = device->physical_device;
-
+VkSurfaceCapabilitiesKHR GetVkSurfaceCapabilities(
+    VkPhysicalDevice device, VkSurfaceKHR surface
+) {
     VkSurfaceCapabilitiesKHR caps;
-    auto r = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(pdev, surf, &caps);
+    auto r = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+        device, surface, &caps); 
     if (r) {
         throw std::runtime_error{
             "Vulkan: Failed to get surface capabilities"};
     }
+    return caps;
+}
 
+SurfaceDescription FillSurfaceDescription(
+    VkPhysicalDevice device, VkSurfaceKHR surface
+) {
+    auto caps = GetVkSurfaceCapabilities(device, surface);
     auto formats = Enumerate<VkSurfaceFormatKHR>(
-        pdev, surf, vkGetPhysicalDeviceSurfaceFormatsKHR);
+        device, surface, vkGetPhysicalDeviceSurfaceFormatsKHR);
     auto present_modes = Enumerate<VkPresentModeKHR>(
-        pdev, surf, vkGetPhysicalDeviceSurfacePresentModesKHR);
+        device, surface, vkGetPhysicalDeviceSurfacePresentModesKHR);
 
     auto format_v = std::views::transform(formats,
         [] (VkSurfaceFormatKHR sf) {
@@ -38,90 +41,75 @@ SurfaceDescription FillSurfaceDescriptions(Surface surface, Device device) {
         [] (VkPresentModeKHR pm) { return static_cast<PresentMode>(pm); });
 
     return {
-        .supported_transforms = ExtractEnum<Transform>(caps.supportedTransforms),
-        .supported_composite_alphas = ExtractEnum<CompositeAlpha>(caps.supportedCompositeAlpha),
         .supported_formats = vec_from_range(format_v),
         .supported_present_modes = vec_from_range(present_mode_v),
+        .supported_composite_alphas =
+            ExtractEnum<CompositeAlpha>(caps.supportedCompositeAlpha),
         .min_image_count = caps.minImageCount,
         .max_image_count = caps.maxImageCount,
-        .supported_image_usage = ImageUsageFromVK(caps.supportedUsageFlags),
+        .supported_image_usage =
+            ImageUsageFromVK(caps.supportedUsageFlags),
     };
 }
+
+auto FillSurfaceDescriptions(
+    Instance instance, VkSurfaceKHR surface
+) {
+    auto v = std::views::transform(instance->devices,
+        [&] (DeviceImpl& device) {
+            return std::pair{
+                &device,
+                FillSurfaceDescription(device.physical_device, surface)};
+        });
+    return std::unordered_map{v.begin(), v.end()};
+}
+}
+
+Surface CreateSurfaceFromHandle(Instance instance, Vk::Surface handle) {
+    auto surf = handle.get();
+    return std::make_unique<SurfaceImpl>(SurfaceImpl{
+        .handle = std::move(handle),
+        .descriptions = FillSurfaceDescriptions(instance, surf),
+    }).release();
+}
+
+void DestroySurface(Surface surface) {
+    delete surface;
 }
 
 const SurfaceDescription& GetSurfaceDescription(Surface surface, Device device) {
-    auto& descs = surface->descriptions;
-    auto it = descs.find(device);
-    if (it == descs.end()) {
-        it = descs.emplace(
-            device,
-            FillSurfaceDescriptions(surface, device)).first;
-    };
-    return it->second;
-}
-
-Transform GetSurfaceCurrentTransform(Surface surface, Device device) {
-    VkSurfaceCapabilitiesKHR caps;
-    auto r = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-        device->physical_device, surface->handle.get(), &caps);
-    if (r) {
-        throw std::runtime_error{
-            "Vulkan: Failed to get surface capabilities"};
-    }
-    return static_cast<Transform>(caps.currentTransform);
+    return surface->descriptions[device];
 }
 
 namespace {
-Vk::Swapchain CreateSwapchainHandle(
-    VkDevice dev,
-    const SwapchainDescription& desc,
-    VkSwapchainKHR old_swapchain
-) {
-    VkSwapchainCreateInfoKHR create_info = {
-        .sType = sType(create_info),
-        .flags = SwapchainCapabilitiesToVK(desc.capabilities),
-        .surface = desc.surface->handle.get(),
-        .minImageCount = desc.image_count,
-        .imageFormat = static_cast<VkFormat>(desc.format),
-        .imageColorSpace = static_cast<VkColorSpaceKHR>(desc.color_space),
-        .imageExtent = {
-            .width = desc.width,
-            .height = desc.height,
-        },
-        .imageArrayLayers = 1,
-        .imageUsage = ImageUsageToVK(desc.image_usage),
-        .imageSharingMode = desc.image_sharing_queue_families.empty() ?
-            VK_SHARING_MODE_EXCLUSIVE: VK_SHARING_MODE_CONCURRENT,
-        .queueFamilyIndexCount =
-            static_cast<uint32_t>(desc.image_sharing_queue_families.size()),
-        .pQueueFamilyIndices = reinterpret_cast<const unsigned*>(
-            desc.image_sharing_queue_families.data()),
-        .preTransform =
-            static_cast<VkSurfaceTransformFlagBitsKHR>(desc.transform),
-        .compositeAlpha =
-            static_cast<VkCompositeAlphaFlagBitsKHR>(desc.composite_alpha),
-        .presentMode =
-            static_cast<VkPresentModeKHR>(desc.present_mode),
-        .clipped = desc.capabilities.clipped,
-        .oldSwapchain = old_swapchain,
-    };
-
-    VkSwapchainKHR swc = VK_NULL_HANDLE;
-    vkCreateSwapchainKHR(dev, &create_info, nullptr, &swc);
-
-    return Vk::Swapchain{dev, swc};
-}
-
 void InitSwapchain(
-    Swapchain swc,
-    VkSwapchainKHR old_swapchain = VK_NULL_HANDLE
+    Swapchain swc
 ) {
     auto dev = swc->handle.get_device();
-    auto [width, height] = swc->surface_size_cb();
-    swc->description.width = width;
-    swc->description.height = height;
-    swc->handle = CreateSwapchainHandle(
-        dev, swc->description, old_swapchain);
+    auto old_swapchain = swc->handle.get();
+    auto caps = GetVkSurfaceCapabilities(swc->adapter, swc->create_info.surface);
+
+    swc->create_info.sType = sType(swc->create_info);
+    swc->create_info.imageExtent = [&] {
+        constexpr auto special_value = 0xFFFFFFFF;
+        if (caps.currentExtent.width == special_value and
+            caps.currentExtent.height == special_value) {
+            auto [width, height] = swc->surface_size_cb();
+            return VkExtent2D{width, height};
+        } else {
+            return caps.currentExtent;
+        }
+    } ();
+    swc->create_info.preTransform = caps.currentTransform;
+    swc->create_info.oldSwapchain = old_swapchain;
+
+    swc->handle.reset(
+    [] (VkDevice device, const VkSwapchainCreateInfoKHR& create_info) {
+        VkSwapchainKHR swc = VK_NULL_HANDLE;
+        vkCreateSwapchainKHR(device, &create_info, nullptr, &swc);
+        return swc;
+    } (dev, swc->create_info));
+
     if (!swc->handle) {
         throw std::runtime_error{"Vulkan: Failed to create swapchain"};
     }
@@ -136,14 +124,6 @@ void InitSwapchain(
             }};
         });
     swc->images.assign(v.begin(), v.end());
-    swc->description.image_count = swc->images.size();
-}
-
-void UpdateSwapchain(Swapchain swc) {
-    auto old_handle = std::move(swc->handle);
-    InitSwapchain(swc, old_handle.get());
-    // Before destroying old swapchain
-    QueueWaitIdle(swc->present_queue);
 }
 }
 
@@ -154,24 +134,31 @@ Swapchain CreateSwapchain(
     const SwapchainConfig& config
 ) {
     auto dev = ctx->device.get();
+    auto pdev = ctx->adapter;
+    auto surf = surface->handle.get();
     auto swc = std::make_unique<SwapchainImpl>(SwapchainImpl{
+        .adapter = pdev,
         .handle{dev, nullptr},
         .present_queue = config.present_queue,
         .surface_size_cb = std::move(size_cb),
-        .description = {
-            .surface = surface,
-            .capabilities = config.capabilities,
-            .image_usage = config.image_usage,
-            .format = config.format,
-            .color_space = config.color_space,
-            .image_count = config.image_count,
-            .image_sharing_queue_families {
-                config.image_sharing_queue_families.begin(),
-                config.image_sharing_queue_families.end()
-            },
-            .transform = config.transform,
-            .composite_alpha = config.composite_alpha,
-            .present_mode = config.present_mode,
+        .create_info = {
+            .surface = surf,
+            .minImageCount = config.image_count,
+            .imageFormat = static_cast<VkFormat>(config.format),
+            .imageColorSpace = static_cast<VkColorSpaceKHR>(config.color_space),
+            .imageArrayLayers = 1,
+            .imageUsage = ImageUsageToVK(config.image_usage),
+            .imageSharingMode = config.image_sharing_queue_families.empty() ?
+                VK_SHARING_MODE_EXCLUSIVE: VK_SHARING_MODE_CONCURRENT,
+            .queueFamilyIndexCount =
+                static_cast<uint32_t>(config.image_sharing_queue_families.size()),
+            .pQueueFamilyIndices = reinterpret_cast<const unsigned*>(
+                config.image_sharing_queue_families.data()),
+            .compositeAlpha =
+                static_cast<VkCompositeAlphaFlagBitsKHR>(config.composite_alpha),
+            .presentMode =
+                static_cast<VkPresentModeKHR>(config.present_mode),
+            .clipped = config.clipped,
         },
     });
     InitSwapchain(swc.get());
@@ -179,49 +166,44 @@ Swapchain CreateSwapchain(
 }
 
 void DestroySwapchain(Swapchain swapchain) {
-    QueueWaitIdle(swapchain->present_queue);
     delete swapchain;
 }
 
-const SwapchainDescription& GetSwapchainDescription(
-    Swapchain swapchain
-) {
-    return swapchain->description;
+std::tuple<unsigned, unsigned> GetSwapchainSize(Swapchain swapchain) {
+    auto ext = swapchain->create_info.imageExtent;
+    return { ext.width, ext.height };
 }
 
 unsigned GetSwapchainImageCount(Swapchain swapchain) {
-    return GetSwapchainDescription(swapchain).image_count;
+    return swapchain->images.size();
 }
 
 Image GetSwapchainImage(Swapchain swapchain, unsigned image_idx) {
     return &swapchain->images[image_idx];
 }
 
-unsigned AcquireImage(
+std::tuple<unsigned, SwapchainStatus> AcquireImage(
     Swapchain swapchain,
-    std::chrono::nanoseconds timeout,
-    Semaphore signal_semaphore,
-    Fence signal_fence
+    Semaphore signal_semaphore
 ) {
-    while (true) {
-        uint32_t image_idx = 0;
-        auto r = vkAcquireNextImageKHR(
-            swapchain->handle.get_device(), swapchain->handle.get(),
-            timeout.count(),
-            signal_semaphore, signal_fence,
-            &image_idx); 
-        if (r == VK_SUCCESS or r == VK_SUBOPTIMAL_KHR) {
-            return image_idx;
-        } else if (r == VK_ERROR_OUT_OF_DATE_KHR) {
-            UpdateSwapchain(swapchain);
-        } else {
-            throw std::runtime_error{
-                "Vulkan: Failed to acquire image from swapchain"};
-        }
+    uint32_t image_idx = 0;
+    auto r = vkAcquireNextImageKHR(
+        swapchain->handle.get_device(), swapchain->handle.get(),
+        UINT64_MAX,
+        signal_semaphore, nullptr,
+        &image_idx); 
+    switch (r) {
+        case VK_SUCCESS:
+        case VK_SUBOPTIMAL_KHR:
+            return {image_idx, SwapchainStatus::Good};
+        case VK_ERROR_OUT_OF_DATE_KHR:
+            return {-1, SwapchainStatus::RequiresSlowResize};
     }
+    throw std::runtime_error{
+        "Vulkan: Failed to acquire image from swapchain"};
 }
 
-void PresentImage(
+SwapchainStatus PresentImage(
     Swapchain swapchain,
     unsigned image_idx,
     std::span<const Semaphore> wait_semaphores
@@ -236,12 +218,20 @@ void PresentImage(
         .pSwapchains = &vk_swc,
         .pImageIndices = &image_idx,
     };
-    auto r = vkQueuePresentKHR(swapchain->present_queue, &present_info);
-    if (r == VK_SUBOPTIMAL_KHR or r == VK_ERROR_OUT_OF_DATE_KHR) {
-        UpdateSwapchain(swapchain);
-    } else if (r) {
-        throw std::runtime_error{
-            "Vulkan: Failed to present to swapchain"};
+    auto r = vkQueuePresentKHR(
+        swapchain->present_queue, &present_info);
+    switch (r) {
+        case VK_SUCCESS:
+            return SwapchainStatus::Good;
+        case VK_SUBOPTIMAL_KHR:
+        case VK_ERROR_OUT_OF_DATE_KHR:
+            return SwapchainStatus::RequiresSlowResize;
     }
+    throw std::runtime_error{
+        "Vulkan: Failed to present to swapchain"};
+}
+
+void ResizeSwapchain(Swapchain swapchain) {
+    InitSwapchain(swapchain);
 }
 }

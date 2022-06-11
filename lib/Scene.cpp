@@ -70,7 +70,7 @@ GAPI::Pipeline createPipeline(
 }
 
 GAPI::ImageView createSwapchainImageView(
-    GAPI::Context ctx, GAPI::Image img, Format fmt 
+    GAPI::Context ctx, Format fmt, GAPI::Image img 
 ) {
     ImageViewConfig config = {
         .type = ImageViewType::D2,
@@ -84,6 +84,16 @@ GAPI::ImageView createSwapchainImageView(
         },
     };
     return GAPI::CreateImageView(ctx, img, config);
+}
+
+std::vector<GAPI::ImageView> createSwapchainImageViews(
+    GAPI::Context ctx, Format fmt, GAPI::Swapchain swc
+) {
+    std::vector<GAPI::ImageView> views(GAPI::GetSwapchainImageCount(swc));
+    for (size_t i = 0; i < views.size(); i++) {
+        views[i] = createSwapchainImageView(ctx, fmt, GAPI::GetSwapchainImage(swc, i));
+    }
+    return views;
 }
 
 GAPI::CommandPool createCommandPool(GAPI::Context ctx, QueueFamily::ID qf) {
@@ -119,24 +129,20 @@ std::vector<GAPI::Semaphore> createSemaphores(GAPI::Context ctx, unsigned n) {
 }
 
 struct Scene::Impl {
-    GAPI::Context                                       ctx;
-    QueueFamily::ID                                     queue_family;
-    GAPI::Queue                                         queue;
-    GAPI::PipelineLayout                                pipeline_layout;
-    GAPI::ShaderModule                                  vert_module, frag_module;
-    std::unordered_map<Format, GAPI::Pipeline>          pipelines;
-
-    std::unordered_map<GAPI::Image, GAPI::ImageView>    image_views;
-
-    unsigned                                            frame_index;
-    unsigned                                            frame_count;
-
-    GAPI::CommandPool                                   command_pool;
-    std::vector<GAPI::CommandBuffer>                    command_buffers;
-
-    std::vector<GAPI::Fence>                            fences;
-    std::vector<GAPI::Semaphore>                        acquire_semaphores;
-    std::vector<GAPI::Semaphore>                        draw_semaphores;
+    GAPI::Context                       ctx;
+    GAPI::Swapchain                     swapchain;
+    QueueFamily::ID                     queue_family;
+    GAPI::Queue                         queue;
+    Format                              color_fmt;
+    GAPI::Pipeline                      pipeline;
+    std::vector<GAPI::ImageView>        image_views;
+    unsigned                            frame_index;
+    unsigned                            frame_count;
+    GAPI::CommandPool                   command_pool;
+    std::vector<GAPI::CommandBuffer>    command_buffers;
+    std::vector<GAPI::Fence>            fences;
+    std::vector<GAPI::Semaphore>        acquire_semaphores;
+    std::vector<GAPI::Semaphore>        draw_semaphores;
 
     ~Impl() {
         GAPI::ContextWaitIdle(ctx);
@@ -145,26 +151,35 @@ struct Scene::Impl {
         std::ranges::for_each(draw_semaphores, [&] (auto s) { GAPI::DestroySemaphore(ctx, s); });
         GAPI::FreeCommandBuffers(ctx, command_pool, command_buffers);
         GAPI::DestroyCommandPool(ctx, command_pool);
-        std::ranges::for_each(image_views, [&] (const auto& kv) { GAPI::DestroyImageView(ctx, kv.second); });
-        std::ranges::for_each(pipelines, [&] (const auto& kv) { GAPI::DestroyPipeline(ctx, kv.second); });
-        std::ranges::for_each(std::array{vert_module, frag_module}, [&] (auto m) { GAPI::DestroyShaderModule(ctx, m); });
-        GAPI::DestroyPipelineLayout(ctx, pipeline_layout);
+        std::ranges::for_each(image_views, [&] (auto v) { GAPI::DestroyImageView(ctx, v); });
+        GAPI::DestroyPipeline(ctx, pipeline);
     }
 };
 
-Scene::Scene(Context& ctx):
+Scene::Scene(Context& ctx, Swapchain& swapchain):
+    m_swapchain{swapchain},
     pimpl{std::make_unique<Impl>()}
 {
+    auto& swc = m_swapchain.get().get();
     pimpl->ctx = ctx.get().get();
+    pimpl->swapchain = swc.get();
     pimpl->queue_family = ctx.get().GetGraphicsQueueFamily();
     pimpl->queue = ctx.get().GetGraphicsQueue();
+    pimpl->color_fmt = swc.GetFormat();
     {
         auto vert_code = loadShader("vert.spv");
         auto frag_code = loadShader("frag.spv");
-        pimpl->vert_module = GAPI::CreateShaderModule(pimpl->ctx, { .code = vert_code } );
-        pimpl->frag_module = GAPI::CreateShaderModule(pimpl->ctx, { .code = frag_code } );
+        auto vert_module = GAPI::CreateShaderModule(pimpl->ctx, { .code = vert_code } );
+        auto frag_module = GAPI::CreateShaderModule(pimpl->ctx, { .code = frag_code } );
+        auto layout = createPipelineLayout(pimpl->ctx);
+        pimpl->pipeline = createPipeline(pimpl->ctx, layout, vert_module, frag_module, pimpl->color_fmt);
+        GAPI::DestroyPipelineLayout(pimpl->ctx, layout);
+        GAPI::DestroyShaderModule(pimpl->ctx, vert_module);
+        GAPI::DestroyShaderModule(pimpl->ctx, frag_module);
     }
-    pimpl->pipeline_layout = createPipelineLayout(pimpl->ctx);
+    {
+        pimpl->image_views = createSwapchainImageViews(pimpl->ctx, pimpl->color_fmt, pimpl->swapchain);
+    }
     pimpl->frame_index = 0;
     pimpl->frame_count = 2;
     pimpl->command_pool = createCommandPool(
@@ -184,9 +199,9 @@ Scene::Scene(Context& ctx):
     );
 }
 
-void Scene::Draw(Swapchain& swapchain) {
-    auto swc = swapchain.get().get();
-
+void Scene::Draw() {
+    auto ctx = pimpl->ctx;
+    auto swc = pimpl->swapchain;
     auto idx = pimpl->frame_index;
     auto fence = pimpl->fences[idx];
     auto acquire_sem = pimpl->acquire_semaphores[idx];
@@ -194,28 +209,34 @@ void Scene::Draw(Swapchain& swapchain) {
 
     constexpr auto InfiniteTimeout = std::chrono::nanoseconds{UINT64_MAX};
 
-    GAPI::WaitForFences(pimpl->ctx, {&fence, 1}, true, InfiniteTimeout);
-    GAPI::ResetFences(pimpl->ctx, {&fence, 1});
+    GAPI::WaitForFences(ctx, {&fence, 1}, true, InfiniteTimeout);
+    GAPI::ResetFences(ctx, {&fence, 1});
 
-    auto img_idx = GAPI::AcquireImage(swc, InfiniteTimeout, acquire_sem, nullptr);
+    auto resize_swapchain = [&] (SwapchainStatus status) {
+        if (status == SwapchainStatus::RequiresSlowResize) {
+            GAPI::ContextWaitIdle(ctx);
+            std::ranges::for_each(pimpl->command_buffers, [] (auto cmd) { GAPI::ResetCommandBuffer(cmd, CommandResources::Keep); });
+            std::ranges::for_each(pimpl->image_views, [&] (auto v) { GAPI::DestroyImageView(ctx, v); });
+            GAPI::ResizeSwapchain(swc);
+            pimpl->image_views = createSwapchainImageViews(ctx, pimpl->color_fmt, swc);
+        } else {
+            GAPI::ResizeSwapchain(swc);
+        }
+    };
 
-    const auto& swc_desc = GAPI::GetSwapchainDescription(swc);
-    auto swc_fmt = swc_desc.format;
-    auto img_w = swc_desc.width;
-    auto img_h = swc_desc.height;
+    auto img_idx = [&] {
+    while(true) {
+        auto [img_idx, status] = GAPI::AcquireImage(swc, acquire_sem);
+        if (status != SwapchainStatus::Good) {
+            resize_swapchain(status);
+        } else {
+            return img_idx;
+        };
+    }} ();
 
+    auto [img_w, img_h] = GAPI::GetSwapchainSize(swc);
     auto img = GAPI::GetSwapchainImage(swc, img_idx);
-    // TODO: this is broken on resize
-    auto& img_view = pimpl->image_views[img];
-    if (!img_view) {
-        img_view = createSwapchainImageView(pimpl->ctx, img, swc_fmt);
-    }
-
-    auto& pipeline = pimpl->pipelines[swc_fmt];
-    if (!pipeline) {
-        pipeline = createPipeline(
-            pimpl->ctx, pimpl->pipeline_layout, pimpl->vert_module, pimpl->frag_module, swc_fmt);
-    }
+    auto view = pimpl->image_views[img_idx];
 
     auto cmd_buffer = pimpl->command_buffers[idx];
 
@@ -249,7 +270,7 @@ void Scene::Draw(Swapchain& swapchain) {
 
     ClearValue clear_color = {0.2f, 0.2f, 0.8f, 1.0f};
     GAPI::RenderingAttachment color_attachment = {
-        .view = img_view,
+        .view = view,
         .layout = ImageLayout::Attachment,
         .load_op = AttachmentLoadOp::Clear,
         .store_op = AttachmentStoreOp::Store,
@@ -278,7 +299,7 @@ void Scene::Draw(Swapchain& swapchain) {
         GAPI::CmdSetScissors(cmd_buffer, {&scissor, 1});
     }
 
-    GAPI::CmdBindGraphicsPipeline(cmd_buffer, pipeline);
+    GAPI::CmdBindGraphicsPipeline(cmd_buffer, pimpl->pipeline);
     DrawConfig draw_config = {
         .vertex_count = 3,
         .instance_count = 1,
@@ -326,7 +347,10 @@ void Scene::Draw(Swapchain& swapchain) {
         GAPI::QueueSubmit(pimpl->queue, {&submit_config, 1}, fence);
     }
 
-    GAPI::PresentImage(swc, img_idx, {&draw_sem, 1});
+    auto status = GAPI::PresentImage(swc, img_idx, {&draw_sem, 1});
+    if (status != SwapchainStatus::Good) {
+        resize_swapchain(status);
+    }
 
     pimpl->frame_index = (pimpl->frame_index + 1) % pimpl->frame_count;
 }

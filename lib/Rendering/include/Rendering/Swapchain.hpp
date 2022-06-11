@@ -20,11 +20,11 @@ public:
 };
 
 class Swapchain {
-    HSwapchain m_swapchain;
+    GAPI::SwapchainConfig   m_config;
+    HSwapchain              m_swapchain;
 
 public:
     struct Config {
-        Transform       transform;
         CompositeAlpha  composite_alpha;
         PresentMode     present_mode;
     };
@@ -36,5 +36,6 @@ public:
     );
 
     GAPI::Swapchain get() noexcept { return m_swapchain.get(); }
+    Format GetFormat() const noexcept { return m_config.format; }
 };
 }

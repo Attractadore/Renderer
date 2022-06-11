@@ -3,6 +3,8 @@
 #include "Instance.hpp"
 #include "Queue.hpp"
 
+#include <optional>
+
 namespace R1 {
 enum class CompositeAlpha {
     Opaque          = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
@@ -15,7 +17,7 @@ enum class PresentMode {
     Immediate   = VK_PRESENT_MODE_IMMEDIATE_KHR,
     Mailbox     = VK_PRESENT_MODE_MAILBOX_KHR,
     FIFO        = VK_PRESENT_MODE_FIFO_KHR,
-    FIFORelaxed = VK_PRESENT_MODE_FIFO_RELAXED_KHR,
+    RelaxedFIFO = VK_PRESENT_MODE_FIFO_RELAXED_KHR,
 };
 }
 
@@ -27,8 +29,9 @@ using Swapchain = SwapchainImpl*;
 
 void DestroySurface(Surface surface);
 
-const SurfaceDescription& GetSurfaceDescription(Surface surface, Device device);
-Transform GetSurfaceCurrentTransform(Surface surface, Device device);
+const SurfaceDescription& GetSurfaceDescription(
+    Surface surface, Device device
+);
 
 using SwapchainConfig = SwapchainConfigBase<Queue>;
 Swapchain CreateSwapchain(
@@ -39,22 +42,24 @@ Swapchain CreateSwapchain(
 );
 void DestroySwapchain(Swapchain swapchain);
 
-using SwapchainDescription = SwapchainDescriptionBase<Surface>;
-const SwapchainDescription& GetSwapchainDescription(Swapchain swapchain);
-
+std::tuple<unsigned, unsigned> GetSwapchainSize(Swapchain swapchain);
 unsigned GetSwapchainImageCount(Swapchain swapchain);
 Image GetSwapchainImage(Swapchain swapchain, unsigned image_idx);
 
-unsigned AcquireImage(
+std::tuple<unsigned, SwapchainStatus> AcquireImage(
     Swapchain swapchain,
-    std::chrono::nanoseconds timeout,
-    Semaphore signal_semaphore,
-    Fence signal_fence
+    Semaphore signal_semaphore
 );
 
-void PresentImage(
+SwapchainStatus PresentImage(
     Swapchain swapchain,
     unsigned image_idx,
     std::span<const Semaphore> wait_semaphores
 );
+
+// Resize the swapchain to match the native window's dimensions
+//
+// Unless a fast resize is possible, all views to the swapchain's
+// images must have been destroyed
+void ResizeSwapchain(Swapchain swapchain);
 };

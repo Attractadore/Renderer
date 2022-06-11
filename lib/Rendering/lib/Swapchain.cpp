@@ -34,7 +34,7 @@ CompositeAlpha SelectCompositeAlpha(
 }
 
 
-HSwapchain CreateSwapchain(
+GAPI::SwapchainConfig ConfigureSwapchain(
     Context& ctx, Surface& surface, const Swapchain::Config& config
 ) {
     auto device = ctx.GetDevice().get();
@@ -48,21 +48,18 @@ HSwapchain CreateSwapchain(
     }
     auto composite_alpha = SelectCompositeAlpha(desc.supported_composite_alphas);
 
-    GAPI::SwapchainConfig cfg = {
-        .image_usage = {
-            .color_attachment = true,
-        },
+    return {
         .format = surf_fmt.format,
         .color_space = surf_fmt.color_space,
         .image_count = image_count,
-        .transform = config.transform,
         .composite_alpha = composite_alpha,
         .present_mode = config.present_mode,
         .present_queue = ctx.GetGraphicsQueue(),
-     };
-
-    return HSwapchain{GAPI::CreateSwapchain(
-        ctx.get(), surf, surface.GetSizeCallback(), cfg)};
+        .image_usage = {
+            .color_attachment = true,
+        },
+        .clipped = true,
+    };
 }
 }
 
@@ -70,5 +67,8 @@ Swapchain::Swapchain(
     Context& ctx,
     Surface& surface,
     const Config& config
-): m_swapchain{CreateSwapchain(ctx, surface, config)} {}
+):  m_config{ConfigureSwapchain(ctx, surface, config)},
+    m_swapchain{GAPI::CreateSwapchain(
+        ctx.get(), surface.get(), surface.GetSizeCallback(), m_config
+    )} {} 
 }

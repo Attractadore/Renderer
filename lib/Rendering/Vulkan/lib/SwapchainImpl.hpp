@@ -9,6 +9,8 @@ struct SurfaceImpl {
     std::unordered_map<Device, SurfaceDescription>  descriptions;
 };
 
+Surface CreateSurfaceFromHandle(Instance instance, Vk::Surface handle);
+
 struct SwapchainImageImpl: ImageImpl {
     SwapchainImageImpl(ImageImpl img):
         ImageImpl{std::move(img)} {}
@@ -26,16 +28,13 @@ struct SwapchainImageImpl: ImageImpl {
 };
 
 struct SwapchainImpl {
+    VkPhysicalDevice                adapter;
     Vk::Swapchain                   handle;
     std::vector<SwapchainImageImpl> images;
     Queue                           present_queue;
     SurfaceSizeCallback             surface_size_cb;
-    SwapchainDescription            description;
+    VkSwapchainCreateInfoKHR        create_info;
 };
-
-constexpr VkSwapchainCreateFlagsKHR SwapchainCapabilitiesToVK(
-    const SwapchainCapabilities& caps
-);
 }
 
 #include "SwapchainImpl.inl"

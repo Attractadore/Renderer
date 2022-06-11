@@ -38,8 +38,6 @@ Surface CreateSurfaceXlib(
     if (!handle) {
         throw std::runtime_error{"Vulkan: Failed to create Xlib surface"};
     }
-    return std::make_unique<SurfaceImpl>(SurfaceImpl{
-        .handle = std::move(handle),
-    }).release();
+    return CreateSurfaceFromHandle(instance, std::move(handle));
 }
 }

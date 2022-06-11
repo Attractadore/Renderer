@@ -16,13 +16,10 @@ Rendering::Swapchain::Config ConfigureSwapchain(
     auto device = ctx.GetDevice().get();
     auto surf = surface.get();
 
-    auto transform = GAPI::GetSurfaceCurrentTransform(surf, device);
-
     auto desc = GAPI::GetSurfaceDescription(surf, device);
     auto present_mode = SelectPresentMode(desc.supported_present_modes);
 
     return {
-        .transform = transform,
         .present_mode = present_mode,
     };
 }
