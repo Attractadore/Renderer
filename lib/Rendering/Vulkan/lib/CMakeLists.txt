@@ -1,6 +1,10 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.16)
 
+find_package(ECM REQUIRED)
+list(APPEND CMAKE_MODULE_PATH ${ECM_FIND_MODULE_DIR})
 find_package(Vulkan REQUIRED)
+find_package(X11 COMPONENTS xcb REQUIRED)
+find_package(Wayland COMPONENTS Client REQUIRED)
 
 add_library(R1_VK_PublicInterface INTERFACE)
 target_include_directories(R1_VK_PublicInterface
@@ -53,9 +57,6 @@ target_compile_definitions(R1_VK
     PUBLIC R1_USE_VULKAN
 )
 
-find_package(X11 COMPONENTS xcb)
-
-if (TARGET X11::X11)
 add_library(R1_VK_Xlib
     APIXlib.cpp
 )
@@ -63,9 +64,7 @@ target_link_libraries(R1_VK_Xlib
     PUBLIC R1_VK X11::X11 
     PRIVATE R1_VK_PrivateInterface
 )
-endif()
 
-if (TARGET X11::xcb)
 add_library(R1_VK_XCB
     APIXCB.cpp
 )
@@ -73,4 +72,3 @@ target_link_libraries(R1_VK_XCB
     PUBLIC R1_VK X11::xcb 
     PRIVATE R1_VK_PrivateInterface
 )
-endif()
