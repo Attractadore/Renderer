@@ -51,13 +51,11 @@ GAPI::SwapchainConfig ConfigureSwapchain(
     return {
         .format = surf_fmt.format,
         .color_space = surf_fmt.color_space,
+        .image_usage = ImageUsage::ColorAttachment,
         .image_count = image_count,
         .composite_alpha = composite_alpha,
         .present_mode = config.present_mode,
         .present_queue = ctx.GetGraphicsQueue(),
-        .image_usage = {
-            .color_attachment = true,
-        },
         .clipped = true,
     };
 }

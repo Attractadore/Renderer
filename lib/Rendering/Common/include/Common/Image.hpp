@@ -5,27 +5,13 @@
 #include <span>
 
 namespace R1 {
-struct ImageCapabilities {
-    bool mutable_format: 1;
-    bool cube_compatible: 1;
-    bool block_texel_view_compatible: 1;
-    bool extended_usage: 1;
-};
-
+enum class ImageConfigOption;
+using ImageConfigFlags = Flags<ImageConfigOption>;
 enum class ImageType;
-
-struct ImageUsage {
-    bool transfer_src: 1;
-    bool transfer_dst: 1;
-    bool sampled: 1;
-    bool storage: 1;
-    bool color_attachment: 1;
-    bool depth_attachment: 1;
-    bool stencil_attachment: 1;
-    bool input_attachment: 1;
-};
-
+enum class ImageUsage;
+using ImageUsageFlags = Flags<ImageUsage>;
 enum class ImageLayout;
+
 enum class ImageMemoryUsage {
     Default,
     RenderTarget,
@@ -33,7 +19,7 @@ enum class ImageMemoryUsage {
 };
 
 struct ImageConfig {
-    ImageCapabilities                   capabilities;
+    ImageConfigFlags                    flags;
     ImageType                           type;    
     Format                              format;
     unsigned                            width;
@@ -42,18 +28,14 @@ struct ImageConfig {
     unsigned                            mip_level_count;
     unsigned                            array_layer_count;
     unsigned                            sample_count;
-    ImageUsage                          usage;
+    ImageUsageFlags                     usage;
     std::span<const QueueFamily::ID>    sharing_queue_families;
     ImageLayout                         initial_layout;
     ImageMemoryUsage                    memory_usage;
 };
 
-struct ImageAspects {
-    bool color: 1;
-    bool depth: 1;
-    bool stencil: 1;
-};
-
+enum class ImageAspect;
+using ImageAspectFlags = Flags<ImageAspect>;
 enum class ImageViewType;
 enum class ImageComponentSwizzle;
 
@@ -62,11 +44,11 @@ struct ImageComponentMapping {
 };
 
 struct ImageSubresourceRange {
-    ImageAspects    aspects;
-    unsigned        first_mip_level;
-    unsigned        mip_level_count;
-    unsigned        first_array_layer;
-    unsigned        array_layer_count;
+    ImageAspectFlags    aspects;
+    unsigned            first_mip_level;
+    unsigned            mip_level_count;
+    unsigned            first_array_layer;
+    unsigned            array_layer_count;
 };
 
 struct ImageViewConfig {

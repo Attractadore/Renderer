@@ -76,7 +76,7 @@ GAPI::ImageView createSwapchainImageView(
         .type = ImageViewType::D2,
         .format = fmt,
         .subresource_range = {
-            .aspects = { .color = true, },
+            .aspects = ImageAspect::Color,
             .first_mip_level = 0,
             .mip_level_count = 1,
             .first_array_layer = 0,
@@ -255,7 +255,7 @@ void Scene::Draw() {
             .new_layout = ImageLayout::Attachment,
             .image = img,
             .subresource_range = {
-                .aspects = { .color = true },
+                .aspects = ImageAspect::Color,
                 .first_mip_level = 0,
                 .mip_level_count = 1,
                 .first_array_layer = 0,
@@ -318,7 +318,7 @@ void Scene::Draw() {
             .new_layout = ImageLayout::Present,
             .image = img,
             .subresource_range = {
-                .aspects = { .color = true },
+                .aspects = ImageAspect::Color,
                 .first_mip_level = 0,
                 .mip_level_count = 1,
                 .first_array_layer = 0,

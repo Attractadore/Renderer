@@ -6,7 +6,7 @@ namespace R1::VK {
 Image CreateImage(Context ctx, const ImageConfig& config) {
     VkImageCreateInfo create_info = {
         .sType = sType(create_info),
-        .flags = ImageCapabilitiesToVK(config.capabilities),
+        .flags = static_cast<VkImageCreateFlags>(config.flags.Extract()),
         .imageType = static_cast<VkImageType>(config.type),
         .format = static_cast<VkFormat>(config.format),
         .extent = {
@@ -20,7 +20,7 @@ Image CreateImage(Context ctx, const ImageConfig& config) {
             config.sample_count
         ),
         .tiling = VK_IMAGE_TILING_OPTIMAL,
-        .usage = ImageUsageToVK(config.usage),
+        .usage = static_cast<VkImageUsageFlags>(config.usage.Extract()),
         .sharingMode = config.sharing_queue_families.empty() ?
             VK_SHARING_MODE_EXCLUSIVE: VK_SHARING_MODE_CONCURRENT,
         .queueFamilyIndexCount = static_cast<uint32_t>(

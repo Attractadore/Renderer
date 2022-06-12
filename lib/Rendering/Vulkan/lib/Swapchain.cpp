@@ -48,7 +48,7 @@ SurfaceDescription FillSurfaceDescription(
         .min_image_count = caps.minImageCount,
         .max_image_count = caps.maxImageCount,
         .supported_image_usage =
-            ImageUsageFromVK(caps.supportedUsageFlags),
+            static_cast<ImageUsage>(caps.supportedUsageFlags),
     };
 }
 
@@ -78,7 +78,7 @@ void DestroySurface(Surface surface) {
 }
 
 const SurfaceDescription& GetSurfaceDescription(Surface surface, Device device) {
-    return surface->descriptions[device];
+    return surface->descriptions.find(device)->second;
 }
 
 namespace {
@@ -147,7 +147,7 @@ Swapchain CreateSwapchain(
             .imageFormat = static_cast<VkFormat>(config.format),
             .imageColorSpace = static_cast<VkColorSpaceKHR>(config.color_space),
             .imageArrayLayers = 1,
-            .imageUsage = ImageUsageToVK(config.image_usage),
+            .imageUsage = static_cast<VkImageUsageFlags>(config.image_usage.Extract()),
             .imageSharingMode = config.image_sharing_queue_families.empty() ?
                 VK_SHARING_MODE_EXCLUSIVE: VK_SHARING_MODE_CONCURRENT,
             .queueFamilyIndexCount =
