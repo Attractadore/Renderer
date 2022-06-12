@@ -16,6 +16,7 @@ public:
     using BitType = E;
     using UnderlyingType = std::underlying_type_t<E>;
 
+    constexpr Flags() noexcept = default;
     constexpr Flags(decltype(EmptyFlags)) noexcept {}
     constexpr Flags(BitType bit) noexcept:
         value{bit} {}
@@ -58,6 +59,10 @@ public:
 
     constexpr bool NoneSet(Flags<E> mask) const noexcept {
         return (*this & mask) == EmptyFlags;
+    }
+
+    constexpr E Extract() const noexcept {
+        return value;
     }
 
     constexpr bool operator==(const Flags<E>&) const noexcept = default;
