@@ -12,7 +12,7 @@ struct DeviceImpl {
     VKDeviceDescription description;
 };
 
-QueueCapabilities QueueCapabilitiesFromVK(VkQueueFlags flags);
+QueueCapabilityFlags QueueCapabilitiesFromVK(VkQueueFlags flags);
 }
 
 #include "DeviceImpl.inl"

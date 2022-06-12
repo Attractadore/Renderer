@@ -10,10 +10,10 @@ const DeviceDescription& Device::GetDescription() const {
 }
 
 QueueFamily::ID Device::FindQueueFamilyWithCapabilities(
-    const QueueCapabilities& caps
+    QueueCapabilityFlags caps, QueueCapabilityFlags filter
 ) const noexcept {
     for (const auto& qf: GetDescription().queue_families) {
-        if (qf.capabilities == caps) {
+        if ((qf.capabilities & filter) == caps) {
             return qf.id;
         }
     }

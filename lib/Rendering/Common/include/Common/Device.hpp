@@ -1,25 +1,20 @@
 #pragma once
+#include "Flags.hpp"
+
 #include <string>
 #include <vector>
 
 namespace R1 {
 enum class DeviceType;
 
-struct QueueCapabilities {
-    bool graphics: 1;
-    bool compute: 1;
-    bool transfer: 1;
-
-    bool operator==(const QueueCapabilities&) const = default;
-};
+enum class QueueCapability;
+using QueueCapabilityFlags = Flags<QueueCapability>;
 
 struct QueueFamily {
     enum ID: unsigned { Unknown = static_cast<unsigned>(-1) };
     ID id;
-    QueueCapabilities capabilities;
+    QueueCapabilityFlags capabilities;
     unsigned count;
-
-    bool operator==(const QueueFamily&) const = default;
 };
 
 struct DeviceDescription {

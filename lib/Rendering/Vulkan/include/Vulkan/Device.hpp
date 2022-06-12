@@ -11,6 +11,12 @@ enum class DeviceType {
     VirtualGPU      = VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU,
     CPU             = VK_PHYSICAL_DEVICE_TYPE_CPU,
 };
+
+enum class QueueCapability {
+    Graphics = VK_QUEUE_GRAPHICS_BIT,
+    Compute = VK_QUEUE_COMPUTE_BIT,
+    Transfer = VK_QUEUE_TRANSFER_BIT,
+};
 }
 
 namespace R1::VK {
