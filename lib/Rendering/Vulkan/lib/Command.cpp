@@ -8,7 +8,8 @@ CommandPool CreateCommandPool(
 ) {
     VkCommandPoolCreateInfo create_info = {
         .sType = sType(create_info),
-        .flags = CommandPoolCapabilitiesToVK(config.capabilities),
+        .flags = static_cast<VkCommandPoolCreateFlags>(
+            config.flags.Extract()),
         .queueFamilyIndex = config.queue_family,
     };
 
@@ -30,7 +31,8 @@ void ResetCommandPool(
     Context ctx, CommandPool pool, CommandResources resources
 ) {
     auto r = vkResetCommandPool(
-        ctx->device.get(), pool, CommandPoolResourcesToVK(resources));
+        ctx->device.get(), pool,
+        static_cast<VkCommandPoolResetFlags>(resources));
     if (r) {
         throw std::runtime_error{
             "Vulkan: Failed to reset command pool"};
@@ -72,7 +74,8 @@ void ResetCommandBuffer(
     CommandBuffer cmd_buffer, CommandResources resources
 ) {
     auto r = vkResetCommandBuffer(
-        cmd_buffer, CommandBufferResourcesToVK(resources));
+        cmd_buffer,
+        static_cast<VkCommandBufferResetFlags>(resources));
     if (r) {
         throw std::runtime_error{
             "Vulkan: Failed to reset command buffer"};
@@ -85,7 +88,7 @@ void BeginCommandBuffer(
 ) {
     VkCommandBufferBeginInfo begin_info = {
         .sType = sType(begin_info),
-        .flags = CommandBufferUsageToVK(begin_config.usage),
+        .flags = static_cast<VkCommandBufferUsageFlags>(begin_config.usage.Extract()),
     };
     auto r = vkBeginCommandBuffer(cmd_buffer, &begin_info);
     if (r) {
@@ -130,7 +133,9 @@ void CmdPipelineBarrier(CommandBuffer cmd_buffer, const DependencyConfig& config
     vkCmdPipelineBarrier2(cmd_buffer, &dep_info);
 }
 
-void CmdBeginRendering(CommandBuffer cmd_buffer, const RenderingConfig& config) {
+void CmdBeginRendering(
+    CommandBuffer cmd_buffer, const RenderingConfig& config
+) {
     auto color_attachments = vec_from_range(
         std::views::transform(
             config.color_attachments, RenderingAttachmentToVK));
@@ -140,7 +145,7 @@ void CmdBeginRendering(CommandBuffer cmd_buffer, const RenderingConfig& config) 
         RenderingAttachmentToVK(config.stencil_attachment);
     VkRenderingInfo rendering_info = {
         .sType = sType(rendering_info),
-        .flags = RenderingContinuationToVK(config.continuation),
+        .flags = static_cast<VkRenderingFlags>(config.flags.Extract()),
         .renderArea = Rect2DToVK(config.render_area),
         .layerCount = 1,
         .colorAttachmentCount =

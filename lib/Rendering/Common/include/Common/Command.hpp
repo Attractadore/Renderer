@@ -5,80 +5,29 @@
 #include <span>
 
 namespace R1 {
-struct CommandPoolCapabilities {
-    bool transient: 1;
-    bool reset_command_buffer: 1;
-};
+enum class CommandPoolConfigOption;
+using CommandPoolFlags = Flags<CommandPoolConfigOption>;
 
 struct CommandPoolConfig {
-    CommandPoolCapabilities capabilities;
-    QueueFamily::ID queue_family;
+    CommandPoolFlags    flags;
+    QueueFamily::ID     queue_family;
 };
 
-enum class CommandResources {
-    Release,
-    Keep,
-};
+enum class CommandResources;
 
-struct CommandBufferUsage {
-    bool one_time_submit: 1;
-    bool simultaneous_use: 1;
-};
+enum class CommandBufferUsage;
+using CommandBufferUsageFlags = Flags<CommandBufferUsage>;
 
 struct CommandBufferBeginConfig {
-    CommandBufferUsage usage;
+    CommandBufferUsageFlags usage;
 };
 
-struct PipelineStages {
-    bool draw_indirect: 1;
-    bool index_input: 1;
-    bool vertex_attribute_input: 1;
-    bool vertex_input: 1;
-    bool vertex_shader: 1;
-    bool tessellation_control_shader: 1;
-    bool tessellation_evaluation_shader: 1;
-    bool geometry_shader: 1;
-    bool pre_rasterization_shaders: 1;
-    bool fragment_shader: 1;
-    bool early_fragment_tests: 1;
-    bool late_fragment_tests: 1;
-    bool color_attachment_output: 1;
-    bool all_graphics: 1;
-    bool copy: 1;
-    bool resolve: 1;
-    bool blit: 1;
-    bool clear: 1;
-    bool all_transfer: 1;
-    bool compute_shader: 1;
-    bool all_commands: 1;
-};
-
-struct MemoryAccesses {
-    bool indirect_command_read: 1;
-    bool index_read: 1;
-    bool vertex_attribute_read: 1;
-    bool uniform_read: 1;
-    bool shader_sampled_read: 1;
-    bool shader_storage_read: 1;
-    bool shader_read: 1;
-    bool shader_storage_write: 1;
-    bool shader_write: 1;
-    bool input_attachment_read: 1;
-    bool color_attachment_read: 1;
-    bool color_attachment_write: 1;
-    bool depth_stencil_attachment_read: 1;
-    bool depth_stencil_attachment_write: 1;
-    bool transfer_read: 1;
-    bool transfer_write: 1;
-    bool memory_read: 1;
-    bool memory_write: 1;
-};
-
-struct MemoryBarrier {
-    PipelineStages src_stages;
-    MemoryAccesses src_accesses;
-    PipelineStages dst_stages;
-    MemoryAccesses dst_accesses;
+template<typename PipelineStageFlags, typename MemoryAccessFlags>
+struct MemoryBarrierBase {
+    PipelineStageFlags  src_stages;
+    MemoryAccessFlags   src_accesses;
+    PipelineStageFlags  dst_stages;
+    MemoryAccessFlags   dst_accesses;
 };
 
 struct QueueFamilyTransfer {
@@ -86,7 +35,7 @@ struct QueueFamilyTransfer {
     QueueFamily::ID dst;
 };
 
-template<class Buffer>
+template<class MemoryBarrier, class Buffer>
 struct BufferBarrierBase {
     MemoryBarrier       memory_barrier;
     QueueFamilyTransfer queue_family_transfer;
@@ -95,7 +44,7 @@ struct BufferBarrierBase {
     size_t              size;
 };
 
-template<class Image>
+template<class MemoryBarrier, class Image>
 struct ImageBarrierBase {
     MemoryBarrier           memory_barrier;
     ImageLayout             old_layout;
@@ -105,7 +54,7 @@ struct ImageBarrierBase {
     ImageSubresourceRange   subresource_range;
 };
 
-template<class BufferBarrier, class ImageBarrier>
+template<class MemoryBarrier, class BufferBarrier, class ImageBarrier>
 struct DependencyConfigBase {
     std::span<const MemoryBarrier>  memory_barriers;
     std::span<const BufferBarrier>  buffer_barriers;
@@ -143,14 +92,12 @@ struct RenderingAttachmentBase {
     ClearValue          clear_value;
 };
 
-struct RenderingContinuation {
-    bool resume: 1;
-    bool suspend: 1;
-};
+enum class RenderingConfigOption;
+using RenderingConfigFlags = Flags<RenderingConfigOption>;
 
 template<class RenderingAttachment, class Rect2D>
 struct RenderingConfigBase {
-    RenderingContinuation                   continuation;
+    RenderingConfigFlags                    flags;
     Rect2D                                  render_area;
     std::span<const RenderingAttachment>    color_attachments;
     RenderingAttachment                     depth_attachment;

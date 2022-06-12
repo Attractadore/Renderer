@@ -8,7 +8,7 @@ using Queue = VkQueue;
 Queue GetQueue(Context ctx, QueueFamily::ID family, unsigned idx);
 
 struct SemaphoreSubmitConfig: VkSemaphoreSubmitInfo {
-    SemaphoreSubmitConfig(Semaphore sem, const PipelineStages& stages);
+    SemaphoreSubmitConfig(Semaphore sem, PipelineStageFlags stages);
 };
 
 struct CommandBufferSubmitConfig: VkCommandBufferSubmitInfo {

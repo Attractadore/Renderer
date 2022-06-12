@@ -98,10 +98,9 @@ std::vector<GAPI::ImageView> createSwapchainImageViews(
 
 GAPI::CommandPool createCommandPool(GAPI::Context ctx, QueueFamily::ID qf) {
     CommandPoolConfig config = {
-        .capabilities = {
-            .transient = true,
-            .reset_command_buffer = true,
-        },
+        .flags =
+            CommandPoolConfigOption::Transient |
+            CommandPoolConfigOption::AllowCommandBufferReset,
         .queue_family = qf,
     };
     return GAPI::CreateCommandPool(ctx, config);
@@ -241,16 +240,16 @@ void Scene::Draw() {
     auto cmd_buffer = pimpl->command_buffers[idx];
 
     CommandBufferBeginConfig begin_config = {
-        .usage = { .one_time_submit = true },
+        .usage = CommandBufferUsage::OneTimeSubmit,
     };
     GAPI::BeginCommandBuffer(cmd_buffer, begin_config);
 
     {
         GAPI::ImageBarrier from_present = {
             .memory_barrier = {
-                .src_stages = { .all_commands = true },
-                .dst_stages = { .color_attachment_output = true },
-                .dst_accesses = { .color_attachment_write = true },
+                .src_stages = PipelineStage::AllCommands,
+                .dst_stages = PipelineStage::ColorAttachmentOutput,
+                .dst_accesses = MemoryAccess::ColorAttachmentWrite,
             },
             .new_layout = ImageLayout::Attachment,
             .image = img,
@@ -311,8 +310,8 @@ void Scene::Draw() {
     {
         GAPI::ImageBarrier to_present = {
             .memory_barrier = {
-                .src_stages = { .color_attachment_output = true },
-                .src_accesses = { .color_attachment_write = true },
+                .src_stages = PipelineStage::ColorAttachmentOutput,
+                .src_accesses = MemoryAccess::ColorAttachmentWrite,
             },
             .old_layout = ImageLayout::Attachment,
             .new_layout = ImageLayout::Present,
@@ -335,7 +334,7 @@ void Scene::Draw() {
 
     {
         GAPI::SemaphoreSubmitConfig wait_config {
-            acquire_sem, { .color_attachment_output = true }};
+            acquire_sem, PipelineStage::ColorAttachmentOutput};
         GAPI::CommandBufferSubmitConfig cmd_config{cmd_buffer};
         GAPI::SemaphoreSubmitConfig signal_config {
             draw_sem, {}};

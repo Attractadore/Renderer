@@ -12,11 +12,11 @@ Queue GetQueue(Context ctx, QueueFamily::ID family, unsigned idx) {
 }
 
 SemaphoreSubmitConfig::SemaphoreSubmitConfig(
-    Semaphore sem, const PipelineStages& stages
+    Semaphore sem, PipelineStageFlags stages
 ): VkSemaphoreSubmitInfo {
     .sType = R1::VK::sType<VkSemaphoreSubmitInfo>(),
     .semaphore = sem,
-    .stageMask = PipelineStagesToVK(stages),
+    .stageMask = static_cast<VkPipelineStageFlags2>(stages.Extract()),
 } {}
 
 CommandBufferSubmitConfig::CommandBufferSubmitConfig(
