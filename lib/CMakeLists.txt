@@ -1,4 +1,4 @@
-add_subdirectory(Rendering)
+add_subdirectory(GAPI)
 
 set(R1PublicHeaders
     ${PROJECT_SOURCE_DIR}/include/R1/R1Types.h
