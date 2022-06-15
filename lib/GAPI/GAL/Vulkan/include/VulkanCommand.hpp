@@ -9,6 +9,7 @@ enum class CommandPoolConfigOption {
     Transient               = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
     AllowCommandBufferReset = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
 };
+using CommandPoolConfigFlags = Flags<CommandPoolConfigOption>;
 
 enum class CommandResources {
     Keep = 0,
@@ -19,6 +20,7 @@ enum class CommandBufferUsage {
     OneTimeSubmit   = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
     Simultaneous    = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
 };
+using CommandBufferUsageFlags = Flags<CommandBufferUsage>;
 
 enum class PipelineStage: VkPipelineStageFlags2 {
     DrawIndirect                = VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT,
@@ -112,6 +114,7 @@ enum class RenderingConfigOption {
     Resume = VK_RENDERING_RESUMING_BIT_KHR,
     Suspend = VK_RENDERING_SUSPENDING_BIT,
 };
+using RenderingConfigFlags = Flags<RenderingConfigOption>;
 
 using CommandPool = VkCommandPool;
 using CommandBuffer = VkCommandBuffer;
@@ -151,21 +154,21 @@ static_assert(sizeof(Rect2D) == sizeof(VkRect2D));
 
 namespace Detail {
 struct CommandTraits {
-    using CommandPoolConfigOption = GAL::CommandPoolConfigOption;
-    using CommandBufferUsage = GAL::CommandBufferUsage;
-    using PipelineStage = GAL::PipelineStage;
-    using MemoryAccess = GAL::MemoryAccess;
-    using Buffer = GAL::Buffer;
-    using Image = GAL::Image;
-    using ImageLayout = GAL::ImageLayout;
-    using ImageView = GAL::ImageView;
-    using ImageAspect = GAL::ImageAspect;
-    using ResolveMode = GAL::ResolveMode;
     using AttachmentLoadOp = GAL::AttachmentLoadOp;
     using AttachmentStoreOp = GAL::AttachmentStoreOp;
-    using RenderingConfigOption = GAL::RenderingConfigOption;
-    using Rect2D = GAL::Rect2D;
+    using Buffer = GAL::Buffer;
+    using CommandBufferUsage = GAL::CommandBufferUsage;
+    using CommandPoolConfigOption = GAL::CommandPoolConfigOption;
+    using Image = GAL::Image;
+    using ImageAspect = GAL::ImageAspect;
+    using ImageLayout = GAL::ImageLayout;
     using ImageSubresourceRange = GAL::ImageSubresourceRange;
+    using ImageView = GAL::ImageView;
+    using MemoryAccess = GAL::MemoryAccess;
+    using PipelineStage = GAL::PipelineStage;
+    using Rect2D = GAL::Rect2D;
+    using RenderingConfigOption = GAL::RenderingConfigOption;
+    using ResolveMode = GAL::ResolveMode;
 };
 }
 

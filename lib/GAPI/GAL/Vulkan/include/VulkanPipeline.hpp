@@ -96,6 +96,7 @@ enum class ColorComponent {
     B = VK_COLOR_COMPONENT_B_BIT,
     A = VK_COLOR_COMPONENT_A_BIT,
 };
+using ColorComponentFlags = Flags<ColorComponent>;
 
 enum class BlendFactor {
     Zero                = VK_BLEND_FACTOR_ZERO,
@@ -193,21 +194,21 @@ struct GraphicsPipelineConfiguratorData {
 };
 
 struct PipelineTraits {
-    using ShaderModule = GAL::ShaderModule;
-    using VertexInputRate = GAL::VertexInputRate;
-    using Format = GAL::Format;
-    using PrimitiveTopology = GAL::PrimitiveTopology;
-    using PolygonMode = GAL::PolygonMode;
-    using CullMode = GAL::CullMode;
-    using FrontFace = GAL::FrontFace;
-    using CompareOp = GAL::CompareOp;
-    using StencilOp = GAL::StencilOp;
-    using ColorComponent = GAL::ColorComponent;
-    using LogicOp = GAL::LogicOp;
     using BlendFactor = GAL::BlendFactor;
     using BlendOp = GAL::BlendOp;
-    using PipelineLayout = GAL::PipelineLayout;
+    using ColorComponent = GAL::ColorComponent;
+    using CompareOp = GAL::CompareOp;
+    using CullMode = GAL::CullMode;
+    using Format = GAL::Format;
+    using FrontFace = GAL::FrontFace;
     using GraphicsPipelineConfigs = GAL::GraphicsPipelineConfigs;
+    using LogicOp = GAL::LogicOp;
+    using PipelineLayout = GAL::PipelineLayout;
+    using PolygonMode = GAL::PolygonMode;
+    using PrimitiveTopology = GAL::PrimitiveTopology;
+    using ShaderModule = GAL::ShaderModule;
+    using StencilOp = GAL::StencilOp;
+    using VertexInputRate = GAL::VertexInputRate;
 };
 }
 
