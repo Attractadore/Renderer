@@ -5,6 +5,7 @@ namespace R1::GAL {
 using ShaderStageConfig             = GraphicsPipelineConfigurator::ShaderStageConfig;
 using VertexInputBindingConfig      = GraphicsPipelineConfigurator::VertexInputBindingConfig;
 using VertexInputAttributeConfig    = GraphicsPipelineConfigurator::VertexInputAttributeConfig;
+using InputAssemblyConfig           = GraphicsPipelineConfigurator::InputAssemblyConfig;
 using RasterizationConfig           = GraphicsPipelineConfigurator::RasterizationConfig;
 using DepthTestConfig               = GraphicsPipelineConfigurator::DepthTestConfig;
 using DepthAttachmentConfig         = GraphicsPipelineConfigurator::DepthAttachmentConfig;

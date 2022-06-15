@@ -8,10 +8,10 @@ if (TARGET SDL2::SDL2)
     find_package(Wayland COMPONENTS Client REQUIRED)
 
     add_executable(VKListDevices VKListDevices.cpp)
-    target_link_libraries(VKListDevices R1_VK R1_VK_Xlib SDL2::SDL2)
+    target_link_libraries(VKListDevices GAL_Vulkan GAL_Vulkan_Xlib SDL2::SDL2)
     target_include_directories(VKListDevices PRIVATE ..)
     
     add_executable(VKCreateContexts VKCreateContexts.cpp)
-    target_link_libraries(VKCreateContexts R1_VK R1_VK_Xlib SDL2::SDL2)
+    target_link_libraries(VKCreateContexts GAL_Vulkan GAL_Vulkan_Xlib SDL2::SDL2)
     target_include_directories(VKCreateContexts PRIVATE ..)
 endif()

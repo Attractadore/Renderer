@@ -1,7 +1,7 @@
 #pragma once
 
 namespace R1 {
-inline SurfaceSizeCallback makeSizeCB(R1SurfaceSizeCallback size_cb, void* usrptr) {
+inline GAL::SurfaceSizeCallback makeSizeCB(R1SurfaceSizeCallback size_cb, void* usrptr) {
     return [=] {
         int w = -1, h = -1;
         size_cb(usrptr, &w, &h);

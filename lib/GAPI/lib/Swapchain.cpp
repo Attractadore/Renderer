@@ -4,21 +4,21 @@
 
 #include <algorithm>
 
-namespace R1::Rendering {
+namespace R1::GAPI {
 namespace {
-SurfaceFormat SelectSurfaceFormat(std::span<const SurfaceFormat> surf_fmts) {
+GAL::SurfaceFormat SelectSurfaceFormat(std::span<const GAL::SurfaceFormat> surf_fmts) {
     auto it = std::ranges::find_if(surf_fmts,
-        [](const SurfaceFormat& sf) {
-            return Rendering::IsSRGBFormat(sf.format);
+        [](const GAL::SurfaceFormat& sf) {
+            return IsSRGBFormat(sf.format);
         });
     return it != surf_fmts.end() ? *it: surf_fmts.front();
 };
 
-CompositeAlpha SelectCompositeAlpha(
-    std::span<const CompositeAlpha> composite_alphas
+GAL::CompositeAlpha SelectCompositeAlpha(
+    std::span<const GAL::CompositeAlpha> composite_alphas
 ) {
-    auto key = [](CompositeAlpha composite_alpha) {
-        using enum CompositeAlpha;
+    auto key = [](GAL::CompositeAlpha composite_alpha) {
+        using enum GAL::CompositeAlpha;
         switch(composite_alpha) {
             case Opaque:
                 return 4;
@@ -34,13 +34,13 @@ CompositeAlpha SelectCompositeAlpha(
 }
 
 
-GAPI::SwapchainConfig ConfigureSwapchain(
+GAL::SwapchainConfig ConfigureSwapchain(
     Context& ctx, Surface& surface, const Swapchain::Config& config
 ) {
     auto device = ctx.GetDevice().get();
     auto surf = surface.get();
 
-    auto desc = GAPI::GetSurfaceDescription(surf, device);
+    auto desc = GAL::GetSurfaceDescription(surf, device);
     auto surf_fmt = SelectSurfaceFormat(desc.supported_formats);
     auto image_count = std::max(desc.min_image_count, 2u);
     if (desc.max_image_count) {
@@ -51,7 +51,7 @@ GAPI::SwapchainConfig ConfigureSwapchain(
     return {
         .format = surf_fmt.format,
         .color_space = surf_fmt.color_space,
-        .image_usage = ImageUsage::ColorAttachment,
+        .image_usage = GAL::ImageUsage::ColorAttachment,
         .image_count = image_count,
         .composite_alpha = composite_alpha,
         .present_mode = config.present_mode,
@@ -66,7 +66,7 @@ Swapchain::Swapchain(
     Surface& surface,
     const Config& config
 ):  m_config{ConfigureSwapchain(ctx, surface, config)},
-    m_swapchain{GAPI::CreateSwapchain(
+    m_swapchain{GAL::CreateSwapchain(
         ctx.get(), surface.get(), surface.GetSizeCallback(), m_config
     )} {} 
 }

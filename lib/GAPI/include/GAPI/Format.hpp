@@ -1,15 +1,17 @@
 #pragma once
-#include "GAPI.hpp"
+#include "GAL/GAL.hpp"
 
-namespace R1::Rendering {
+#include <cassert>
+
+namespace R1::GAPI {
 namespace Detail {
 struct FormatTraits {
     bool is_color: 1 = false;
     bool is_srgb: 1 = false;
 };
 
-constexpr inline FormatTraits GetFormatTraits(Format fmt) {
-    using enum Format;
+constexpr inline FormatTraits GetFormatTraits(GAL::Format fmt) {
+    using enum GAL::Format;
     switch (fmt) {
         case RGB8_UNORM:
         case RGBA8_UNORM:
@@ -34,11 +36,11 @@ constexpr inline FormatTraits GetFormatTraits(Format fmt) {
 }
 }
 
-constexpr inline bool IsColorFormat(Format fmt) {
+constexpr inline bool IsColorFormat(GAL::Format fmt) {
     return Detail::GetFormatTraits(fmt).is_color;
 }
 
-constexpr inline bool IsSRGBFormat(Format fmt) {
+constexpr inline bool IsSRGBFormat(GAL::Format fmt) {
     return Detail::GetFormatTraits(fmt).is_srgb;
 }
 }

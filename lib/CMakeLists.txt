@@ -26,7 +26,7 @@ add_library(R1
 )
 target_link_libraries(R1
     PUBLIC R1PublicInterface
-    PRIVATE R1PrivateInterface R1Rendering
+    PRIVATE R1PrivateInterface GAPI
 )
 
 add_library(R1Xlib
@@ -34,7 +34,7 @@ add_library(R1Xlib
 )
 target_link_libraries(R1Xlib
     PUBLIC R1 R1PublicInterface
-    PRIVATE R1PrivateInterface R1RenderingXlib
+    PRIVATE R1PrivateInterface GAPI_Xlib 
 )
 
 add_library(R1XCB
@@ -42,5 +42,5 @@ add_library(R1XCB
 )
 target_link_libraries(R1XCB
     PUBLIC R1 R1PublicInterface
-    PRIVATE R1PrivateInterface R1RenderingXCB
+    PRIVATE R1PrivateInterface GAPI_XCB 
 )

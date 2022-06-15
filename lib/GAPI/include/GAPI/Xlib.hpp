@@ -1,25 +1,25 @@
 #pragma once
-#include "GAPIXlib.hpp"
+#include "GAL/GALXlib.hpp"
 #include "Instance.hpp"
 #include "Swapchain.hpp"
 
-namespace R1::Rendering::Xlib {
+namespace R1::GAPI::Xlib {
 inline Instance CreateInstance(
     ::Display* dpy,
     int screen,
-    const InstanceConfig& config
+    const GAL::InstanceConfig& config
 ) {
-    HInstance instance{GAPI::CreateInstanceXlib(dpy, screen, config)};
+    HInstance instance{GAL::Xlib::CreateInstance(dpy, screen, config)};
     return Instance{std::move(instance)};
 }
 
 inline Surface CreateSurface(
-    GAPI::Instance instance,
+    GAL::Instance instance,
     ::Display* dpy,
     ::Window window,
-    SurfaceSizeCallback size_cb
+    GAL::SurfaceSizeCallback size_cb
 ) {
-    HSurface surface{GAPI::CreateSurfaceXlib(instance, dpy, window)};
+    HSurface surface{GAL::Xlib::CreateSurface(instance, dpy, window)};
     return Surface{std::move(surface), std::move(size_cb)};
 }
 }

@@ -1,13 +1,13 @@
-#include "Vulkan/API.hpp"
-#include "Vulkan/APIXlib.hpp"
+#include "GAL/GAL.hpp"
+#include "GAL/GALXlib.hpp"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_syswm.h>
 
 #include <iostream>
 
-const char* GetDeviceTypeStr(R1::DeviceType dev_type) {
-    using enum R1::DeviceType;
+const char* GetDeviceTypeStr(R1::GAL::DeviceType dev_type) {
+    using enum R1::GAL::DeviceType;
     switch(dev_type) {
         case CPU:
             return "CPU";
@@ -22,11 +22,11 @@ const char* GetDeviceTypeStr(R1::DeviceType dev_type) {
     }
 }
 
-void printDevices(R1::VK::Instance instance) {
-    auto dev_cnt = R1::VK::GetDeviceCount(instance);
+void printDevices(R1::GAL::Instance instance) {
+    auto dev_cnt = R1::GAL::GetDeviceCount(instance);
     for (size_t i = 0; i < dev_cnt; i++) {
-        auto dev = R1::VK::GetDevice(instance, i);
-        const auto& dev_desc = R1::VK::GetDeviceDescription(dev);
+        auto dev = R1::GAL::GetDevice(instance, i);
+        const auto& dev_desc = R1::GAL::GetDeviceDescription(dev);
         std::cout << GetDeviceTypeStr(dev_desc.type) << " device " << dev_desc.name << "\n";
     }
 }
@@ -47,11 +47,11 @@ int main() {
 
     switch (info.subsystem) {
     case SDL_SYSWM_X11: {
-        auto i = R1::VK::CreateInstanceXlib(
+        auto i = R1::GAL::Xlib::CreateInstance(
             info.info.x11.display, 0, {}
         );
         printDevices(i);
-        R1::VK::DestroyInstance(i);
+        R1::GAL::DestroyInstance(i);
         break;
     }
     default: {

@@ -1,22 +1,22 @@
-#include "Rendering/Context.hpp"
+#include "GAPI/Context.hpp"
 #include "Swapchain.hpp"
 
 namespace R1 {
 namespace {
-PresentMode SelectPresentMode(
-    std::span<const PresentMode> present_modes
+GAL::PresentMode SelectPresentMode(
+    std::span<const GAL::PresentMode> present_modes
 ) {
-    return PresentMode::FIFO;
+    return GAL::PresentMode::FIFO;
 }
 
-Rendering::Swapchain::Config ConfigureSwapchain(
-    Rendering::Context& ctx,
-    Rendering::Surface& surface
+GAPI::Swapchain::Config ConfigureSwapchain(
+    GAPI::Context& ctx,
+    GAPI::Surface& surface
 ) {
     auto device = ctx.GetDevice().get();
     auto surf = surface.get();
 
-    auto desc = GAPI::GetSurfaceDescription(surf, device);
+    auto desc = GAL::GetSurfaceDescription(surf, device);
     auto present_mode = SelectPresentMode(desc.supported_present_modes);
 
     return {
@@ -26,7 +26,7 @@ Rendering::Swapchain::Config ConfigureSwapchain(
 }
 
 Swapchain::Swapchain(
-    Rendering::Context& ctx,
-    Rendering::Surface& surface
+    GAPI::Context& ctx,
+    GAPI::Surface& surface
 ): m_swapchain{ctx, surface, ConfigureSwapchain(ctx, surface)} {}
 }

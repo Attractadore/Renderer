@@ -1,20 +1,20 @@
 #include "Context.hpp"
 
-namespace R1::Rendering {
+namespace R1::GAPI {
 namespace {
-GAPI::Context CreateContext(Device& device) {
+GAL::Context CreateContext(Device& device) {
     auto graphics_queue = device.FindGraphicsQueueFamily();
     auto compute_queue = device.FindComputeQueueFamily();
     auto transfer_queue = device.FindTransferQueueFamily();
 
-    using QueueFamily::ID::Unknown;
+    using GAL::QueueFamily::ID::Unknown;
 
     unsigned config_cnt = 0;
-    std::array<QueueConfig, 3> queue_configs;
-    auto push_config = [&] (const QueueConfig& cfg) {
+    std::array<GAL::QueueConfig, 3> queue_configs;
+    auto push_config = [&] (const GAL::QueueConfig& cfg) {
         queue_configs[config_cnt++] = cfg;
     };
-    auto push_config_if_found = [&] (const QueueConfig& cfg) {
+    auto push_config_if_found = [&] (const GAL::QueueConfig& cfg) {
         if (cfg.id != Unknown) {
             push_config(cfg);
         }
@@ -44,12 +44,12 @@ GAPI::Context CreateContext(Device& device) {
             "Device doesn't support presentation"};
     }
 
-    ContextConfig config {
+    GAL::ContextConfig config {
         .queue_config = std::span{queue_configs.data(), config_cnt},
         .wsi = true,
     };
 
-    return GAPI::CreateContext(device.get(), config);
+    return GAL::CreateContext(device.get(), config);
 }
 }
 
@@ -57,7 +57,7 @@ Context::Context(Device& device):
     m_device{device},
     m_context{CreateContext(device)}
 {
-    using QueueFamily::ID::Unknown;
+    using GAL::QueueFamily::ID::Unknown;
     m_graphics_queue_family = device.FindGraphicsQueueFamily();
     m_compute_queue_family = device.FindComputeQueueFamily();
     if (m_compute_queue_family == Unknown) {
@@ -68,8 +68,8 @@ Context::Context(Device& device):
         m_transfer_queue_family = m_graphics_queue_family;
     }
 
-    m_graphics_queue = GAPI::GetQueue(m_context.get(), m_graphics_queue_family, 0);
-    m_compute_queue = GAPI::GetQueue(m_context.get(), m_compute_queue_family, 0);
-    m_transfer_queue = GAPI::GetQueue(m_context.get(), m_transfer_queue_family, 0);
+    m_graphics_queue = GAL::GetQueue(m_context.get(), m_graphics_queue_family, 0);
+    m_compute_queue = GAL::GetQueue(m_context.get(), m_compute_queue_family, 0);
+    m_transfer_queue = GAL::GetQueue(m_context.get(), m_transfer_queue_family, 0);
 }
 }

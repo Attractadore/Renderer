@@ -1,49 +1,47 @@
 #pragma once
-#include "GAPIRAII.hpp"
+#include "GALRAII.hpp"
 
-#include <memory>
-
-namespace R1::Rendering {
+namespace R1::GAPI {
 class Device {
-    GAPI::Device m_device;
+    GAL::Device m_device;
 
 public:
-    Device(GAPI::Device device):
+    Device(GAL::Device device):
         m_device{device} {}
 
     const std::string& GetName() const;
-    const DeviceDescription& GetDescription() const;
+    const GAL::DeviceDescription& GetDescription() const;
 
-    QueueFamily::ID FindQueueFamilyWithCapabilities(
-        QueueCapabilityFlags caps,
-        QueueCapabilityFlags filter =
-            QueueCapability::Graphics |
-            QueueCapability::Compute |
-            QueueCapability::Transfer
+    GAL::QueueFamily::ID FindQueueFamilyWithCapabilities(
+        GAL::QueueCapabilityFlags caps,
+        GAL::QueueCapabilityFlags filter =
+            GAL::QueueCapability::Graphics |
+            GAL::QueueCapability::Compute |
+            GAL::QueueCapability::Transfer
     ) const noexcept;
     
-    QueueFamily::ID FindGraphicsQueueFamily() const noexcept {
+    GAL::QueueFamily::ID FindGraphicsQueueFamily() const noexcept {
         return FindQueueFamilyWithCapabilities(
-            QueueCapability::Graphics |
-            QueueCapability::Compute |
-            QueueCapability::Transfer
+            GAL::QueueCapability::Graphics |
+            GAL::QueueCapability::Compute |
+            GAL::QueueCapability::Transfer
         );
     }
     
-    QueueFamily::ID FindComputeQueueFamily() const noexcept {
+    GAL::QueueFamily::ID FindComputeQueueFamily() const noexcept {
         return FindQueueFamilyWithCapabilities(
-            QueueCapability::Compute |
-            QueueCapability::Transfer
+            GAL::QueueCapability::Compute |
+            GAL::QueueCapability::Transfer
         );
     }
     
-    QueueFamily::ID FindTransferQueueFamily() const noexcept {
+    GAL::QueueFamily::ID FindTransferQueueFamily() const noexcept {
         return FindQueueFamilyWithCapabilities(
-            QueueCapability::Transfer
+            GAL::QueueCapability::Transfer
         );
     }
 
-    GAPI::Device get() noexcept { return m_device; }
+    GAL::Device get() noexcept { return m_device; }
 };
 
 class Instance {
@@ -56,6 +54,6 @@ public:
     size_t GetDeviceCount() const { return devices.size(); }
     Device& GetDevice(size_t idx) { return devices[idx]; }
 
-    GAPI::Instance get() noexcept { return m_instance.get(); }
+    GAL::Instance get() noexcept { return m_instance.get(); }
 };
 };

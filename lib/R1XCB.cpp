@@ -1,10 +1,10 @@
 #include "R1XCB.h"
-#include "Rendering/APIXCB.hpp"
+#include "GAPI/XCB.hpp"
 #include "Types.hpp"
 
 extern "C" {
 R1Instance* R1_CreateInstanceXCB(xcb_connection_t* conn, int screen) {
-    return new R1Instance{R1::Rendering::XCB::CreateInstance(conn, screen, {})};
+    return new R1Instance{R1::GAPI::XCB::CreateInstance(conn, screen, {})};
 }
 
 R1Surface* R1_CreateSurfaceXlib(
@@ -15,7 +15,7 @@ R1Surface* R1_CreateSurfaceXlib(
     void* usrptr
 ) {
     return new R1Surface {
-        R1::Rendering::XCB::CreateSurface(
+        R1::GAPI::XCB::CreateSurface(
             instance->get().get(), conn, window,
             R1::makeSizeCB(c_size_cb, usrptr)
         )

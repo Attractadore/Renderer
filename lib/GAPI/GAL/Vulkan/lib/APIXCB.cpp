@@ -1,11 +1,11 @@
-#include "GAL/APIXCB.hpp"
+#include "GAL/GALXCB.hpp"
 #include "InstanceImpl.hpp"
 #include "SwapchainImpl.hpp"
 
 #include <vulkan/vulkan_xcb.h>
 
-namespace R1::GAL {
-Instance CreateInstanceXCB(::xcb_connection_t* c, int screen, const InstanceConfig& config) {
+namespace R1::GAL::XCB {
+Instance CreateInstance(::xcb_connection_t* c, int screen, const InstanceConfig& config) {
     static constexpr std::array exts = {
         VK_KHR_SURFACE_EXTENSION_NAME,
         VK_KHR_XCB_SURFACE_EXTENSION_NAME,
@@ -17,7 +17,7 @@ Instance CreateInstanceXCB(::xcb_connection_t* c, int screen, const InstanceConf
     return CreateInstanceFromVK(std::move(instance));
 }
 
-Surface CreateSurfaceXCB(
+Surface CreateSurface(
     Instance instance,
     xcb_connection_t* conn,
     xcb_window_t window

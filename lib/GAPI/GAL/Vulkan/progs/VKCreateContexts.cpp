@@ -1,16 +1,16 @@
-#include "Vulkan/API.hpp"
-#include "Vulkan/APIXlib.hpp"
+#include "GAL/GAL.hpp"
+#include "GAL/GALXlib.hpp"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_syswm.h>
 
 #include <iostream>
 
-void printDevices(R1::VK::Instance instance) {
-    auto dev_cnt = R1::VK::GetDeviceCount(instance);
+void printDevices(R1::GAL::Instance instance) {
+    auto dev_cnt = R1::GAL::GetDeviceCount(instance);
     for (size_t i = 0; i < dev_cnt; i++) {
-        auto dev = R1::VK::GetDevice(instance, i);
-        const auto& dev_desc = R1::VK::GetDeviceDescription(dev);
+        auto dev = R1::GAL::GetDevice(instance, i);
+        const auto& dev_desc = R1::GAL::GetDeviceDescription(dev);
         std::cout << "Create context for device " << dev_desc.name << "\n";
         if (dev_desc.queue_families.empty()) {
             std::cout << "Device doesn't have any queues\n";
@@ -19,11 +19,11 @@ void printDevices(R1::VK::Instance instance) {
             std::cout << "Device doesn't support presentation\n";
             continue;
         }
-        R1::QueueConfig qcfg = {
+        R1::GAL::QueueConfig qcfg = {
             .id = dev_desc.queue_families[0].id,
             .count = 1,
         };
-        auto ctx = R1::VK::CreateContext(dev, {
+        auto ctx = R1::GAL::CreateContext(dev, {
             .queue_config = {&qcfg, 1},
             .wsi = true,
         });
@@ -32,7 +32,7 @@ void printDevices(R1::VK::Instance instance) {
         } else {
             std::cout << "Success\n";
         }
-        R1::VK::DestroyContext(ctx);
+        R1::GAL::DestroyContext(ctx);
     }
 }
 
@@ -52,11 +52,11 @@ int main() {
 
     switch (info.subsystem) {
     case SDL_SYSWM_X11: {
-        auto i = R1::VK::CreateInstanceXlib(
+        auto i = R1::GAL::Xlib::CreateInstance(
             info.info.x11.display, 0, {}
         );
         printDevices(i);
-        R1::VK::DestroyInstance(i);
+        R1::GAL::DestroyInstance(i);
         break;
     }
     default: {

@@ -1,11 +1,11 @@
-#include "GAL/APIXlib.hpp"
+#include "GAL/GALXlib.hpp"
 #include "InstanceImpl.hpp"
 #include "SwapchainImpl.hpp"
 
 #include <vulkan/vulkan_xlib.h>
 
-namespace R1::GAL {
-Instance CreateInstanceXlib(
+namespace R1::GAL::Xlib {
+Instance CreateInstance(
     ::Display* dpy,
     int screen,
     const InstanceConfig& config
@@ -21,7 +21,7 @@ Instance CreateInstanceXlib(
     return CreateInstanceFromVK(std::move(instance));
 }
 
-Surface CreateSurfaceXlib(
+Surface CreateSurface(
     Instance instance,
     ::Display* dpy,
     ::Window window

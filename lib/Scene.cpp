@@ -16,142 +16,146 @@ std::vector<std::byte> loadShader(const std::string& path) {
     return data;
 }
 
-GAPI::PipelineLayout createPipelineLayout(GAPI::Context ctx) {
-    return GAPI::CreatePipelineLayout(ctx, {});
+GAL::PipelineLayout createPipelineLayout(GAL::Context ctx) {
+    return GAL::CreatePipelineLayout(ctx, {});
 }
 
-GAPI::Pipeline createPipeline(
-    GAPI::Context ctx,
-    GAPI::PipelineLayout layout,
-    GAPI::ShaderModule vert_module,
-    GAPI::ShaderModule frag_module,
-    Format color_fmt
+GAL::Pipeline createPipeline(
+    GAL::Context ctx,
+    GAL::PipelineLayout layout,
+    GAL::ShaderModule vert_module,
+    GAL::ShaderModule frag_module,
+    GAL::Format color_fmt
 ) {
-    GAPI::GraphicsPipelineConfigurator gpc;
+    GAL::GraphicsPipelineConfigurator gpc;
 
     gpc.SetLayout(layout);
 
-    GAPI::ShaderStageInfo vert_stage = {
+    GAL::ShaderStageConfig vert_stage = {
         .module = vert_module,
         .entry_point = "main",
     };
-    VertexInputInfo vert_input = {};
-    InputAssemblyInfo input_assembly = {
-        .primitive_topology = PrimitiveTopology::TriangleList,
+    GAL::VertexInputConfig vert_input = {};
+    GAL::InputAssemblyConfig input_assembly = {
+        .primitive_topology = GAL::PrimitiveTopology::TriangleList,
     };
     gpc.SetVertexShaderState(vert_stage, vert_input, {}, {}, input_assembly);
 
-    RasterizationInfo rast = {
-        .polygon_mode = PolygonMode::Fill,
-        .cull_mode = CullMode::None,
+    GAL::RasterizationConfig rast = {
+        .polygon_mode = GAL::PolygonMode::Fill,
+        .cull_mode = GAL::CullMode::None,
         .line_width = 1.0f,
     };
-    MultisampleInfo ms = {
+    GAL::MultisampleConfig ms = {
         .sample_count = 1,
     };
     gpc.SetRasterizationState(rast, ms);
 
-    GAPI::ShaderStageInfo frag_stage = {
+    GAL::ShaderStageConfig frag_stage = {
         .module = frag_module,
         .entry_point = "main",
     };
-    ColorBlendInfo blend = {};
-    ColorAttachmentInfo att = {
+    GAL::ColorBlendConfig blend = {};
+    GAL::ColorAttachmentConfig att = {
         .format = color_fmt,
-        .color_mask = {1, 1, 1, 1},
+        .color_mask =
+            GAL::ColorComponent::R |
+            GAL::ColorComponent::G |
+            GAL::ColorComponent::B |
+            GAL::ColorComponent::A,
     };
     gpc.SetFragmentShaderState(frag_stage, blend, {&att, 1});
     gpc.FinishCurrent();
 
-    GAPI::Pipeline pipeline = nullptr;
-    GAPI::CreateGraphicsPipelines(ctx, nullptr, gpc.FinishAll(), &pipeline);
+    GAL::Pipeline pipeline = nullptr;
+    GAL::CreateGraphicsPipelines(ctx, nullptr, gpc.FinishAll(), &pipeline);
 
     return pipeline;
 }
 
-GAPI::ImageView createSwapchainImageView(
-    GAPI::Context ctx, Format fmt, GAPI::Image img 
+GAL::ImageView createSwapchainImageView(
+    GAL::Context ctx, GAL::Format fmt, GAL::Image img 
 ) {
-    ImageViewConfig config = {
-        .type = ImageViewType::D2,
+    GAL::ImageViewConfig config = {
+        .type = GAL::ImageViewType::D2,
         .format = fmt,
         .subresource_range = {
-            .aspects = ImageAspect::Color,
+            .aspects = GAL::ImageAspect::Color,
             .first_mip_level = 0,
             .mip_level_count = 1,
             .first_array_layer = 0,
             .array_layer_count = 1,
         },
     };
-    return GAPI::CreateImageView(ctx, img, config);
+    return GAL::CreateImageView(ctx, img, config);
 }
 
-std::vector<GAPI::ImageView> createSwapchainImageViews(
-    GAPI::Context ctx, Format fmt, GAPI::Swapchain swc
+std::vector<GAL::ImageView> createSwapchainImageViews(
+    GAL::Context ctx, GAL::Format fmt, GAL::Swapchain swc
 ) {
-    std::vector<GAPI::ImageView> views(GAPI::GetSwapchainImageCount(swc));
+    std::vector<GAL::ImageView> views(GAL::GetSwapchainImageCount(swc));
     for (size_t i = 0; i < views.size(); i++) {
-        views[i] = createSwapchainImageView(ctx, fmt, GAPI::GetSwapchainImage(swc, i));
+        views[i] = createSwapchainImageView(ctx, fmt, GAL::GetSwapchainImage(swc, i));
     }
     return views;
 }
 
-GAPI::CommandPool createCommandPool(GAPI::Context ctx, QueueFamily::ID qf) {
-    CommandPoolConfig config = {
+GAL::CommandPool createCommandPool(GAL::Context ctx, GAL::QueueFamily::ID qf) {
+    GAL::CommandPoolConfig config = {
         .flags =
-            CommandPoolConfigOption::Transient |
-            CommandPoolConfigOption::AllowCommandBufferReset,
+            GAL::CommandPoolConfigOption::Transient |
+            GAL::CommandPoolConfigOption::AllowCommandBufferReset,
         .queue_family = qf,
     };
-    return GAPI::CreateCommandPool(ctx, config);
+    return GAL::CreateCommandPool(ctx, config);
 }
 
-std::vector<GAPI::CommandBuffer> createCommandBuffers(
-    GAPI::Context ctx, GAPI::CommandPool pool, unsigned n
+std::vector<GAL::CommandBuffer> createCommandBuffers(
+    GAL::Context ctx, GAL::CommandPool pool, unsigned n
 ) {
-    std::vector<GAPI::CommandBuffer> cmd_buffers(n);
-    GAPI::AllocateCommandBuffers(ctx, pool, cmd_buffers);
+    std::vector<GAL::CommandBuffer> cmd_buffers(n);
+    GAL::AllocateCommandBuffers(ctx, pool, cmd_buffers);
     return cmd_buffers;
 }
 
-std::vector<GAPI::Fence> createFences(GAPI::Context ctx, unsigned n, bool signaled = true) {
-    std::vector<GAPI::Fence> fences(n);
-    std::ranges::generate(fences, [&] { return GAPI::CreateFence(ctx, { .signaled = signaled }); });
+std::vector<GAL::Fence> createFences(GAL::Context ctx, unsigned n, bool signaled = true) {
+    std::vector<GAL::Fence> fences(n);
+    std::ranges::generate(fences, [&] { return GAL::CreateFence(ctx, { .signaled = signaled }); });
     return fences;
 }
 
-std::vector<GAPI::Semaphore> createSemaphores(GAPI::Context ctx, unsigned n) {
-    std::vector<GAPI::Semaphore> semaphores(n);
-    std::ranges::generate(semaphores, [&] { return GAPI::CreateSemaphore(ctx); });
+std::vector<GAL::Semaphore> createSemaphores(GAL::Context ctx, unsigned n) {
+    std::vector<GAL::Semaphore> semaphores(n);
+    std::ranges::generate(semaphores, [&] { return GAL::CreateSemaphore(ctx); });
     return semaphores;
 }
 }
 
 struct Scene::Impl {
-    GAPI::Context                       ctx;
-    GAPI::Swapchain                     swapchain;
-    QueueFamily::ID                     queue_family;
-    GAPI::Queue                         queue;
-    Format                              color_fmt;
-    GAPI::Pipeline                      pipeline;
-    std::vector<GAPI::ImageView>        image_views;
-    unsigned                            frame_index;
-    unsigned                            frame_count;
-    GAPI::CommandPool                   command_pool;
-    std::vector<GAPI::CommandBuffer>    command_buffers;
-    std::vector<GAPI::Fence>            fences;
-    std::vector<GAPI::Semaphore>        acquire_semaphores;
-    std::vector<GAPI::Semaphore>        draw_semaphores;
+    GAL::Context                    ctx;
+    GAL::Swapchain                  swapchain;
+    GAL::QueueFamily::ID            queue_family;
+    GAL::Queue                      queue;
+    GAL::Format                     color_fmt;
+    GAL::Pipeline                   pipeline;
+    std::vector<GAL::ImageView>     image_views;
+    unsigned                        frame_index;
+    unsigned                        frame_count;
+    GAL::CommandPool                command_pool;
+    std::vector<GAL::CommandBuffer> command_buffers;
+    std::vector<GAL::Fence>         fences;
+    std::vector<GAL::Semaphore>     acquire_semaphores;
+    std::vector<GAL::Semaphore>     draw_semaphores;
 
     ~Impl() {
-        GAPI::ContextWaitIdle(ctx);
-        std::ranges::for_each(fences, [&] (auto f) { GAPI::DestroyFence(ctx, f); });
-        std::ranges::for_each(acquire_semaphores, [&] (auto s) { GAPI::DestroySemaphore(ctx, s); });
-        std::ranges::for_each(draw_semaphores, [&] (auto s) { GAPI::DestroySemaphore(ctx, s); });
-        GAPI::FreeCommandBuffers(ctx, command_pool, command_buffers);
-        GAPI::DestroyCommandPool(ctx, command_pool);
-        std::ranges::for_each(image_views, [&] (auto v) { GAPI::DestroyImageView(ctx, v); });
-        GAPI::DestroyPipeline(ctx, pipeline);
+        GAL::ContextWaitIdle(ctx);
+        std::ranges::for_each(fences, [&] (auto f) { GAL::DestroyFence(ctx, f); });
+        std::ranges::for_each(acquire_semaphores, [&] (auto s) { GAL::DestroySemaphore(ctx, s); });
+        std::ranges::for_each(draw_semaphores, [&] (auto s) { GAL::DestroySemaphore(ctx, s); });
+        GAL::FreeCommandBuffers(ctx, command_pool, command_buffers);
+        GAL::DestroyCommandPool(ctx, command_pool);
+        std::ranges::for_each(image_views, [&] (auto v) { GAL::DestroyImageView(ctx, v); });
+        GAL::DestroyPipeline(ctx, pipeline);
     }
 };
 
@@ -168,13 +172,13 @@ Scene::Scene(Context& ctx, Swapchain& swapchain):
     {
         auto vert_code = loadShader("vert.spv");
         auto frag_code = loadShader("frag.spv");
-        auto vert_module = GAPI::CreateShaderModule(pimpl->ctx, { .code = vert_code } );
-        auto frag_module = GAPI::CreateShaderModule(pimpl->ctx, { .code = frag_code } );
+        auto vert_module = GAL::CreateShaderModule(pimpl->ctx, { .code = vert_code } );
+        auto frag_module = GAL::CreateShaderModule(pimpl->ctx, { .code = frag_code } );
         auto layout = createPipelineLayout(pimpl->ctx);
         pimpl->pipeline = createPipeline(pimpl->ctx, layout, vert_module, frag_module, pimpl->color_fmt);
-        GAPI::DestroyPipelineLayout(pimpl->ctx, layout);
-        GAPI::DestroyShaderModule(pimpl->ctx, vert_module);
-        GAPI::DestroyShaderModule(pimpl->ctx, frag_module);
+        GAL::DestroyPipelineLayout(pimpl->ctx, layout);
+        GAL::DestroyShaderModule(pimpl->ctx, vert_module);
+        GAL::DestroyShaderModule(pimpl->ctx, frag_module);
     }
     {
         pimpl->image_views = createSwapchainImageViews(pimpl->ctx, pimpl->color_fmt, pimpl->swapchain);
@@ -208,146 +212,146 @@ void Scene::Draw() {
 
     constexpr auto InfiniteTimeout = std::chrono::nanoseconds{UINT64_MAX};
 
-    GAPI::WaitForFences(ctx, {&fence, 1}, true, InfiniteTimeout);
-    GAPI::ResetFences(ctx, {&fence, 1});
+    GAL::WaitForFences(ctx, {&fence, 1}, true, InfiniteTimeout);
+    GAL::ResetFences(ctx, {&fence, 1});
 
-    auto resize_swapchain = [&] (SwapchainStatus status) {
-        if (status == SwapchainStatus::RequiresSlowResize) {
-            GAPI::ContextWaitIdle(ctx);
-            std::ranges::for_each(pimpl->command_buffers, [] (auto cmd) { GAPI::ResetCommandBuffer(cmd, CommandResources::Keep); });
-            std::ranges::for_each(pimpl->image_views, [&] (auto v) { GAPI::DestroyImageView(ctx, v); });
-            GAPI::ResizeSwapchain(swc);
+    auto resize_swapchain = [&] (GAL::SwapchainStatus status) {
+        if (status == GAL::SwapchainStatus::RequiresSlowResize) {
+            GAL::ContextWaitIdle(ctx);
+            std::ranges::for_each(pimpl->command_buffers, [] (auto cmd) { GAL::ResetCommandBuffer(cmd, GAL::CommandResources::Keep); });
+            std::ranges::for_each(pimpl->image_views, [&] (auto v) { GAL::DestroyImageView(ctx, v); });
+            GAL::ResizeSwapchain(swc);
             pimpl->image_views = createSwapchainImageViews(ctx, pimpl->color_fmt, swc);
         } else {
-            GAPI::ResizeSwapchain(swc);
+            GAL::ResizeSwapchain(swc);
         }
     };
 
     auto img_idx = [&] {
     while(true) {
-        auto [img_idx, status] = GAPI::AcquireImage(swc, acquire_sem);
-        if (status != SwapchainStatus::Good) {
+        auto [img_idx, status] = GAL::AcquireImage(swc, acquire_sem);
+        if (status != GAL::SwapchainStatus::Good) {
             resize_swapchain(status);
         } else {
             return img_idx;
         };
     }} ();
 
-    auto [img_w, img_h] = GAPI::GetSwapchainSize(swc);
-    auto img = GAPI::GetSwapchainImage(swc, img_idx);
+    auto [img_w, img_h] = GAL::GetSwapchainSize(swc);
+    auto img = GAL::GetSwapchainImage(swc, img_idx);
     auto view = pimpl->image_views[img_idx];
 
     auto cmd_buffer = pimpl->command_buffers[idx];
 
-    CommandBufferBeginConfig begin_config = {
-        .usage = CommandBufferUsage::OneTimeSubmit,
+    GAL::CommandBufferBeginConfig begin_config = {
+        .usage = GAL::CommandBufferUsage::OneTimeSubmit,
     };
-    GAPI::BeginCommandBuffer(cmd_buffer, begin_config);
+    GAL::BeginCommandBuffer(cmd_buffer, begin_config);
 
     {
-        GAPI::ImageBarrier from_present = {
+        GAL::ImageBarrier from_present = {
             .memory_barrier = {
-                .src_stages = PipelineStage::AllCommands,
-                .dst_stages = PipelineStage::ColorAttachmentOutput,
-                .dst_accesses = MemoryAccess::ColorAttachmentWrite,
+                .src_stages = GAL::PipelineStage::AllCommands,
+                .dst_stages = GAL::PipelineStage::ColorAttachmentOutput,
+                .dst_accesses = GAL::MemoryAccess::ColorAttachmentWrite,
             },
-            .new_layout = ImageLayout::Attachment,
+            .new_layout = GAL::ImageLayout::Attachment,
             .image = img,
             .subresource_range = {
-                .aspects = ImageAspect::Color,
+                .aspects = GAL::ImageAspect::Color,
                 .first_mip_level = 0,
                 .mip_level_count = 1,
                 .first_array_layer = 0,
                 .array_layer_count = 1,
             },
         };
-        GAPI::DependencyConfig config = {
+        GAL::DependencyConfig config = {
             .image_barriers{&from_present, 1},
         };
-        GAPI::CmdPipelineBarrier(cmd_buffer, config);
+        GAL::CmdPipelineBarrier(cmd_buffer, config);
     }
 
-    ClearValue clear_color = {0.2f, 0.2f, 0.8f, 1.0f};
-    GAPI::RenderingAttachment color_attachment = {
+    GAL::ClearValue clear_color = {0.2f, 0.2f, 0.8f, 1.0f};
+    GAL::RenderingAttachment color_attachment = {
         .view = view,
-        .layout = ImageLayout::Attachment,
-        .load_op = AttachmentLoadOp::Clear,
-        .store_op = AttachmentStoreOp::Store,
+        .layout = GAL::ImageLayout::Attachment,
+        .load_op = GAL::AttachmentLoadOp::Clear,
+        .store_op = GAL::AttachmentStoreOp::Store,
         .clear_value = clear_color,
     };
 
-    GAPI::RenderingConfig rendering_config = {
+    GAL::RenderingConfig rendering_config = {
         .render_area = { .width = img_w, .height = img_h },
         .color_attachments{&color_attachment, 1},
     };
 
-    GAPI::CmdBeginRendering(cmd_buffer, rendering_config);
+    GAL::CmdBeginRendering(cmd_buffer, rendering_config);
 
     {
-        GAPI::Viewport viewport = {
+        GAL::Viewport viewport = {
             .width = static_cast<float>(img_w),
             .height = static_cast<float>(img_h),
             .min_depth = 0.0f,
             .max_depth = 1.0f,
         };
-        GAPI::Rect2D scissor = {
+        GAL::Rect2D scissor = {
             .width = img_w,
             .height = img_h,
         };
-        GAPI::CmdSetViewports(cmd_buffer, {&viewport, 1});
-        GAPI::CmdSetScissors(cmd_buffer, {&scissor, 1});
+        GAL::CmdSetViewports(cmd_buffer, {&viewport, 1});
+        GAL::CmdSetScissors(cmd_buffer, {&scissor, 1});
     }
 
-    GAPI::CmdBindGraphicsPipeline(cmd_buffer, pimpl->pipeline);
-    DrawConfig draw_config = {
+    GAL::CmdBindGraphicsPipeline(cmd_buffer, pimpl->pipeline);
+    GAL::DrawConfig draw_config = {
         .vertex_count = 3,
         .instance_count = 1,
     };
-    GAPI::CmdDraw(cmd_buffer, draw_config);
+    GAL::CmdDraw(cmd_buffer, draw_config);
 
-    GAPI::CmdEndRendering(cmd_buffer);
+    GAL::CmdEndRendering(cmd_buffer);
 
     {
-        GAPI::ImageBarrier to_present = {
+        GAL::ImageBarrier to_present = {
             .memory_barrier = {
-                .src_stages = PipelineStage::ColorAttachmentOutput,
-                .src_accesses = MemoryAccess::ColorAttachmentWrite,
+                .src_stages = GAL::PipelineStage::ColorAttachmentOutput,
+                .src_accesses = GAL::MemoryAccess::ColorAttachmentWrite,
             },
-            .old_layout = ImageLayout::Attachment,
-            .new_layout = ImageLayout::Present,
+            .old_layout = GAL::ImageLayout::Attachment,
+            .new_layout = GAL::ImageLayout::Present,
             .image = img,
             .subresource_range = {
-                .aspects = ImageAspect::Color,
+                .aspects = GAL::ImageAspect::Color,
                 .first_mip_level = 0,
                 .mip_level_count = 1,
                 .first_array_layer = 0,
                 .array_layer_count = 1,
             },
         };
-        GAPI::DependencyConfig config = {
+        GAL::DependencyConfig config = {
             .image_barriers{&to_present, 1},
         };
-        GAPI::CmdPipelineBarrier(cmd_buffer, config);
+        GAL::CmdPipelineBarrier(cmd_buffer, config);
     }
 
-    GAPI::EndCommandBuffer(cmd_buffer);
+    GAL::EndCommandBuffer(cmd_buffer);
 
     {
-        GAPI::SemaphoreSubmitConfig wait_config {
-            acquire_sem, PipelineStage::ColorAttachmentOutput};
-        GAPI::CommandBufferSubmitConfig cmd_config{cmd_buffer};
-        GAPI::SemaphoreSubmitConfig signal_config {
+        GAL::SemaphoreSubmitConfig wait_config {
+            acquire_sem, GAL::PipelineStage::ColorAttachmentOutput};
+        GAL::CommandBufferSubmitConfig cmd_config{cmd_buffer};
+        GAL::SemaphoreSubmitConfig signal_config {
             draw_sem, {}};
-        GAPI::QueueSubmitConfig submit_config{
+        GAL::QueueSubmitConfig submit_config{
             {&wait_config, 1},
             {&cmd_config, 1},
             {&signal_config, 1},
         };
-        GAPI::QueueSubmit(pimpl->queue, {&submit_config, 1}, fence);
+        GAL::QueueSubmit(pimpl->queue, {&submit_config, 1}, fence);
     }
 
-    auto status = GAPI::PresentImage(swc, img_idx, {&draw_sem, 1});
-    if (status != SwapchainStatus::Good) {
+    auto status = GAL::PresentImage(swc, img_idx, {&draw_sem, 1});
+    if (status != GAL::SwapchainStatus::Good) {
         resize_swapchain(status);
     }
 

@@ -1,27 +1,27 @@
 #pragma once
 #include "R1Types.h"
-#include "Rendering/Swapchain.hpp"
+#include "GAPI/Swapchain.hpp"
 
 namespace R1 {
-namespace Rendering { class Context; }
+namespace GAPI { class Context; }
 
 class Surface {
-    Rendering::Surface m_surface;
+    GAPI::Surface m_surface;
 
 public:
-    explicit Surface(Rendering::Surface surface):
+    explicit Surface(GAPI::Surface surface):
         m_surface{std::move(surface)} {}
 
-    Rendering::Surface& get() noexcept { return m_surface; }
+    GAPI::Surface& get() noexcept { return m_surface; }
 };
 
 class Swapchain {
-    Rendering::Swapchain m_swapchain;
+    GAPI::Swapchain m_swapchain;
 
 public:
-    Swapchain(Rendering::Context& ctx, Rendering::Surface& surface);
+    Swapchain(GAPI::Context& ctx, GAPI::Surface& surface);
 
-    Rendering::Swapchain& get() noexcept { return m_swapchain; }
+    GAPI::Swapchain& get() noexcept { return m_swapchain; }
 };
 }
 

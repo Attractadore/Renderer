@@ -2,12 +2,12 @@
 #include "Types.hpp"
 
 namespace {
-R1Device* ToPublic(R1::Rendering::Device* device) {
+R1Device* ToPublic(R1::GAPI::Device* device) {
     return reinterpret_cast<R1Device*>(device);
 }
 
-R1::Rendering::Device* ToPrivate(R1Device* device) {
-    return reinterpret_cast<R1::Rendering::Device*>(device);
+R1::GAPI::Device* ToPrivate(R1Device* device) {
+    return reinterpret_cast<R1::GAPI::Device*>(device);
 }
 };
 

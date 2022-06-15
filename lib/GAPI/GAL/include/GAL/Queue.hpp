@@ -1,7 +1,7 @@
 #pragma once
 #include "Types.hpp"
 
-namespace R1::GAL::VK {
+namespace R1::GAL {
 Queue GetQueue(Context ctx, QueueFamily::ID family, unsigned idx);
 
 void QueueSubmit(

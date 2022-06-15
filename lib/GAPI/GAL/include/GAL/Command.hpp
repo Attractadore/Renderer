@@ -9,11 +9,11 @@ void TrimCommandPool(Context ctx, CommandPool pool);
 
 void AllocateCommandBuffers(
     Context ctx, CommandPool pool,
-    std::span<const CommandBuffer> cmd_buffers
+    std::span<CommandBuffer> cmd_buffers
 );
 void FreeCommandBuffers(
     Context ctx, CommandPool pool,
-    std::span<const CommandBuffer> cmd_buffers
+    std::span<CommandBuffer> cmd_buffers
 );
 void ResetCommandBuffer(CommandBuffer cmd_buffer, CommandResources resources);
 
