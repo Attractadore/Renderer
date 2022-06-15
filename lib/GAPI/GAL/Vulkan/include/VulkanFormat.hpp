@@ -12,4 +12,4 @@ enum class Format {
     BGRA8_UNORM = VK_FORMAT_B8G8R8A8_UNORM,
     BGRA8_SRGB  = VK_FORMAT_B8G8R8A8_SRGB,
 };
-};
+}

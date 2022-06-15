@@ -144,17 +144,17 @@ struct ColorBlendConfigBase {
 
 template<typename Traits>
 struct ColorAttachmentConfigBase {
-    Traits::Format                          format;
-    Flags<typename Traits::ColorComponent>  color_mask;
+    Traits::Format              format;
+    Traits::ColorComponentFlags color_mask;
     struct {
-        Traits::BlendFactor                 src_color_factor;
-        Traits::BlendFactor                 dst_color_factor;
-        Traits::BlendOp                     color_op;
-        Traits::BlendFactor                 src_alpha_factor;
-        Traits::BlendFactor                 dst_alpha_factor;
-        Traits::BlendOp                     alpha_op;
-        bool                                enabled: 1;
-    }                                       blend;
+        Traits::BlendFactor     src_color_factor;
+        Traits::BlendFactor     dst_color_factor;
+        Traits::BlendOp         color_op;
+        Traits::BlendFactor     src_alpha_factor;
+        Traits::BlendFactor     dst_alpha_factor;
+        Traits::BlendOp         alpha_op;
+        bool                    enabled: 1;
+    }                           blend;
 };
 
 struct GraphicsPipelineConfigBase {

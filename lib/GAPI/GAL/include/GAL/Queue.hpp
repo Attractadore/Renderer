@@ -1,5 +1,5 @@
 #pragma once
-#include "Types.hpp"
+#include "Instance.hpp"
 
 namespace R1::GAL {
 Queue GetQueue(Context ctx, QueueFamily::ID family, unsigned idx);

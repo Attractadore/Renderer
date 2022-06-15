@@ -1,8 +1,5 @@
 #pragma once
-#include "ImageCommon.hpp"
 #include "VulkanFormat.hpp"
-
-#include <vulkan/vulkan.h>
 
 namespace R1::GAL {
 enum class ImageConfigOption {
@@ -11,7 +8,6 @@ enum class ImageConfigOption {
     BlockTexelViewCompatible = VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT,
     ExtendedUsage = VK_IMAGE_CREATE_EXTENDED_USAGE_BIT,
 };
-using ImageConfigFlags = Flags<ImageConfigOption>;
 
 enum class ImageType {
     D1 = VK_IMAGE_TYPE_1D,
@@ -28,7 +24,6 @@ enum class ImageUsage {
     DepthAttachment = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
     StencilAttachment = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 };
-using ImageUsageFlags = Flags<ImageUsage>;
 
 enum class ImageLayout {
     Undefined       = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -46,7 +41,6 @@ enum class ImageAspect {
     Depth = VK_IMAGE_ASPECT_DEPTH_BIT,
     Stencil = VK_IMAGE_ASPECT_STENCIL_BIT,
 };
-using ImageAspectFlags = Flags<ImageAspect>;
 
 enum class ImageViewType {
     D1          = VK_IMAGE_VIEW_TYPE_1D,
@@ -71,22 +65,4 @@ enum class ImageComponentSwizzle {
 struct ImageImpl;
 using Image = ImageImpl*;
 using ImageView = VkImageView;
-
-namespace Detail {
-struct ImageTraits {
-    using Format = GAL::Format;
-    using ImageAspect = GAL::ImageAspect;
-    using ImageComponentSwizzle = GAL::ImageComponentSwizzle;
-    using ImageConfigOption = GAL::ImageConfigOption;
-    using ImageLayout = GAL::ImageLayout;
-    using ImageType = GAL::ImageType;
-    using ImageUsage = GAL::ImageUsage;
-    using ImageViewType = GAL::ImageViewType;
-};
-}
-
-using ImageConfig = Detail::ImageConfigBase<Detail::ImageTraits>;
-using ImageComponentMapping = Detail::ImageComponentMappingBase<Detail::ImageTraits>;
-using ImageSubresourceRange = Detail::ImageSubresourceRangeBase<Detail::ImageTraits>;
-using ImageViewConfig = Detail::ImageViewConfigBase<Detail::ImageTraits>;
 }

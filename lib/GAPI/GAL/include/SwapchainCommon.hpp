@@ -20,19 +20,19 @@ struct SurfaceDescriptionBase {
     std::vector<typename Traits::CompositeAlpha>    supported_composite_alphas;
     unsigned                                        min_image_count;
     unsigned                                        max_image_count;
-    Flags<typename Traits::ImageUsage>              supported_image_usage;
+    Traits::ImageUsageFlags                         supported_image_usage;
 };
 
 template<typename Traits>
 struct SwapchainConfigBase {
-    Traits::Format                      format;
-    Traits::ColorSpace                  color_space;
-    Flags<typename Traits::ImageUsage>  image_usage;
-    unsigned                            image_count;
-    std::span<const QueueFamilyID>      image_sharing_queue_families;
-    Traits::CompositeAlpha              composite_alpha;
-    Traits::PresentMode                 present_mode;
-    Traits::Queue                       present_queue;
+    Traits::Format                  format;
+    Traits::ColorSpace              color_space;
+    Traits::ImageUsageFlags         image_usage;
+    unsigned                        image_count;
+    std::span<const QueueFamilyID>  image_sharing_queue_families;
+    Traits::CompositeAlpha          composite_alpha;
+    Traits::PresentMode             present_mode;
+    Traits::Queue                   present_queue;
     bool                                clipped: 1;
 };
 }

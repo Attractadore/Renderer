@@ -2,10 +2,9 @@
 #include "PipelineCommon.hpp"
 #include "VulkanFormat.hpp"
 
+#include <array>
 #include <string>
 #include <vector>
-
-#include <vulkan/vulkan.h>
 
 namespace R1::GAL {
 enum class VertexInputRate {
@@ -96,7 +95,6 @@ enum class ColorComponent {
     B = VK_COLOR_COMPONENT_B_BIT,
     A = VK_COLOR_COMPONENT_A_BIT,
 };
-using ColorComponentFlags = Flags<ColorComponent>;
 
 enum class BlendFactor {
     Zero                = VK_BLEND_FACTOR_ZERO,
@@ -192,27 +190,5 @@ struct GraphicsPipelineConfiguratorData {
     GraphicsPipelineConfig          m_current_config = {};
     VkGraphicsPipelineCreateInfo    m_current_create_info = {};
 };
-
-struct PipelineTraits {
-    using BlendFactor = GAL::BlendFactor;
-    using BlendOp = GAL::BlendOp;
-    using ColorComponent = GAL::ColorComponent;
-    using CompareOp = GAL::CompareOp;
-    using CullMode = GAL::CullMode;
-    using Format = GAL::Format;
-    using FrontFace = GAL::FrontFace;
-    using GraphicsPipelineConfigs = GAL::GraphicsPipelineConfigs;
-    using LogicOp = GAL::LogicOp;
-    using PipelineLayout = GAL::PipelineLayout;
-    using PolygonMode = GAL::PolygonMode;
-    using PrimitiveTopology = GAL::PrimitiveTopology;
-    using ShaderModule = GAL::ShaderModule;
-    using StencilOp = GAL::StencilOp;
-    using VertexInputRate = GAL::VertexInputRate;
-};
 }
-
-using GraphicsPipelineConfigurator =
-    Detail::GraphicsPipelineConfiguratorBase<
-        Detail::GraphicsPipelineConfiguratorData, Detail::PipelineTraits>;
 }

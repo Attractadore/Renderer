@@ -1,7 +1,12 @@
 #pragma once
-#include "Types.hpp"
+#include "DeviceCommon.hpp"
+#include "InstanceCommon.hpp"
+#include "Traits.hpp"
 
 namespace R1::GAL {
+using QueueFamily = Detail::QueueFamilyBase<Detail::Traits>;
+using DeviceDescription = Detail::DeviceDescriptionBase<Detail::Traits>;
+
 InstanceDescription GetInstanceDescription();
 void DestroyInstance(Instance instance);
 

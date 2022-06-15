@@ -1,6 +1,4 @@
 #pragma once
-#include "DeviceCommon.hpp"
-
 #include <vulkan/vulkan.h>
 
 namespace R1::GAL {
@@ -9,7 +7,6 @@ enum class QueueCapability {
     Compute     = VK_QUEUE_COMPUTE_BIT,
     Transfer    = VK_QUEUE_TRANSFER_BIT,
 };
-using QueueCapabilityFlags = Flags<QueueCapability>;
 
 enum class DeviceType {
     Unknown         = VK_PHYSICAL_DEVICE_TYPE_OTHER,
@@ -21,13 +18,4 @@ enum class DeviceType {
 
 struct DeviceImpl;
 using Device = DeviceImpl*;
-
-namespace Detail {
-struct DeviceTraits {
-    using QueueCapability = GAL::QueueCapability;
-    using DeviceType = GAL::DeviceType;
-};
-}
-using QueueFamily = Detail::QueueFamilyBase<Detail::DeviceTraits>;
-using DeviceDescription = Detail::DeviceDescriptionBase<Detail::DeviceTraits>;
 }

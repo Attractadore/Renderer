@@ -1,7 +1,17 @@
 #pragma once
-#include "Types.hpp"
+#include "CommandCommon.hpp"
+#include "Traits.hpp"
 
 namespace R1::GAL {
+using CommandPoolConfig = Detail::CommandPoolConfigBase<Detail::Traits>;
+using CommandBufferBeginConfig = Detail::CommandBufferBeginConfigBase<Detail::Traits>;
+using MemoryBarrier = Detail::MemoryBarrierBase<Detail::Traits>;
+using BufferBarrier = Detail::BufferBarrierBase<Detail::Traits>;
+using ImageBarrier = Detail::ImageBarrierBase<Detail::Traits>;
+using DependencyConfig = Detail::DependencyConfigBase<Detail::Traits>;
+using RenderingAttachment = Detail::RenderingAttachmentBase<Detail::Traits>;
+using RenderingConfig = Detail::RenderingConfigBase<Detail::Traits>;
+
 CommandPool CreateCommandPool(Context ctx, const CommandPoolConfig& config);
 void DestroyCommandPool(Context ctx, CommandPool pool);
 void ResetCommandPool(Context ctx, CommandPool pool, CommandResources resources);

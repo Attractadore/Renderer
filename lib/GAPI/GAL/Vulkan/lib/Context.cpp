@@ -1,7 +1,7 @@
 #include "Common/Vector.hpp"
-#include "GAL/Instance.hpp"
 #include "ContextImpl.hpp"
 #include "DeviceImpl.hpp"
+#include "GAL/Context.hpp"
 #include "VKUtil.hpp"
 
 namespace R1::GAL {

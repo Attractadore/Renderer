@@ -1,5 +1,5 @@
 #pragma once
-#include "VulkanDevice.hpp"
+#include "GAL/Instance.hpp"
 
 namespace R1::GAL {
 struct VKDeviceDescription {

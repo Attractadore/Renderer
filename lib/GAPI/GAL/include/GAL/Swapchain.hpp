@@ -1,7 +1,12 @@
 #pragma once
-#include "Types.hpp"
+#include "SwapchainCommon.hpp"
+#include "Traits.hpp"
 
 namespace R1::GAL {
+using SurfaceFormat = Detail::SurfaceFormatBase<Detail::Traits>;
+using SurfaceDescription = Detail::SurfaceDescriptionBase<Detail::Traits>;
+using SwapchainConfig = Detail::SwapchainConfigBase<Detail::Traits>;
+
 void DestroySurface(Surface surface);
 
 const SurfaceDescription& GetSurfaceDescription(

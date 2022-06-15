@@ -1,5 +1,4 @@
 #pragma once
-#include "SwapchainCommon.hpp"
 #include "VulkanQueue.hpp"
 
 namespace R1::GAL {
@@ -23,19 +22,4 @@ struct SurfaceImpl;
 using Surface = SurfaceImpl*;
 struct SwapchainImpl;
 using Swapchain = SwapchainImpl*;
-
-namespace Detail {
-struct SwapchainTraits {
-    using ColorSpace = GAL::ColorSpace;
-    using CompositeAlpha = GAL::CompositeAlpha;
-    using Format = GAL::Format;
-    using ImageUsage = GAL::ImageUsage;
-    using PresentMode = GAL::PresentMode;
-    using Queue = GAL::Queue;
-};
-}
-
-using SurfaceFormat = Detail::SurfaceFormatBase<Detail::SwapchainTraits>;
-using SurfaceDescription = Detail::SurfaceDescriptionBase<Detail::SwapchainTraits>;
-using SwapchainConfig = Detail::SwapchainConfigBase<Detail::SwapchainTraits>;
 };

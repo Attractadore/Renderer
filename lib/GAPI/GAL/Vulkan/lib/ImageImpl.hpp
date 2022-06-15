@@ -1,5 +1,5 @@
 #pragma once
-#include "VulkanImage.hpp"
+#include "GAL/Image.hpp"
 #include "VKRAII.hpp"
 
 namespace R1::GAL {

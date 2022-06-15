@@ -1,4 +1,5 @@
 #pragma once
+#include "Common/Flags.hpp"
 #include "VulkanCommand.hpp"
 #include "VulkanSync.hpp"
 
@@ -8,7 +9,7 @@ namespace R1::GAL {
 using Queue = VkQueue;
 
 struct SemaphoreSubmitConfig: VkSemaphoreSubmitInfo {
-    SemaphoreSubmitConfig(Semaphore sem, PipelineStageFlags stages);
+    SemaphoreSubmitConfig(Semaphore sem, Flags<PipelineStage> stages);
 };
 
 struct CommandBufferSubmitConfig: VkCommandBufferSubmitInfo {

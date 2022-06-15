@@ -8,21 +8,21 @@ namespace R1::GAL {
 namespace Detail {
 template<typename Traits>
 struct CommandPoolConfigBase {
-    Flags<typename Traits::CommandPoolConfigOption> flags;
-    QueueFamilyID                                   queue_family;
+    Traits::CommandPoolConfigFlags  flags;
+    QueueFamilyID                   queue_family;
 };
 
 template<typename Traits>
 struct CommandBufferBeginConfigBase {
-    Flags<typename Traits::CommandBufferUsage> usage;
+    Traits::CommandBufferUsageFlags usage;
 };
 
 template<typename Traits>
 struct MemoryBarrierBase {
-    Flags<typename Traits::PipelineStage>   src_stages;
-    Flags<typename Traits::MemoryAccess>    src_accesses;
-    Flags<typename Traits::PipelineStage>   dst_stages;
-    Flags<typename Traits::MemoryAccess>    dst_accesses;
+    Traits::PipelineStageFlags  src_stages;
+    Traits::MemoryAccessFlags   src_accesses;
+    Traits::PipelineStageFlags  dst_stages;
+    Traits::MemoryAccessFlags   dst_accesses;
 };
 }
 
@@ -48,7 +48,7 @@ struct ImageBarrierBase {
     Traits::ImageLayout                 new_layout;
     QueueFamilyTransfer                 queue_family_transfer;
     Traits::Image                       image;
-    Traits::ImageSubresourceRange       subresource_range;
+    ImageSubresourceRangeBase<Traits>   subresource_range;
 };
 
 template<typename Traits>
@@ -89,7 +89,7 @@ struct RenderingAttachmentBase {
 
 template<typename Traits>
 struct RenderingConfigBase {
-    Flags<typename Traits::RenderingConfigOption>       flags;
+    Traits::RenderingConfigFlags                        flags;
     Traits::Rect2D                                      render_area;
     std::span<const RenderingAttachmentBase<Traits>>    color_attachments;
     RenderingAttachmentBase<Traits>                     depth_attachment;

@@ -1,6 +1,4 @@
 #pragma once
-#include "SyncCommon.hpp"
-
 #include <vulkan/vulkan.h>
 
 namespace R1::GAL {

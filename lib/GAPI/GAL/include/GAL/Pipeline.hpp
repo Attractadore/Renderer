@@ -1,7 +1,10 @@
 #pragma once
-#include "Types.hpp"
+#include "Traits.hpp"
 
 namespace R1::GAL {
+using GraphicsPipelineConfigurator =
+    Detail::GraphicsPipelineConfiguratorBase<
+        Detail::GraphicsPipelineConfiguratorData, Detail::Traits>;
 using ShaderStageConfig             = GraphicsPipelineConfigurator::ShaderStageConfig;
 using VertexInputBindingConfig      = GraphicsPipelineConfigurator::VertexInputBindingConfig;
 using VertexInputAttributeConfig    = GraphicsPipelineConfigurator::VertexInputAttributeConfig;

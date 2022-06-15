@@ -1,5 +1,6 @@
 #pragma once
-#include "Types.hpp"
+#include "ContextCommon.hpp"
+#include "Traits.hpp"
 
 namespace R1::GAL {
 Context CreateContext(Device dev, const ContextConfig& config);

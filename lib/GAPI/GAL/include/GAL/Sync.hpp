@@ -1,6 +1,6 @@
 #pragma once
 #include "SyncCommon.hpp"
-#include "Types.hpp"
+#include "Traits.hpp"
 
 #include <chrono>
 

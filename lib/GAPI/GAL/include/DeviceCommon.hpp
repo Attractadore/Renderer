@@ -11,9 +11,9 @@ namespace Detail {
 template<typename Traits>
 struct QueueFamilyBase {
     using ID = QueueFamilyID;
-    ID                                      id;
-    Flags<typename Traits::QueueCapability> capabilities;
-    unsigned                                count;
+    ID                              id;
+    Traits::QueueCapabilityFlags    capabilities;
+    unsigned                        count;
 };
 
 template<typename Traits>

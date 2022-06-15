@@ -1,7 +1,13 @@
 #pragma once
-#include "Types.hpp"
+#include "ImageCommon.hpp"
+#include "Traits.hpp"
 
 namespace R1::GAL {
+using ImageConfig = Detail::ImageConfigBase<Detail::Traits>;
+using ImageComponentMapping = Detail::ImageComponentMappingBase<Detail::Traits>;
+using ImageSubresourceRange = Detail::ImageSubresourceRangeBase<Detail::Traits>;
+using ImageViewConfig = Detail::ImageViewConfigBase<Detail::Traits>;
+
 Image CreateImage(Context ctx, const ImageConfig& config);
 void DestroyImage(Context ctx, Image image);
 

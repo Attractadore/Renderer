@@ -1,15 +1,11 @@
 #pragma once
-#include "CommandCommon.hpp"
-#include "VulkanBuffer.hpp"
-#include "VulkanImage.hpp"
-#include "VulkanPipeline.hpp"
+#include <vulkan/vulkan.h>
 
 namespace R1::GAL {
 enum class CommandPoolConfigOption {
     Transient               = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
     AllowCommandBufferReset = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
 };
-using CommandPoolConfigFlags = Flags<CommandPoolConfigOption>;
 
 enum class CommandResources {
     Keep = 0,
@@ -20,7 +16,6 @@ enum class CommandBufferUsage {
     OneTimeSubmit   = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
     Simultaneous    = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
 };
-using CommandBufferUsageFlags = Flags<CommandBufferUsage>;
 
 enum class PipelineStage: VkPipelineStageFlags2 {
     DrawIndirect                = VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT,
@@ -53,7 +48,6 @@ enum class PipelineStage: VkPipelineStageFlags2 {
 
     AllCommands                 = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
 };
-using PipelineStageFlags = Flags<PipelineStage>;
 
 enum class MemoryAccess: VkAccessFlags2 {
     IndirectCommandRead         = VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT,
@@ -88,7 +82,6 @@ enum class MemoryAccess: VkAccessFlags2 {
     MemoryRead                  = VK_ACCESS_2_MEMORY_READ_BIT,
     MemoryWrite                 = VK_ACCESS_2_MEMORY_WRITE_BIT,
 };
-using MemoryAccessFlags = Flags<MemoryAccess>;
 
 enum class ResolveMode {
     None        = VK_RESOLVE_MODE_NONE,
@@ -114,7 +107,6 @@ enum class RenderingConfigOption {
     Resume = VK_RENDERING_RESUMING_BIT_KHR,
     Suspend = VK_RENDERING_SUSPENDING_BIT,
 };
-using RenderingConfigFlags = Flags<RenderingConfigOption>;
 
 using CommandPool = VkCommandPool;
 using CommandBuffer = VkCommandBuffer;
@@ -151,33 +143,4 @@ static_assert(offsetof(Rect2D, y) == offsetof(Rect2D, vk_rect.offset.y));
 static_assert(offsetof(Rect2D, width) == offsetof(Rect2D, vk_rect.extent.width));
 static_assert(offsetof(Rect2D, height) == offsetof(Rect2D, vk_rect.extent.height));
 static_assert(sizeof(Rect2D) == sizeof(VkRect2D));
-
-namespace Detail {
-struct CommandTraits {
-    using AttachmentLoadOp = GAL::AttachmentLoadOp;
-    using AttachmentStoreOp = GAL::AttachmentStoreOp;
-    using Buffer = GAL::Buffer;
-    using CommandBufferUsage = GAL::CommandBufferUsage;
-    using CommandPoolConfigOption = GAL::CommandPoolConfigOption;
-    using Image = GAL::Image;
-    using ImageAspect = GAL::ImageAspect;
-    using ImageLayout = GAL::ImageLayout;
-    using ImageSubresourceRange = GAL::ImageSubresourceRange;
-    using ImageView = GAL::ImageView;
-    using MemoryAccess = GAL::MemoryAccess;
-    using PipelineStage = GAL::PipelineStage;
-    using Rect2D = GAL::Rect2D;
-    using RenderingConfigOption = GAL::RenderingConfigOption;
-    using ResolveMode = GAL::ResolveMode;
-};
-}
-
-using CommandPoolConfig = Detail::CommandPoolConfigBase<Detail::CommandTraits>;
-using CommandBufferBeginConfig = Detail::CommandBufferBeginConfigBase<Detail::CommandTraits>;
-using MemoryBarrier = Detail::MemoryBarrierBase<Detail::CommandTraits>;
-using BufferBarrier = Detail::BufferBarrierBase<Detail::CommandTraits>;
-using ImageBarrier = Detail::ImageBarrierBase<Detail::CommandTraits>;
-using DependencyConfig = Detail::DependencyConfigBase<Detail::CommandTraits>;
-using RenderingAttachment = Detail::RenderingAttachmentBase<Detail::CommandTraits>;
-using RenderingConfig = Detail::RenderingConfigBase<Detail::CommandTraits>;
 }
