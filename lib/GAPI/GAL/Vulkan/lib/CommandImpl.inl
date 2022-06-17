@@ -96,6 +96,17 @@ inline constexpr VkRenderingAttachmentInfo RenderingAttachmentToVK(
     return vk_attachment;
 }
 
+inline constexpr VkViewport ViewportToVK(const Viewport& viewport) {
+    return VkViewport {
+        .x = viewport.x,
+        .y = viewport.y,
+        .width = viewport.width,
+        .height = viewport.height,
+        .minDepth = viewport.min_depth,
+        .maxDepth = viewport.max_depth,
+    };
+}
+
 inline constexpr VkRect2D Rect2DToVK(const Rect2D& rect) {
     return VkRect2D {
         .offset = {

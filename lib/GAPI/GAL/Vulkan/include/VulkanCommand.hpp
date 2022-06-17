@@ -110,37 +110,4 @@ enum class RenderingConfigOption {
 
 using CommandPool = VkCommandPool;
 using CommandBuffer = VkCommandBuffer;
-
-struct Viewport {
-    union {
-        VkViewport vk_viewport;
-        struct {
-            float x, y;
-            float width, height;
-            float min_depth, max_depth;
-        };
-    };
-};
-static_assert(offsetof(Viewport, x) == offsetof(Viewport, vk_viewport.x));
-static_assert(offsetof(Viewport, y) == offsetof(Viewport, vk_viewport.y));
-static_assert(offsetof(Viewport, width) == offsetof(Viewport, vk_viewport.width));
-static_assert(offsetof(Viewport, height) == offsetof(Viewport, vk_viewport.height));
-static_assert(offsetof(Viewport, min_depth) == offsetof(Viewport, vk_viewport.minDepth));
-static_assert(offsetof(Viewport, max_depth) == offsetof(Viewport, vk_viewport.maxDepth));
-static_assert(sizeof(Viewport) == sizeof(VkViewport));
-
-struct Rect2D {
-    union {
-        VkRect2D vk_rect;
-        struct {
-            int x, y;
-            unsigned width, height;
-        };
-    };
-};
-static_assert(offsetof(Rect2D, x) == offsetof(Rect2D, vk_rect.offset.x));
-static_assert(offsetof(Rect2D, y) == offsetof(Rect2D, vk_rect.offset.y));
-static_assert(offsetof(Rect2D, width) == offsetof(Rect2D, vk_rect.extent.width));
-static_assert(offsetof(Rect2D, height) == offsetof(Rect2D, vk_rect.extent.height));
-static_assert(sizeof(Rect2D) == sizeof(VkRect2D));
 }

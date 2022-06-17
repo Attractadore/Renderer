@@ -44,7 +44,6 @@ struct Traits {
     using Queue = GAL::Queue;
     using QueueCapability = GAL::QueueCapability;
     using QueueCapabilityFlags = GAL::QueueCapabilityFlags;
-    using Rect2D = GAL::Rect2D;
     using RenderingConfigFlags = GAL::RenderingConfigFlags;
     using ResolveMode = GAL::ResolveMode;
     using ShaderModule = GAL::ShaderModule;

@@ -53,10 +53,10 @@ struct ImageBarrierBase {
 
 template<typename Traits>
 struct DependencyConfigBase {
-    std::span<const MemoryBarrierBase<Traits>> memory_barriers;
-    std::span<const BufferBarrierBase<Traits>> buffer_barriers;
-    std::span<const ImageBarrierBase<Traits>>  image_barriers;
-    bool                                                by_region: 1;
+    std::span<const MemoryBarrierBase<Traits>>  memory_barriers;
+    std::span<const BufferBarrierBase<Traits>>  buffer_barriers;
+    std::span<const ImageBarrierBase<Traits>>   image_barriers;
+    bool                                        by_region: 1;
 };
 }
 
@@ -70,6 +70,17 @@ struct ClearValue {
             unsigned stencil;
         };
     };
+};
+
+struct Viewport {
+    float x, y;
+    float width, height;
+    float min_depth, max_depth;
+};
+
+struct Rect2D {
+    int         x, y;
+    unsigned    width, height;
 };
 
 namespace Detail {
@@ -90,7 +101,7 @@ struct RenderingAttachmentBase {
 template<typename Traits>
 struct RenderingConfigBase {
     Traits::RenderingConfigFlags                        flags;
-    Traits::Rect2D                                      render_area;
+    Rect2D                                              render_area;
     std::span<const RenderingAttachmentBase<Traits>>    color_attachments;
     RenderingAttachmentBase<Traits>                     depth_attachment;
     RenderingAttachmentBase<Traits>                     stencil_attachment; 

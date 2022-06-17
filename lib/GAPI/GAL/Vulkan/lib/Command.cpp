@@ -108,15 +108,18 @@ void EndCommandBuffer(
 }
 
 void CmdPipelineBarrier(CommandBuffer cmd_buffer, const DependencyConfig& config) {
-    auto memory_barriers = vec_from_range(
-        std::views::transform(
-            config.memory_barriers, MemoryBarrierToVK));
-    auto buffer_barriers = vec_from_range(
-        std::views::transform(
-            config.buffer_barriers, BufferBarrierToVK));
-    auto image_barriers = vec_from_range(
-        std::views::transform(
-            config.image_barriers, ImageBarrierToVK));
+    static thread_local std::vector<VkMemoryBarrier2> memory_barriers;
+    static thread_local std::vector<VkBufferMemoryBarrier2> buffer_barriers;
+    static thread_local std::vector<VkImageMemoryBarrier2> image_barriers;
+    auto mv = std::views::transform(
+            config.memory_barriers, MemoryBarrierToVK);
+    auto bv = std::views::transform(
+            config.buffer_barriers, BufferBarrierToVK);
+    auto iv = std::views::transform(
+            config.image_barriers, ImageBarrierToVK);
+    memory_barriers.assign(mv.begin(), mv.end());
+    buffer_barriers.assign(bv.begin(), bv.end());
+    image_barriers.assign(iv.begin(), iv.end());
     VkDependencyInfo dep_info = {
         .sType = sType(dep_info),
         .dependencyFlags = config.by_region ? VK_DEPENDENCY_BY_REGION_BIT: 0u,
@@ -136,9 +139,11 @@ void CmdPipelineBarrier(CommandBuffer cmd_buffer, const DependencyConfig& config
 void CmdBeginRendering(
     CommandBuffer cmd_buffer, const RenderingConfig& config
 ) {
-    auto color_attachments = vec_from_range(
-        std::views::transform(
-            config.color_attachments, RenderingAttachmentToVK));
+    static thread_local std::vector<VkRenderingAttachmentInfo>
+        color_attachments;
+    auto cv = std::views::transform(
+        config.color_attachments, RenderingAttachmentToVK);
+    color_attachments.assign(cv.begin(), cv.end());
     auto depth_attachment =
         RenderingAttachmentToVK(config.depth_attachment);
     auto stencil_attachment =
@@ -161,16 +166,24 @@ void CmdEndRendering(CommandBuffer cmd_buffer) {
     vkCmdEndRendering(cmd_buffer);
 }
 
-void CmdSetViewports(CommandBuffer cmd_buffer, std::span<const Viewport> viewports) {
+void CmdSetViewports(
+    CommandBuffer cmd_buffer, std::span<const Viewport> viewports
+) {
+    static thread_local std::vector<VkViewport> vk_viewports;
+    auto v = std::views::transform(viewports, ViewportToVK);
+    vk_viewports.assign(v.begin(), v.end());
     vkCmdSetViewportWithCount(
-        cmd_buffer, viewports.size(),
-        reinterpret_cast<const VkViewport*>(viewports.data()));
+        cmd_buffer, vk_viewports.size(), vk_viewports.data());
 }
 
-void CmdSetScissors(CommandBuffer cmd_buffer, std::span<const Rect2D> scissors) {
+void CmdSetScissors(
+    CommandBuffer cmd_buffer, std::span<const Rect2D> scissors
+) {
+    static thread_local std::vector<VkRect2D> vk_rects;
+    auto v = std::views::transform(scissors, Rect2DToVK);
+    vk_rects.assign(v.begin(), v.end());
     vkCmdSetScissorWithCount(
-        cmd_buffer, scissors.size(),
-        reinterpret_cast<const VkRect2D*>(scissors.data()));
+        cmd_buffer, vk_rects.size(), vk_rects.data());
 }
 
 void CmdBindGraphicsPipeline(CommandBuffer cmd_buffer, Pipeline pipeline) {
