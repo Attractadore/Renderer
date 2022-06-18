@@ -59,13 +59,11 @@ void fillShaderStage(
 
 using GPC = GraphicsPipelineConfigurator;
 
-template<>
 GPC& GPC::SetLayout(PipelineLayout layout) {
-    m_current_create_info.layout = layout;
+    m_current_layout = layout;
     return *this;
 }
 
-template<>
 GPC& GPC::SetVertexShaderState(
     const ShaderStageConfig& vertex_shader_config,
     const VertexInputConfig& vertex_input_config,
@@ -86,13 +84,11 @@ GPC& GPC::SetVertexShaderState(
     auto& vis = cfg.vertex_input_state;
     const auto& vii = vertex_input_config;
     vis = {
-        .sType = sType(vis),
         .vertexBindingDescriptionCount =
             static_cast<uint32_t>(vertex_binding_configs.size()),
         .vertexAttributeDescriptionCount = 
             static_cast<uint32_t>(vertex_attribute_configs.size()),
     };
-    cfg.dynamic_vertex_input_binding_stride = vii.dynamic_stride;
 
     auto& bindings = m_configs.vertex_input_binding_descriptions;
     auto vb = std::views::transform(vertex_binding_configs,
@@ -122,17 +118,13 @@ GPC& GPC::SetVertexShaderState(
     auto& ias = m_current_config.input_assembly_state;
     const auto& iai = input_assembly_config;
     ias = {
-        .sType = sType(ias),
         .topology = static_cast<VkPrimitiveTopology>(iai.primitive_topology),
         .primitiveRestartEnable = iai.primitive_restart_enabled,
     };
-    cfg.dynamic_primitive_restart = iai.dynamic_primitive_restart;
-    cfg.dynamic_primitive_topology = iai.dynamic_primitive_topology;
 
     return *this;
 }
 
-template<>
 GPC& GPC::SetTessellationShaderState(
     const ShaderStageConfig& tesselation_control_shader_config,
     const ShaderStageConfig& tesselation_evaluation_shader_config,
@@ -159,14 +151,12 @@ GPC& GPC::SetTessellationShaderState(
     auto& ts = cfg.tesselation_state;
     const auto& ti = tesselation_config;
     ts = {
-        .sType = sType(ts),
         .patchControlPoints = ti.patch_control_point_count
     };
 
     return *this;
 }
 
-template<>
 GPC& GPC::SetGeometryShaderState(
     const ShaderStageConfig& geometry_shader_config
 ) {
@@ -183,7 +173,6 @@ GPC& GPC::SetGeometryShaderState(
     return *this;
 }
 
-template<>
 GPC& GPC::SetRasterizationState(
     const RasterizationConfig& rasterization_config,
     const MultisampleConfig& multisample_config
@@ -193,30 +182,22 @@ GPC& GPC::SetRasterizationState(
     auto& rs = cfg.rasterization_state;
     const auto& ri = rasterization_config;
     rs = {
-        .sType = sType(rs),
         .polygonMode = static_cast<VkPolygonMode>(ri.polygon_mode),
         .cullMode = static_cast<VkCullModeFlags>(ri.cull_mode),
         .frontFace = static_cast<VkFrontFace>(ri.front_face),
-        .depthBiasEnable = ri.depth_bias.enabled,
+        .depthBiasEnable = ri.depth_bias_enabled,
         .depthBiasConstantFactor = ri.depth_bias.constant_factor,
         .depthBiasClamp = ri.depth_bias.clamp,
         .depthBiasSlopeFactor = ri.depth_bias.slope_factor,
         .lineWidth = ri.line_width,
     };
-    cfg.dynamic_rasterizer_discard = ri.dynamic_discard;
-    cfg.dynamic_cull_mode = ri.dynamic_cull_mode;
-    cfg.dynamic_front_face = ri.dynamic_front_face;
-    cfg.dynamic_line_width = ri.dynamic_line_width;
-    cfg.dynamic_depth_bias = ri.depth_bias.dynamic;
-    cfg.dynamic_depth_bias_params = ri.depth_bias.dynamic_values;
 
     auto& ms = cfg.multisample_state;
     const auto& mi = multisample_config;
     ms = {
-        .sType = sType(ms),
         .rasterizationSamples =
             static_cast<VkSampleCountFlagBits>(mi.sample_count),
-        .sampleShadingEnable = mi.sample_shading.enabled,
+        .sampleShadingEnable = mi.sample_shading_enabled,
         .minSampleShading = mi.sample_shading.min,
         // This must be updated in FinishAll
         .pSampleMask =
@@ -231,7 +212,6 @@ GPC& GPC::SetRasterizationState(
     return *this;
 }
 
-template<>
 GPC& GPC::SetDepthTestState(
     const DepthTestConfig& depth_test_config,
     const DepthAttachmentConfig& depth_attachment_config
@@ -243,14 +223,9 @@ GPC& GPC::SetDepthTestState(
     dss.depthTestEnable = dti.enabled;
     dss.depthWriteEnable = dti.write_enabled;
     dss.depthCompareOp = static_cast<VkCompareOp>(dti.compare_op);
-    dss.depthBoundsTestEnable = dti.bounds_test.enabled;
+    dss.depthBoundsTestEnable = dti.bounds_test_enabled;
     dss.minDepthBounds = dti.bounds_test.min;
     dss.maxDepthBounds = dti.bounds_test.max;
-    cfg.dynamic_depth_test = dti.dynamic;
-    cfg.dynamic_depth_write = dti.dynamic_write;
-    cfg.dynamic_depth_compare_op = dti.dynamic_compare_op;
-    cfg.dynamic_depth_bounds_test = dti.bounds_test.dynamic;
-    cfg.dynamic_depth_bounds_test_params = dti.bounds_test.dynamic_values;
 
     auto& rs = cfg.rasterization_state;
     rs.depthClampEnable = dti.clamp_enabled;
@@ -262,7 +237,6 @@ GPC& GPC::SetDepthTestState(
     return *this;
 }
 
-template<>
 GPC& GPC::SetStencilTestState(
     const StencilTestConfig& stencil_test_config,
     const StencilAttachmentConfig& stencil_attachment_config
@@ -287,11 +261,6 @@ GPC& GPC::SetStencilTestState(
     dss.stencilTestEnable = sti.enabled;
     assign(dss.front, sti.front);
     assign(dss.back, sti.back);
-    cfg.dynamic_stencil_test = sti.dynamic;
-    cfg.dynamic_stencil_test_ops = sti.dynamic_op;
-    cfg.dynamic_stencil_test_compare_mask = sti.dynamic_compare_mask;
-    cfg.dynamic_stencil_test_write_mask = sti.dynamic_write_mask;
-    cfg.dynamic_stencil_test_reference = sti.dynamic_reference;
 
     auto& r = cfg.rendering;
     const auto& sai = stencil_attachment_config;
@@ -300,7 +269,6 @@ GPC& GPC::SetStencilTestState(
     return *this;
 }
 
-template<>
 GPC& GPC::SetFragmentShaderState(
     const ShaderStageConfig& fragment_shader_config,
     const ColorBlendConfig& color_blend_config,
@@ -320,12 +288,10 @@ GPC& GPC::SetFragmentShaderState(
     const auto& cbi = color_blend_config;
     const auto& cai = color_attachment_configs;
     cbs = {
-        .sType = sType(cbs),
         .logicOpEnable = cbi.logic_op_enabled,
         .logicOp = static_cast<VkLogicOp>(cbi.logic_op),
     };
     std::ranges::copy(cbi.constants, cbs.blendConstants);
-    cfg.dynamic_blend_constants = cbi.dynamic_constants;
 
     auto& color_blend_attachments = m_configs.color_blend_attachments;
     cbs.attachmentCount = cai.size();
@@ -370,95 +336,105 @@ GPC& GPC::SetFragmentShaderState(
     return *this;
 }
 
-template<>
-GPC& GPC::FinishCurrent() {
-    auto& cfg = m_current_config;
-
+GPC& GPC::SetDynamicState(DynamicStateFlags flags) {
+    using enum Dynamic;
     auto& dstates = m_configs.dynamic_states;
     auto start_size = dstates.size();
+    if (flags.IsSet(VertexInputBindingStride)) {
+        dstates.push_back(VK_DYNAMIC_STATE_VERTEX_INPUT_BINDING_STRIDE);
+    }
+    if (flags.IsSet(PrimitiveTopology)) {
+        dstates.push_back(VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY);
+    }
+    if (flags.IsSet(PrimitiveRestart)) {
+        dstates.push_back(VK_DYNAMIC_STATE_PRIMITIVE_RESTART_ENABLE);
+    }
+    if (flags.IsSet(RasterizerDiscard)) {
+        dstates.push_back(VK_DYNAMIC_STATE_RASTERIZER_DISCARD_ENABLE);
+    }
+    if (flags.IsSet(CullMode)) {
+        dstates.push_back(VK_DYNAMIC_STATE_CULL_MODE);
+    } 
+    if (flags.IsSet(FrontFace)) {
+        dstates.push_back(VK_DYNAMIC_STATE_FRONT_FACE);
+    }
+    if (flags.IsSet(LineWidth)) {
+        dstates.push_back(VK_DYNAMIC_STATE_LINE_WIDTH);
+    }
+    if (flags.IsSet(DepthBias)) {
+        dstates.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS_ENABLE);
+    }
+    if (flags.IsSet(DepthBiasParams)) {
+        dstates.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
+    }
+    if (flags.IsSet(DepthTest)) {
+        dstates.push_back(VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE);
+    }
+    if (flags.IsSet(DepthWrite)) {
+        dstates.push_back(VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE);
+    }
+    if (flags.IsSet(DepthCompareOp)) {
+        dstates.push_back(VK_DYNAMIC_STATE_DEPTH_COMPARE_OP);
+    }
+    if (flags.IsSet(DepthBoundsTest)) {
+        dstates.push_back(VK_DYNAMIC_STATE_DEPTH_BOUNDS_TEST_ENABLE);
+    }
+    if (flags.IsSet(DepthBoundsTestParams)) {
+        dstates.push_back(VK_DYNAMIC_STATE_DEPTH_BOUNDS);
+    }
+    if (flags.IsSet(StencilTest)) {
+        dstates.push_back(VK_DYNAMIC_STATE_STENCIL_TEST_ENABLE);
+    }
+    if (flags.IsSet(StencilTestOps)) {
+        dstates.push_back(VK_DYNAMIC_STATE_STENCIL_OP);
+    }
+    if (flags.IsSet(StencilTestCompareMask)) {
+        dstates.push_back(VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK);
+    }
+    if (flags.IsSet(StencilTestWriteMask)) {
+        dstates.push_back(VK_DYNAMIC_STATE_STENCIL_WRITE_MASK);
+    }
+    if (flags.IsSet(StencilTestReference)) {
+        dstates.push_back(VK_DYNAMIC_STATE_STENCIL_REFERENCE);
+    }
+    if (flags.IsSet(BlendConstants)) {
+        dstates.push_back(VK_DYNAMIC_STATE_BLEND_CONSTANTS);
+    }
+    auto end_size = dstates.size();
+    m_current_config.dynamic_state.dynamicStateCount = end_size - start_size;
+    return *this;
+}
+
+GPC& GPC::FinishCurrent() {
+    auto& cfg = m_current_config;
+    auto& dstates = m_configs.dynamic_states;
+
     dstates.insert(dstates.end(), {
         VK_DYNAMIC_STATE_VIEWPORT_WITH_COUNT,
         VK_DYNAMIC_STATE_SCISSOR_WITH_COUNT,
     });
-    if (cfg.dynamic_vertex_input_binding_stride) {
-        dstates.push_back(VK_DYNAMIC_STATE_VERTEX_INPUT_BINDING_STRIDE);
-    }
-    if (cfg.dynamic_primitive_topology) {
-        dstates.push_back(VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY);
-    }
-    if (cfg.dynamic_primitive_restart) {
-        dstates.push_back(VK_DYNAMIC_STATE_PRIMITIVE_RESTART_ENABLE);
-    }
-    if (cfg.dynamic_rasterizer_discard) {
-        dstates.push_back(VK_DYNAMIC_STATE_RASTERIZER_DISCARD_ENABLE);
-    }
-    if (cfg.dynamic_cull_mode) {
-        dstates.push_back(VK_DYNAMIC_STATE_CULL_MODE);
-    } 
-    if (cfg.dynamic_front_face) {
-        dstates.push_back(VK_DYNAMIC_STATE_FRONT_FACE);
-    }
-    if (cfg.dynamic_line_width) {
-        dstates.push_back(VK_DYNAMIC_STATE_LINE_WIDTH);
-    }
-    if (cfg.dynamic_depth_bias) {
-        dstates.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS_ENABLE);
-    }
-    if (cfg.dynamic_depth_bias_params) {
-        dstates.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
-    }
-    if (cfg.dynamic_depth_test) {
-        dstates.push_back(VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE);
-    }
-    if (cfg.dynamic_depth_write) {
-        dstates.push_back(VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE);
-    }
-    if (cfg.dynamic_depth_compare_op) {
-        dstates.push_back(VK_DYNAMIC_STATE_DEPTH_COMPARE_OP);
-    }
-    if (cfg.dynamic_depth_bounds_test) {
-        dstates.push_back(VK_DYNAMIC_STATE_DEPTH_BOUNDS_TEST_ENABLE);
-    }
-    if (cfg.dynamic_depth_bounds_test_params) {
-        dstates.push_back(VK_DYNAMIC_STATE_DEPTH_BOUNDS);
-    }
-    if (cfg.dynamic_stencil_test) {
-        dstates.push_back(VK_DYNAMIC_STATE_STENCIL_TEST_ENABLE);
-    }
-    if (cfg.dynamic_stencil_test_ops) {
-        dstates.push_back(VK_DYNAMIC_STATE_STENCIL_OP);
-    }
-    if (cfg.dynamic_stencil_test_compare_mask) {
-        dstates.push_back(VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK);
-    }
-    if (cfg.dynamic_stencil_test_write_mask) {
-        dstates.push_back(VK_DYNAMIC_STATE_STENCIL_WRITE_MASK);
-    }
-    if (cfg.dynamic_stencil_test_reference) {
-        dstates.push_back(VK_DYNAMIC_STATE_STENCIL_REFERENCE);
-    }
-    if (cfg.dynamic_blend_constants) {
-        dstates.push_back(VK_DYNAMIC_STATE_BLEND_CONSTANTS);
-    }
-    auto end_size = dstates.size();
+    cfg.dynamic_state.dynamicStateCount += 2;
 
     cfg.rendering.sType = sType(cfg.rendering);
+    cfg.vertex_input_state.sType = sType(cfg.vertex_input_state);
+    cfg.input_assembly_state.sType = sType(cfg.input_assembly_state);
+    cfg.tesselation_state.sType = sType(cfg.tesselation_state);
     cfg.viewport_state.sType = sType(cfg.viewport_state);
     cfg.rasterization_state.sType = sType(cfg.rasterization_state);
+    cfg.multisample_state.sType = sType(cfg.multisample_state);
     cfg.depth_stencil_state.sType = sType(cfg.depth_stencil_state);
-    cfg.dynamic_state = {
-        .sType = sType(cfg.dynamic_state),
-        .dynamicStateCount =
-            static_cast<uint32_t>(end_size - start_size),
-    };
+    cfg.color_blend_state.sType = sType(cfg.color_blend_state);
+    cfg.dynamic_state.sType = sType(cfg.dynamic_state);
 
     m_configs.configs.emplace_back(std::exchange(m_current_config, {}));
-    m_configs.create_infos.emplace_back(std::exchange(m_current_create_info, {}));
+    m_configs.create_infos.emplace_back(VkGraphicsPipelineCreateInfo{
+        .sType = sType<VkGraphicsPipelineCreateInfo>(),
+        .layout = m_current_layout,
+    });
 
     return *this;
 }
 
-template<>
 GraphicsPipelineConfigs GPC::FinishAll() {
     auto binding_p =
         m_configs.vertex_input_binding_descriptions.data();
@@ -511,7 +487,6 @@ GraphicsPipelineConfigs GPC::FinishAll() {
         ds.pDynamicStates = dynamic_state_p;
         dynamic_state_p += ds.dynamicStateCount;
 
-        create_info.sType = sType(create_info);
         create_info.pNext = &cfg.rendering;
         create_info.pVertexInputState = &cfg.vertex_input_state;
         create_info.pInputAssemblyState = &cfg.input_assembly_state;

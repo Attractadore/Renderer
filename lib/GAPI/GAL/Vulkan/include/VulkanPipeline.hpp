@@ -1,5 +1,4 @@
 #pragma once
-#include "PipelineCommon.hpp"
 #include "VulkanFormat.hpp"
 
 #include <array>
@@ -132,7 +131,7 @@ using PipelineCache = VkPipelineCache;
 using Pipeline = VkPipeline;
 
 namespace Detail {
-struct GraphicsPipelineConfig: Detail::GraphicsPipelineConfigBase {
+struct GraphicsPipelineConfig {
     static constexpr auto stage_count = std::size({
         VK_SHADER_STAGE_VERTEX_BIT,
         VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT,
@@ -168,27 +167,20 @@ struct GraphicsPipelineConfig: Detail::GraphicsPipelineConfigBase {
 }
 
 struct GraphicsPipelineConfigs {
-    std::vector<Detail::GraphicsPipelineConfig>
-        configs;
-    std::vector<VkVertexInputBindingDescription>
-        vertex_input_binding_descriptions;
-    std::vector<VkVertexInputAttributeDescription>
-        vertex_input_attribute_descriptions;
-    std::vector<VkPipelineColorBlendAttachmentState>
-        color_blend_attachments;
-    std::vector<VkFormat>
-        color_attachment_formats;
-    std::vector<VkDynamicState>
-        dynamic_states;
-    std::vector<VkGraphicsPipelineCreateInfo>
-        create_infos;
+    std::vector<Detail::GraphicsPipelineConfig>         configs;
+    std::vector<VkVertexInputBindingDescription>        vertex_input_binding_descriptions;
+    std::vector<VkVertexInputAttributeDescription>      vertex_input_attribute_descriptions;
+    std::vector<VkPipelineColorBlendAttachmentState>    color_blend_attachments;
+    std::vector<VkFormat>                               color_attachment_formats;
+    std::vector<VkDynamicState>                         dynamic_states;
+    std::vector<VkGraphicsPipelineCreateInfo>           create_infos;
 };
 
 namespace Detail {
 struct GraphicsPipelineConfiguratorData {
     GraphicsPipelineConfigs         m_configs;            
     GraphicsPipelineConfig          m_current_config = {};
-    VkGraphicsPipelineCreateInfo    m_current_create_info = {};
+    PipelineLayout                  m_current_layout;
 };
 }
 }

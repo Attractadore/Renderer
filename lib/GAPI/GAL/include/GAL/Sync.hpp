@@ -1,12 +1,26 @@
 #pragma once
-#include "SyncCommon.hpp"
-#include "Traits.hpp"
+#if GAL_USE_VULKAN
+#include "VulkanSync.hpp"
+#endif
+
+#include "Context.hpp"
 
 #include <chrono>
 
 namespace R1::GAL {
-using SemaphoreConfig = Detail::SemaphoreConfigBase<Detail::Traits>;
-using SemaphoreState = Detail::SemaphoreStateBase<Detail::Traits>;
+enum class SemaphoreStatus {
+    Ready,
+    NotReady,
+};
+
+struct SemaphoreConfig {
+    SemaphorePayload initial_value;
+};
+
+struct SemaphoreState {
+    Semaphore           semaphore;
+    SemaphorePayload    value;
+};
 
 Semaphore CreateSemaphore(Context ctx, const SemaphoreConfig& config);
 void DestroySemaphore(Context ctx, Semaphore semaphore);

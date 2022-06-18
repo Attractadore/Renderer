@@ -7,3 +7,7 @@
 #include "Queue.hpp"
 #include "Swapchain.hpp"
 #include "Sync.hpp"
+
+#if GAL_USE_VULKAN
+#include "VulkanInline.inl"
+#endif

@@ -1,11 +1,40 @@
 #pragma once
-#include "DeviceCommon.hpp"
-#include "InstanceCommon.hpp"
-#include "Traits.hpp"
+#if GAL_USE_VULKAN
+#include "VulkanDevice.hpp"
+#include "VulkanInstance.hpp"
+#endif
+
+#include "Common/Flags.hpp"
+
+#include <string>
+#include <vector>
 
 namespace R1::GAL {
-using QueueFamily = Detail::QueueFamilyBase<Detail::Traits>;
-using DeviceDescription = Detail::DeviceDescriptionBase<Detail::Traits>;
+using QueueCapabilityFlags = Flags<QueueCapability>;
+
+enum QueueFamilyID: unsigned { Unknown = static_cast<unsigned>(-1) };
+
+struct QueueFamily {
+    using ID = QueueFamilyID;
+    ID                      id;
+    QueueCapabilityFlags    capabilities;
+    unsigned                count;
+};
+
+struct DeviceDescription {
+    std::string                 name;
+    DeviceType                  type;
+    std::vector<QueueFamily>    queue_families;
+    bool                        wsi: 1;
+};
+
+struct InstanceDescription {
+    bool wsi: 1;
+    bool xlib: 1;
+    bool xcb: 1;
+};
+
+struct InstanceConfig {};
 
 InstanceDescription GetInstanceDescription();
 void DestroyInstance(Instance instance);

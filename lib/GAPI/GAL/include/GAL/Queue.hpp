@@ -1,10 +1,22 @@
 #pragma once
-#include "Instance.hpp"
-#include "QueueCommon.hpp"
+#if GAL_USE_VULKAN
+#include "VulkanQueue.hpp"
+#endif
+
+#include "Command.hpp"
+#include "Sync.hpp"
 
 namespace R1::GAL {
-using SemaphoreSubmitConfig = Detail::SemaphoreSubmitConfigBase<Detail::Traits>;
-using QueueSubmitConfig = Detail::QueueSubmitConfigBase<Detail::Traits>;
+struct SemaphoreSubmitConfig {
+    SemaphoreState      state;
+    PipelineStageFlags  stages;
+};
+
+struct QueueSubmitConfig {
+    std::span<const SemaphoreSubmitConfig>  wait_semaphores; 
+    std::span<const SemaphoreSubmitConfig>  signal_semaphores;
+    std::span<const CommandBuffer>          command_buffers;
+};
 
 Queue GetQueue(Context ctx, QueueFamily::ID family, unsigned idx);
 
