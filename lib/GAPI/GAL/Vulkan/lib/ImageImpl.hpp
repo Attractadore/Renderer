@@ -1,11 +1,15 @@
 #pragma once
 #include "GAL/Image.hpp"
-#include "VKRAII.hpp"
+
+#include <vk_mem_alloc.h>
 
 namespace R1::GAL {
 struct ImageImpl {
-    Vk::Image       image;
-    Vk::Allocation  allocation;
+    VkImage image;
+};
+
+struct ImageWithAllocation: ImageImpl {
+    VmaAllocation allocation;
 };
 
 constexpr VkImageSubresourceRange ImageSubresourceRangeToVK(

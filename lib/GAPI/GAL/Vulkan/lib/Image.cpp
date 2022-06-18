@@ -1,5 +1,4 @@
 #include "ContextImpl.hpp"
-#include "GAL/Image.hpp"
 #include "ImageImpl.hpp"
 #include "VKUtil.hpp"
 
@@ -57,27 +56,25 @@ Image CreateImage(Context ctx, const ImageConfig& config) {
         .usage = alloc_usg,
     };
 
-    VkImage image = VK_NULL_HANDLE;
-    VmaAllocation alloc = VK_NULL_HANDLE;
-    vmaCreateImage(ctx->allocator.get(), &create_info, &alloc_info, &image, &alloc, nullptr);
-    if (!image) {
-        throw std::runtime_error{"Vulkan: Failed to create image"};
-    }
-
-    return std::make_unique<ImageImpl>(ImageImpl{
-        .image{ctx->device.get(), image},
-        .allocation{ctx->allocator.get(), alloc},
-    }).release();
+    auto image = std::make_unique<ImageWithAllocation>();
+    ThrowIfFailed(vmaCreateImage(
+        ctx->allocator.get(),
+        &create_info, &alloc_info,
+        &image->image, &image->allocation, nullptr),
+        "Vulkan: Failed to create image");
+    return image.release();
 }
 
 void DestroyImage(Context ctx, Image image) {
-    delete image;
+    auto img = static_cast<ImageWithAllocation*>(image);
+    vmaDestroyImage(ctx->allocator.get(), img->image, img->allocation);
+    delete img;
 }
 
 ImageView CreateImageView(Context ctx, Image image, const ImageViewConfig& config) {
     VkImageViewCreateInfo create_info = {
         .sType = sType(create_info),
-        .image = image->image.get(),
+        .image = image->image,
         .viewType = static_cast<VkImageViewType>(config.type),
         .format = static_cast<VkFormat>(config.format),
         .components = {

@@ -58,7 +58,7 @@ inline VkImageMemoryBarrier2 ImageBarrierToVK(
         .newLayout = static_cast<VkImageLayout>(barrier.new_layout),
         .srcQueueFamilyIndex = static_cast<uint32_t>(barrier.queue_family_transfer.src),
         .dstQueueFamilyIndex = static_cast<uint32_t>(barrier.queue_family_transfer.dst),
-        .image = barrier.image->image.get(),
+        .image = barrier.image->image,
         .subresourceRange = ImageSubresourceRangeToVK(barrier.subresource_range),
     };
     return bar;
