@@ -5,6 +5,7 @@
 #include "ImageImpl.hpp"
 #include "InstanceImpl.hpp"
 #include "SwapchainImpl.hpp"
+#include "SyncImpl.hpp"
 #include "VKUtil.hpp"
 
 namespace R1::GAL {
@@ -135,28 +136,10 @@ void InitSwapchain(
     swc->images.assign(v.begin(), v.end());
 
     auto create_semaphore = [&] {
-        VkSemaphoreCreateInfo create_info = {
-            .sType = sType(create_info),
-        };
-        VkSemaphore semaphore;
-        ThrowIfFailed(
-            vkCreateSemaphore(dev, &create_info, nullptr, &semaphore),
-            "Vulkan: Failed to create semaphore"
-        );
-        return Vk::Semaphore{dev, semaphore};
+        return Vk::Semaphore{dev, CreateBinarySemaphore(dev)};
     };
-    
     auto create_fence = [&] (bool signaled) {
-        VkFenceCreateInfo create_info = {
-            .sType = sType(create_info),
-            .flags = signaled ? VK_FENCE_CREATE_SIGNALED_BIT: 0u,
-        };
-        VkFence fence;
-        ThrowIfFailed(
-            vkCreateFence(dev, &create_info, nullptr, &fence),
-            "Vulkan: Failed to create fence"
-        );
-        return Vk::Fence{dev, fence};
+        return Vk::Fence{dev, CreateFence(dev, signaled)};
     };
     auto create_signaled_fence = [&] { return create_fence(true); };
     auto create_unsignaled_fence = [&] { return create_fence(false); };
