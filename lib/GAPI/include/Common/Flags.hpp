@@ -49,6 +49,10 @@ public:
         return *this = *this | r;
     }
 
+    constexpr bool IsSet(E flag) const noexcept {
+        return static_cast<UnderlyingType>(*this & flag);
+    }
+
     constexpr bool AnySet(Flags<E> mask) const noexcept {
         return (*this & mask) != EmptyFlags;
     }
@@ -63,6 +67,10 @@ public:
 
     constexpr E Extract() const noexcept {
         return value;
+    }
+
+    constexpr explicit operator bool() const noexcept {
+        return static_cast<UnderlyingType>(value);
     }
 
     constexpr bool operator==(const Flags<E>&) const noexcept = default;
