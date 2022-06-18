@@ -38,9 +38,7 @@ SwapchainStatus PresentImage(
     const SemaphoreState* signal_state
 );
 
-// Resize the swapchain to match the native window's dimensions
-//
-// Unless a fast resize is possible, all views to the swapchain's
-// images must have been destroyed
+// Resize the swapchain to match the native window's dimensions.
+// All views of the swapchain's images must have been destroyed.
 void ResizeSwapchain(Swapchain swapchain);
 };

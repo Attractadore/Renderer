@@ -134,27 +134,19 @@ struct Scene::Impl {
     std::vector<GAL::CommandBuffer> command_buffers;
 
     static constexpr auto           InfiniteTimeout = std::chrono::nanoseconds{UINT64_MAX};
-    static constexpr auto           signal_cnt = 3;
+    static constexpr auto           signal_cnt = 2;
 
     GAL::Semaphore                  semaphore;
 
     GAL::SemaphorePayload           old_acquire_semaphore_value = 0;
     GAL::SemaphorePayload           old_draw_semaphore_value = old_acquire_semaphore_value + 1;
-    GAL::SemaphorePayload           old_present_semaphore_value = old_draw_semaphore_value + 1;
 
     GAL::SemaphorePayload           last_semaphore_value = frame_count * signal_cnt - 1;
 
-    GAL::SemaphorePayload           last_present_semaphore_value = last_semaphore_value;
-    GAL::SemaphorePayload           last_draw_semaphore_value = last_present_semaphore_value - 1;
+    GAL::SemaphorePayload           last_draw_semaphore_value = last_semaphore_value - 1;
     GAL::SemaphorePayload           last_acquire_semaphore_value = last_draw_semaphore_value - 1;
 
     ~Impl() {
-        GAL::SemaphoreState wait_state = {
-            .semaphore = semaphore,
-            .value = last_present_semaphore_value,
-        };
-        GAL::WaitForSemaphores(ctx, {&wait_state, 1}, true, InfiniteTimeout);
-
         GAL::ContextWaitIdle(ctx);
         GAL::DestroySemaphore(ctx, semaphore);
         GAL::FreeCommandBuffers(ctx, command_pool, command_buffers);
@@ -213,15 +205,10 @@ void Scene::Draw() {
     }
 
     auto resize_swapchain = [&] (GAL::SwapchainStatus status) {
-        if (status == GAL::SwapchainStatus::RequiresSlowResize) {
-            GAL::ContextWaitIdle(ctx);
-            std::ranges::for_each(pimpl->command_buffers, [] (auto cmd) { GAL::ResetCommandBuffer(cmd, GAL::CommandResources::Keep); });
-            std::ranges::for_each(pimpl->image_views, [&] (auto v) { GAL::DestroyImageView(ctx, v); });
-            GAL::ResizeSwapchain(swc);
-            pimpl->image_views = createSwapchainImageViews(ctx, pimpl->color_fmt, swc);
-        } else {
-            GAL::ResizeSwapchain(swc);
-        }
+        GAL::ContextWaitIdle(ctx);
+        std::ranges::for_each(pimpl->image_views, [&] (auto v) { GAL::DestroyImageView(ctx, v); });
+        GAL::ResizeSwapchain(swc);
+        pimpl->image_views = createSwapchainImageViews(ctx, pimpl->color_fmt, swc);
     };
 
     pimpl->last_acquire_semaphore_value = ++pimpl->last_semaphore_value;
@@ -232,7 +219,7 @@ void Scene::Draw() {
             .value = pimpl->last_acquire_semaphore_value,
         };
         auto [img_idx, status] = GAL::AcquireImage(swc, &signal_state);
-        if (status != GAL::SwapchainStatus::Good) {
+        if (status != GAL::SwapchainStatus::Optimal) {
             resize_swapchain(status);
         } else {
             return img_idx;
@@ -365,20 +352,14 @@ void Scene::Draw() {
         .semaphore = sem,
         .value = pimpl->last_draw_semaphore_value,
     };
-    pimpl->last_present_semaphore_value = ++pimpl->last_semaphore_value;
-    GAL::SemaphoreState signal_state = {
-        .semaphore = sem,
-        .value = pimpl->last_present_semaphore_value,
-    };
-    auto status = GAL::PresentImage(swc, img_idx, {&wait_state, 1}, &signal_state);
-    if (status != GAL::SwapchainStatus::Good) {
+    auto status = GAL::PresentImage(swc, img_idx, {&wait_state, 1}, nullptr);
+    if (status != GAL::SwapchainStatus::Optimal) {
         resize_swapchain(status);
     }
 
     pimpl->frame_index = (pimpl->frame_index + 1) % pimpl->frame_count;
     pimpl->old_acquire_semaphore_value += pimpl->signal_cnt;
     pimpl->old_draw_semaphore_value += pimpl->signal_cnt;
-    pimpl->old_present_semaphore_value += pimpl->signal_cnt;
 }
 
 Scene::~Scene() = default;

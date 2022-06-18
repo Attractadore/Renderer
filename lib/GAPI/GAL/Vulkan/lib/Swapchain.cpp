@@ -233,9 +233,9 @@ std::tuple<unsigned, SwapchainStatus> SwapchainImpl::AcquireImage(
         case VK_SUCCESS:
         case VK_SUBOPTIMAL_KHR:
             SignalAcquireSemaphore(signal_state);
-            return {image_idx, SwapchainStatus::Good};
+            return {image_idx, SwapchainStatus::Optimal};
         case VK_ERROR_OUT_OF_DATE_KHR:
-            return {-1, SwapchainStatus::RequiresSlowResize};
+            return {-1, SwapchainStatus::OutOfDate};
     }
     throw std::runtime_error{
         "Vulkan: Failed to acquire image from swapchain"};
@@ -369,10 +369,10 @@ SwapchainStatus SwapchainImpl::QueuePresent(unsigned image_idx) {
     auto r = vkQueuePresentKHR(present_queue, &present_info);
     switch (r) {
         case VK_SUCCESS:
-            return SwapchainStatus::Good;
+            return SwapchainStatus::Optimal;
         case VK_SUBOPTIMAL_KHR:
         case VK_ERROR_OUT_OF_DATE_KHR:
-            return SwapchainStatus::RequiresSlowResize;
+            return SwapchainStatus::OutOfDate;
     }
     throw std::runtime_error{
         "Vulkan: Failed to present to swapchain"};

@@ -38,8 +38,7 @@ struct SwapchainConfigBase {
 }
 
 enum class SwapchainStatus {
-    Good,
-    RequiresFastResize,
-    RequiresSlowResize,
+    Optimal,
+    OutOfDate,
 };
 }
