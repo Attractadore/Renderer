@@ -2,66 +2,18 @@
 #include "GAL/Sync.hpp"
 #include "VKUtil.hpp"
 
+#include <ranges>
+
 namespace R1::GAL {
-Fence CreateFence(Context ctx, const FenceConfig& config) {
-    VkFenceCreateInfo create_info = {
-        .sType = sType(create_info),
-        .flags = config.signaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0u,
+Semaphore CreateSemaphore(Context ctx, const SemaphoreConfig& config) {
+    VkSemaphoreTypeCreateInfo type_info = {
+        .sType = sType(type_info),
+        .semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
+        .initialValue = config.initial_value,
     };
-    VkFence fence = VK_NULL_HANDLE;
-    vkCreateFence(ctx->device.get(), &create_info, nullptr, &fence);
-    if (!fence) {
-        throw std::runtime_error{"Vulkan: Failed to create fence"};
-    }
-    return fence;
-}
-
-void DestroyFence(Context ctx, Fence fence) {
-    vkDestroyFence(ctx->device.get(), fence, nullptr);
-}
-
-FenceStatus GetFenceStatus(Context ctx, Fence fence) {
-    auto r = vkGetFenceStatus(ctx->device.get(), fence);
-    switch(r) {
-        case VK_SUCCESS:
-            return FenceStatus::Ready;
-        case VK_NOT_READY:
-            return FenceStatus::NotReady;
-        default: {
-            throw std::runtime_error{
-                "Vulkan: Failed to get fence status"};
-        }
-    }
-}
-
-FenceStatus WaitForFences(
-    Context ctx, std::span<const Fence> fences, bool all, std::chrono::nanoseconds timeout
-) {
-    auto r = vkWaitForFences(
-        ctx->device.get(), fences.size(), fences.data(), all, timeout.count());
-    switch(r) {
-        case VK_SUCCESS:
-            return FenceStatus::Ready;
-        case VK_TIMEOUT:
-            return FenceStatus::NotReady;
-        default: {
-            throw std::runtime_error{
-                "Vulkan: Failed to wait for fences"};
-        }
-    }
-}
-
-void ResetFences(Context ctx, std::span<const Fence> fences) {
-    auto r = vkResetFences(
-        ctx->device.get(), fences.size(), fences.data());
-    if (r) {
-        throw std::runtime_error{"Vulkan: Failed to reset fences"};
-    }
-}
-
-Semaphore CreateSemaphore(Context ctx) {
     VkSemaphoreCreateInfo create_info = {
         .sType = sType(create_info),
+        .pNext = &type_info,
     };
     VkSemaphore sem = VK_NULL_HANDLE;
     vkCreateSemaphore(ctx->device.get(), &create_info, nullptr, &sem);
@@ -73,5 +25,71 @@ Semaphore CreateSemaphore(Context ctx) {
 
 void DestroySemaphore(Context ctx, Semaphore sem) {
     vkDestroySemaphore(ctx->device.get(), sem, nullptr);
+}
+
+SemaphorePayload GetSemaphorePayloadValue(
+    Context ctx, Semaphore semaphore
+) {
+    uint64_t value;
+    auto r = vkGetSemaphoreCounterValue(
+        ctx->device.get(), semaphore, &value);
+    if (r) {
+        throw std::runtime_error{
+            "Vulkan: Failed to get semaphore payload value"};
+    }
+    return value;
+}
+
+SemaphoreStatus WaitForSemaphores(
+    Context ctx, std::span<const SemaphoreState> wait_states,
+    bool for_all, std::chrono::nanoseconds timeout
+) {
+    static thread_local std::vector<VkSemaphore> wait_semaphores;
+    static thread_local std::vector<uint64_t> wait_values;
+
+    auto sv = std::views::transform(wait_states,
+        [] (const SemaphoreState& state) {
+            return state.semaphore;
+        });
+    auto vv = std::views::transform(wait_states,
+        [] (const SemaphoreState& state) {
+            return state.value;
+        });
+
+    wait_semaphores.assign(sv.begin(), sv.end());
+    wait_values.assign(vv.begin(), vv.end());
+
+    VkSemaphoreWaitInfo wait_info = {
+        .sType = sType(wait_info),
+        .flags = for_all ? 0u: VK_SEMAPHORE_WAIT_ANY_BIT,
+        .semaphoreCount =
+            static_cast<uint32_t>(wait_semaphores.size()),
+        .pSemaphores = wait_semaphores.data(),
+        .pValues = wait_values.data(),
+    };
+    auto r = vkWaitSemaphores(
+        ctx->device.get(), &wait_info, timeout.count());
+    switch (r) {
+        case VK_SUCCESS:
+            return SemaphoreStatus::Ready;
+        case VK_TIMEOUT:
+            return SemaphoreStatus::NotReady;
+        default:
+            throw std::runtime_error{
+                "Vulkan: Failed to wait for semaphores"};
+    }
+}
+
+void SignalSemaphore(Context ctx, const SemaphoreState& signal_state) {
+    VkSemaphoreSignalInfo signal_info = {
+        .sType = sType(signal_info),
+        .semaphore = signal_state.semaphore,
+        .value = signal_state.value,
+    };
+    auto r = vkSignalSemaphore(ctx->device.get(), &signal_info);
+    if (r) {
+        throw std::runtime_error{
+            "Vulkan: Failed to signal semaphore"};
+    }
 }
 }

@@ -31,8 +31,14 @@ Vk::Device CreateDevice(
         exts.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
 
+    VkPhysicalDeviceTimelineSemaphoreFeatures timeline_semaphore_features = {
+        .sType = sType(timeline_semaphore_features),
+        .timelineSemaphore = true,
+    };
+
     VkPhysicalDeviceVulkan13Features vulkan13_features = {
         .sType = sType(vulkan13_features),
+        .pNext = &timeline_semaphore_features,
         .synchronization2 = true,
         .dynamicRendering = true,
     };

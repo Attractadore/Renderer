@@ -93,8 +93,12 @@ template<> inline constexpr auto Detail::DoInstanceDeleteF<VkSurfaceKHR>    = vk
 using Surface       = Detail::InstanceHandle<VkSurfaceKHR>;
 
 template<> inline constexpr auto Detail::DoDeviceDeleteF<VkImage>           = vkDestroyImage;
+template<> inline constexpr auto Detail::DoDeviceDeleteF<VkSemaphore>       = vkDestroySemaphore;
+template<> inline constexpr auto Detail::DoDeviceDeleteF<VkFence>           = vkDestroyFence;
 template<> inline constexpr auto Detail::DoDeviceDeleteF<VkSwapchainKHR>    = vkDestroySwapchainKHR;
 using Image         = Detail::DeviceHandle<VkImage>;
+using Semaphore     = Detail::DeviceHandle<VkSemaphore>;
+using Fence         = Detail::DeviceHandle<VkFence>;
 using Swapchain     = Detail::DeviceHandle<VkSwapchainKHR>;
 
 template<> inline constexpr auto Detail::DoAllocatorDeleteF<VmaAllocation>  = vmaFreeMemory;

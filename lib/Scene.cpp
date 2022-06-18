@@ -118,17 +118,6 @@ std::vector<GAL::CommandBuffer> createCommandBuffers(
     return cmd_buffers;
 }
 
-std::vector<GAL::Fence> createFences(GAL::Context ctx, unsigned n, bool signaled = true) {
-    std::vector<GAL::Fence> fences(n);
-    std::ranges::generate(fences, [&] { return GAL::CreateFence(ctx, { .signaled = signaled }); });
-    return fences;
-}
-
-std::vector<GAL::Semaphore> createSemaphores(GAL::Context ctx, unsigned n) {
-    std::vector<GAL::Semaphore> semaphores(n);
-    std::ranges::generate(semaphores, [&] { return GAL::CreateSemaphore(ctx); });
-    return semaphores;
-}
 }
 
 struct Scene::Impl {
@@ -139,19 +128,35 @@ struct Scene::Impl {
     GAL::Format                     color_fmt;
     GAL::Pipeline                   pipeline;
     std::vector<GAL::ImageView>     image_views;
-    unsigned                        frame_index;
-    unsigned                        frame_count;
+    unsigned                        frame_index = 0;
+    static constexpr auto           frame_count = 2;
     GAL::CommandPool                command_pool;
     std::vector<GAL::CommandBuffer> command_buffers;
-    std::vector<GAL::Fence>         fences;
-    std::vector<GAL::Semaphore>     acquire_semaphores;
-    std::vector<GAL::Semaphore>     draw_semaphores;
+
+    static constexpr auto           InfiniteTimeout = std::chrono::nanoseconds{UINT64_MAX};
+    static constexpr auto           signal_cnt = 3;
+
+    GAL::Semaphore                  semaphore;
+
+    GAL::SemaphorePayload           old_acquire_semaphore_value = 0;
+    GAL::SemaphorePayload           old_draw_semaphore_value = old_acquire_semaphore_value + 1;
+    GAL::SemaphorePayload           old_present_semaphore_value = old_draw_semaphore_value + 1;
+
+    GAL::SemaphorePayload           last_semaphore_value = frame_count * signal_cnt - 1;
+
+    GAL::SemaphorePayload           last_present_semaphore_value = last_semaphore_value;
+    GAL::SemaphorePayload           last_draw_semaphore_value = last_present_semaphore_value - 1;
+    GAL::SemaphorePayload           last_acquire_semaphore_value = last_draw_semaphore_value - 1;
 
     ~Impl() {
+        GAL::SemaphoreState wait_state = {
+            .semaphore = semaphore,
+            .value = last_present_semaphore_value,
+        };
+        GAL::WaitForSemaphores(ctx, {&wait_state, 1}, true, InfiniteTimeout);
+
         GAL::ContextWaitIdle(ctx);
-        std::ranges::for_each(fences, [&] (auto f) { GAL::DestroyFence(ctx, f); });
-        std::ranges::for_each(acquire_semaphores, [&] (auto s) { GAL::DestroySemaphore(ctx, s); });
-        std::ranges::for_each(draw_semaphores, [&] (auto s) { GAL::DestroySemaphore(ctx, s); });
+        GAL::DestroySemaphore(ctx, semaphore);
         GAL::FreeCommandBuffers(ctx, command_pool, command_buffers);
         GAL::DestroyCommandPool(ctx, command_pool);
         std::ranges::for_each(image_views, [&] (auto v) { GAL::DestroyImageView(ctx, v); });
@@ -183,37 +188,29 @@ Scene::Scene(Context& ctx, Swapchain& swapchain):
     {
         pimpl->image_views = createSwapchainImageViews(pimpl->ctx, pimpl->color_fmt, pimpl->swapchain);
     }
-    pimpl->frame_index = 0;
-    pimpl->frame_count = 2;
     pimpl->command_pool = createCommandPool(
         pimpl->ctx, pimpl->queue_family
     );
     pimpl->command_buffers = createCommandBuffers(
         pimpl->ctx, pimpl->command_pool, pimpl->frame_count
     );
-    pimpl->fences = createFences(
-        pimpl->ctx, pimpl->frame_count
-    );
-    pimpl->acquire_semaphores = createSemaphores(
-        pimpl->ctx, pimpl->frame_count
-    );
-    pimpl->draw_semaphores = createSemaphores(
-        pimpl->ctx, pimpl->frame_count
-    );
+    pimpl->semaphore = GAL::CreateSemaphore(
+        pimpl->ctx, { .initial_value = pimpl->last_semaphore_value, });
 }
 
 void Scene::Draw() {
     auto ctx = pimpl->ctx;
     auto swc = pimpl->swapchain;
     auto idx = pimpl->frame_index;
-    auto fence = pimpl->fences[idx];
-    auto acquire_sem = pimpl->acquire_semaphores[idx];
-    auto draw_sem = pimpl->draw_semaphores[idx];
+    auto sem = pimpl->semaphore;
 
-    constexpr auto InfiniteTimeout = std::chrono::nanoseconds{UINT64_MAX};
-
-    GAL::WaitForFences(ctx, {&fence, 1}, true, InfiniteTimeout);
-    GAL::ResetFences(ctx, {&fence, 1});
+    {
+        GAL::SemaphoreState wait_state = {
+            .semaphore = sem,
+            .value = pimpl->old_draw_semaphore_value,
+        };
+        GAL::WaitForSemaphores(ctx, {&wait_state, 1}, true, pimpl->InfiniteTimeout);
+    }
 
     auto resize_swapchain = [&] (GAL::SwapchainStatus status) {
         if (status == GAL::SwapchainStatus::RequiresSlowResize) {
@@ -227,9 +224,14 @@ void Scene::Draw() {
         }
     };
 
+    pimpl->last_acquire_semaphore_value = ++pimpl->last_semaphore_value;
     auto img_idx = [&] {
     while(true) {
-        auto [img_idx, status] = GAL::AcquireImage(swc, acquire_sem);
+        GAL::SemaphoreState signal_state = {
+            .semaphore = sem,
+            .value = pimpl->last_acquire_semaphore_value,
+        };
+        auto [img_idx, status] = GAL::AcquireImage(swc, &signal_state);
         if (status != GAL::SwapchainStatus::Good) {
             resize_swapchain(status);
         } else {
@@ -251,9 +253,8 @@ void Scene::Draw() {
     {
         GAL::ImageBarrier from_present = {
             .memory_barrier = {
-                .src_stages = GAL::PipelineStage::AllCommands,
+                .src_stages = GAL::PipelineStage::ColorAttachmentOutput,
                 .dst_stages = GAL::PipelineStage::ColorAttachmentOutput,
-                .dst_accesses = GAL::MemoryAccess::ColorAttachmentWrite,
             },
             .new_layout = GAL::ImageLayout::Attachment,
             .image = img,
@@ -337,25 +338,47 @@ void Scene::Draw() {
     GAL::EndCommandBuffer(cmd_buffer);
 
     {
-        GAL::SemaphoreSubmitConfig wait_config {
-            acquire_sem, GAL::PipelineStage::ColorAttachmentOutput};
-        GAL::CommandBufferSubmitConfig cmd_config{cmd_buffer};
-        GAL::SemaphoreSubmitConfig signal_config {
-            draw_sem, {}};
-        GAL::QueueSubmitConfig submit_config{
-            {&wait_config, 1},
-            {&cmd_config, 1},
-            {&signal_config, 1},
+        GAL::SemaphoreSubmitConfig wait_config = {
+            .state = {
+                .semaphore = sem,
+                .value = pimpl->last_acquire_semaphore_value,
+            },
+            .stages = GAL::PipelineStage::ColorAttachmentOutput,
         };
-        GAL::QueueSubmit(pimpl->queue, {&submit_config, 1}, fence);
+        pimpl->last_draw_semaphore_value = ++pimpl->last_semaphore_value;
+        GAL::SemaphoreSubmitConfig signal_config = {
+            .state = {
+                .semaphore = sem,
+                .value = pimpl->last_draw_semaphore_value,
+            },
+            .stages = GAL::PipelineStage::ColorAttachmentOutput,
+        };
+        GAL::QueueSubmitConfig submit_config = {
+            .wait_semaphores{&wait_config, 1},
+            .signal_semaphores{&signal_config, 1},
+            .command_buffers{&cmd_buffer, 1},
+        };
+        GAL::QueueSubmit(pimpl->queue, {&submit_config, 1});
     }
 
-    auto status = GAL::PresentImage(swc, img_idx, {&draw_sem, 1});
+    GAL::SemaphoreState wait_state = {
+        .semaphore = sem,
+        .value = pimpl->last_draw_semaphore_value,
+    };
+    pimpl->last_present_semaphore_value = ++pimpl->last_semaphore_value;
+    GAL::SemaphoreState signal_state = {
+        .semaphore = sem,
+        .value = pimpl->last_present_semaphore_value,
+    };
+    auto status = GAL::PresentImage(swc, img_idx, {&wait_state, 1}, &signal_state);
     if (status != GAL::SwapchainStatus::Good) {
         resize_swapchain(status);
     }
 
     pimpl->frame_index = (pimpl->frame_index + 1) % pimpl->frame_count;
+    pimpl->old_acquire_semaphore_value += pimpl->signal_cnt;
+    pimpl->old_draw_semaphore_value += pimpl->signal_cnt;
+    pimpl->old_present_semaphore_value += pimpl->signal_cnt;
 }
 
 Scene::~Scene() = default;

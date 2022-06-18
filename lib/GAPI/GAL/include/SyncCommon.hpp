@@ -1,12 +1,21 @@
 #pragma once
 
 namespace R1::GAL {
-struct FenceConfig {
-    bool signaled: 1;
-};
-
-enum class FenceStatus {
+enum class SemaphoreStatus {
     Ready,
     NotReady,
 };
+
+namespace Detail {
+template<typename Traits>
+struct SemaphoreConfigBase {
+    Traits::SemaphorePayload initial_value;
+};
+
+template<typename Traits>
+struct SemaphoreStateBase {
+    Traits::Semaphore           semaphore;
+    Traits::SemaphorePayload    value;
+};
+}
 }

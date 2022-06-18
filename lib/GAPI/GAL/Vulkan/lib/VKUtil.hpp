@@ -22,6 +22,8 @@ consteval VkStructureType sType() {
         return VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     } if constexpr (std::same_as<T, VkPhysicalDeviceDynamicRenderingFeatures>) {
         return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
+    } if constexpr(std::same_as<T, VkPhysicalDeviceTimelineSemaphoreFeatures>) {
+        return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
     } if constexpr (std::same_as<T, VkPhysicalDeviceVulkan13Features>) {
         return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
     } if constexpr (std::same_as<T, VkDeviceQueueCreateInfo>) {
@@ -76,6 +78,8 @@ consteval VkStructureType sType() {
         return VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     } if constexpr (std::same_as<T, VkSemaphoreCreateInfo>) {
         return VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    } if constexpr (std::same_as<T, VkSemaphoreTypeCreateInfo>) {
+        return VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
     } if constexpr (std::same_as<T, VkMemoryBarrier2>) {
         return VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
     } if constexpr (std::same_as<T, VkBufferMemoryBarrier2>) {
@@ -94,6 +98,10 @@ consteval VkStructureType sType() {
         return VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
     } if constexpr (std::same_as<T, VkSubmitInfo2>) {
         return VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    } if constexpr (std::same_as<T, VkSemaphoreWaitInfo>) {
+        return VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
+    } if constexpr (std::same_as<T, VkSemaphoreSignalInfo>) {
+        return VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO;
     } throw "Unknown sType";
 }
 
@@ -166,5 +174,11 @@ std::vector<E> ExtractEnum(
         }
     };
     return enums;
+}
+
+inline void ThrowIfFailed(VkResult r, const char* msg) {
+    if (r) {
+        throw std::runtime_error{msg};
+    }
 }
 }

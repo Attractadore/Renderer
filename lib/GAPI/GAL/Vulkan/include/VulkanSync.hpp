@@ -2,6 +2,6 @@
 #include <vulkan/vulkan.h>
 
 namespace R1::GAL {
-using Fence = VkFence;
 using Semaphore = VkSemaphore;
+using SemaphorePayload = uint64_t;
 }

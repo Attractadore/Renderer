@@ -11,6 +11,7 @@ struct Traits {
     using ColorComponent = GAL::ColorComponent;
     using ColorComponentFlags = GAL::ColorComponentFlags;
     using ColorSpace = GAL::ColorSpace;
+    using CommandBuffer = GAL::CommandBuffer;
     using CommandBufferUsage = GAL::CommandBufferUsage;
     using CommandBufferUsageFlags = GAL::CommandBufferUsageFlags;
     using CommandPoolConfigFlags = GAL::CommandPoolConfigFlags;
@@ -46,6 +47,8 @@ struct Traits {
     using QueueCapabilityFlags = GAL::QueueCapabilityFlags;
     using RenderingConfigFlags = GAL::RenderingConfigFlags;
     using ResolveMode = GAL::ResolveMode;
+    using Semaphore = GAL::Semaphore;
+    using SemaphorePayload = GAL::SemaphorePayload;
     using ShaderModule = GAL::ShaderModule;
     using StencilOp = GAL::StencilOp;
     using VertexInputRate = GAL::VertexInputRate;

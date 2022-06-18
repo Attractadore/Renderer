@@ -5,13 +5,21 @@
 #include <chrono>
 
 namespace R1::GAL {
-Fence CreateFence(Context ctx, const FenceConfig& config);
-void DestroyFence(Context ctx, Fence fence);
+using SemaphoreConfig = Detail::SemaphoreConfigBase<Detail::Traits>;
+using SemaphoreState = Detail::SemaphoreStateBase<Detail::Traits>;
 
-FenceStatus GetFenceStatus(Context ctx, Fence fence);
-FenceStatus WaitForFences(Context ctx, std::span<const Fence> fences, bool all, std::chrono::nanoseconds timeout);
-void ResetFences(Context ctx, std::span<const Fence> fences);
+Semaphore CreateSemaphore(Context ctx, const SemaphoreConfig& config);
+void DestroySemaphore(Context ctx, Semaphore semaphore);
 
-Semaphore CreateSemaphore(Context ctx);
-void DestroySemaphore(Context ctx, Semaphore sem);
+SemaphorePayload GetSemaphorePayloadValue(
+    Context ctx, Semaphore semaphore
+);
+SemaphoreStatus WaitForSemaphores(
+    Context ctx,
+    std::span<const SemaphoreState> wait_states,
+    bool for_all, std::chrono::nanoseconds timeout
+);
+void SignalSemaphore(
+    Context ctx, const SemaphoreState& signal_state 
+);
 }

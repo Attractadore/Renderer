@@ -64,6 +64,14 @@ auto FillSurfaceDescriptions(
         });
     return std::unordered_map{v.begin(), v.end()};
 }
+
+VkResult WaitForFenceAndReset(VkDevice dev, VkFence fence) {
+    auto r = vkWaitForFences(dev, 1, &fence, true, UINT64_MAX);
+    if (r) {
+        return r;
+    }
+    return vkResetFences(dev, 1, &fence);
+}
 }
 
 Surface CreateSurfaceFromHandle(Instance instance, Vk::Surface handle) {
@@ -125,6 +133,52 @@ void InitSwapchain(
             }};
         });
     swc->images.assign(v.begin(), v.end());
+
+    auto create_semaphore = [&] {
+        VkSemaphoreCreateInfo create_info = {
+            .sType = sType(create_info),
+        };
+        VkSemaphore semaphore;
+        ThrowIfFailed(
+            vkCreateSemaphore(dev, &create_info, nullptr, &semaphore),
+            "Vulkan: Failed to create semaphore"
+        );
+        return Vk::Semaphore{dev, semaphore};
+    };
+    
+    auto create_fence = [&] (bool signaled) {
+        VkFenceCreateInfo create_info = {
+            .sType = sType(create_info),
+            .flags = signaled ? VK_FENCE_CREATE_SIGNALED_BIT: 0u,
+        };
+        VkFence fence;
+        ThrowIfFailed(
+            vkCreateFence(dev, &create_info, nullptr, &fence),
+            "Vulkan: Failed to create fence"
+        );
+        return Vk::Fence{dev, fence};
+    };
+    auto create_signaled_fence = [&] { return create_fence(true); };
+    auto create_unsignaled_fence = [&] { return create_fence(false); };
+
+    swc->acquire_idx = 0;
+    swc->acquire_semaphores.resize(images.size());
+    swc->acquire_fences.resize(images.size());
+    swc->present_semaphores.resize(images.size());
+    swc->present_fences.resize(images.size());
+    std::ranges::generate(
+        swc->acquire_semaphores, create_semaphore);
+    // Fence 0 will be signaled by AcquireImage
+    std::ranges::generate(
+        std::views::take(swc->acquire_fences, 1), create_unsignaled_fence);
+    // Fences except fence 0 will be waited on by PresentImage 
+    std::ranges::generate(
+        std::views::drop(swc->acquire_fences, 1), create_signaled_fence);
+
+    std::ranges::generate(
+        swc->present_semaphores, create_semaphore);
+    std::ranges::generate(
+        swc->present_fences, create_signaled_fence);
 }
 }
 
@@ -185,51 +239,176 @@ Image GetSwapchainImage(Swapchain swapchain, unsigned image_idx) {
 
 std::tuple<unsigned, SwapchainStatus> AcquireImage(
     Swapchain swapchain,
-    Semaphore signal_semaphore
+    const SemaphoreState* signal_state
 ) {
+    auto dev        = swapchain->handle.get_device();
+    auto idx        = swapchain->acquire_idx;
+    auto acq_sem    = swapchain->acquire_semaphores[idx].get();
+    auto acq_fence  = swapchain->acquire_fences[idx].get();
+
+    // It is safe to use the current acquire semaphore here
+    // because it has already been ensured that it unsignaled,
+    // either in PresentImage or Init if this is a new swapchain.
     uint32_t image_idx = 0;
-    auto r = vkAcquireNextImageKHR(
-        swapchain->handle.get_device(), swapchain->handle.get(),
-        UINT64_MAX,
-        signal_semaphore, nullptr,
-        &image_idx); 
+    auto r = vkAcquireNextImageKHR(dev, swapchain->handle.get(),
+        UINT64_MAX, acq_sem, nullptr, &image_idx); 
     switch (r) {
         case VK_SUCCESS:
-        case VK_SUBOPTIMAL_KHR:
+        case VK_SUBOPTIMAL_KHR: {
+            // Transform an internal binary semaphore into an
+            // external timeline one and insert a fence to know
+            // when the current acquire semaphore is safe to reuse.
+
+            VkSemaphoreSubmitInfo wait_info = {
+                .sType = sType(wait_info),
+                .semaphore = acq_sem,
+            };
+            VkSemaphoreSubmitInfo signal_info = {
+                .sType = sType(signal_info),
+            };
+            VkSubmitInfo2 submit_info = {
+                .sType = sType(submit_info),
+                .waitSemaphoreInfoCount = 1,
+                .pWaitSemaphoreInfos = &wait_info,
+            };
+            if (signal_state) {
+                signal_info.semaphore = signal_state->semaphore;
+                signal_info.value = signal_state->value;
+                submit_info.signalSemaphoreInfoCount = 1;
+                submit_info.pSignalSemaphoreInfos = &signal_info;
+            }
+            ThrowIfFailed(vkQueueSubmit2(
+                swapchain->present_queue, 1, &submit_info, acq_fence),
+                "Vulkan: Failed to signal semaphore");
+
             return {image_idx, SwapchainStatus::Good};
-        case VK_ERROR_OUT_OF_DATE_KHR:
+        } case VK_ERROR_OUT_OF_DATE_KHR:
             return {-1, SwapchainStatus::RequiresSlowResize};
+        default:
+            throw std::runtime_error{
+                "Vulkan: Failed to acquire image from swapchain"};
     }
-    throw std::runtime_error{
-        "Vulkan: Failed to acquire image from swapchain"};
 }
 
 SwapchainStatus PresentImage(
     Swapchain swapchain,
     unsigned image_idx,
-    std::span<const Semaphore> wait_semaphores
+    std::span<const SemaphoreState> wait_states,
+    const SemaphoreState* signal_state
 ) {
+    auto dev = swapchain->handle.get_device();
+    auto pres_sem = swapchain->present_semaphores[image_idx].get();
+    auto pres_fence = swapchain->present_fences[image_idx].get();
+
+    // Wait for previous presentation of this image to complete
+    // before reusing its semaphore.
+    ThrowIfFailed(WaitForFenceAndReset(dev, pres_fence),
+        "Vulkan: Failed to avoid present semaphore wait hazard");
+
+    {
+        // Mux external timeline semaphores into an internal binary
+        // one.
+
+        static thread_local std::vector<VkSemaphoreSubmitInfo> wait_infos;
+
+        auto v = std::views::transform(wait_states,
+            [] (const SemaphoreState& state) {
+                VkSemaphoreSubmitInfo info = {
+                    .sType = sType(info),
+                    .semaphore = state.semaphore,
+                    .value = state.value,
+                };
+                return info;
+            });
+        wait_infos.assign(v.begin(), v.end());
+
+        VkSemaphoreSubmitInfo signal_info = {
+            .sType = sType(signal_info),
+            .semaphore = pres_sem,
+        };
+        VkSubmitInfo2 submit_info = {
+            .sType = sType(submit_info),
+            .waitSemaphoreInfoCount =
+                static_cast<uint32_t>(wait_infos.size()),
+            .pWaitSemaphoreInfos = wait_infos.data(),
+            .signalSemaphoreInfoCount = 1,
+            .pSignalSemaphoreInfos = &signal_info,
+        };
+        ThrowIfFailed(vkQueueSubmit2(
+            swapchain->present_queue, 1, &submit_info, VK_NULL_HANDLE),
+            "Vulkan: Failed to wait for semaphores");
+    }
+
     auto vk_swc = swapchain->handle.get();
     VkPresentInfoKHR present_info = {
         .sType = sType(present_info),
-        .waitSemaphoreCount =
-            static_cast<uint32_t>(wait_semaphores.size()),
-        .pWaitSemaphores = wait_semaphores.data(),
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &pres_sem,
         .swapchainCount = 1,
         .pSwapchains = &vk_swc,
         .pImageIndices = &image_idx,
     };
     auto r = vkQueuePresentKHR(
         swapchain->present_queue, &present_info);
+    auto status = SwapchainStatus::Good;
     switch (r) {
         case VK_SUCCESS:
-            return SwapchainStatus::Good;
+            break;
         case VK_SUBOPTIMAL_KHR:
-        case VK_ERROR_OUT_OF_DATE_KHR:
-            return SwapchainStatus::RequiresSlowResize;
+        case VK_ERROR_OUT_OF_DATE_KHR: {
+            status = SwapchainStatus::RequiresSlowResize;
+            break;
+        } default:
+            throw std::runtime_error{
+                "Vulkan: Failed to present to swapchain"};
     }
-    throw std::runtime_error{
-        "Vulkan: Failed to present to swapchain"};
+
+    {
+        // Signal external timeline semaphore and insert a fence to
+        // know when this image's semaphore is safe to reuse.
+        //
+        // This works because the first sync scope includes all
+        // previous commands.
+
+        VkSemaphoreSubmitInfo signal_info = {
+            .sType = sType(signal_info),
+        };
+        VkSubmitInfo2 submit_info = {
+            .sType = sType(submit_info),
+        };
+        if (signal_state) {
+            signal_info.semaphore = signal_state->semaphore;
+            signal_info.value = signal_state->value;
+            submit_info.signalSemaphoreInfoCount = 1,
+            submit_info.pSignalSemaphoreInfos = &signal_info;
+        }
+        ThrowIfFailed(vkQueueSubmit2(
+            swapchain->present_queue, 1, &submit_info, pres_fence),
+            "Vulkan: Failed to insert present completion fence");
+    }
+
+    {
+        // Wait for the previous acquire to complete before
+        // reusing its semaphore.
+        //
+        // When AcquireImage reports that the swapchain is out of date,
+        // it is expected that it will be called again.
+        // In this case, the current acquire fence is already unsignaled,
+        // so additional logic is required to prevent further waits
+        // on it.
+        //
+        // But PresentImage is called only once, so this conditional
+        // logic is avoided if hazard prevention is performed here.
+
+        auto& idx = swapchain->acquire_idx;
+        const auto& acq_fences = swapchain->acquire_fences;
+        idx = (idx + 1) % acq_fences.size();
+        auto acq_fence = acq_fences[idx].get();
+        ThrowIfFailed(WaitForFenceAndReset(dev, acq_fence),
+            "Vulkan: Failed to avoid acquire semaphore signal hazard");
+    }
+    
+    return status;
 }
 
 void ResizeSwapchain(Swapchain swapchain) {

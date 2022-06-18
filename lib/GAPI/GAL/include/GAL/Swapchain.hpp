@@ -1,5 +1,6 @@
 #pragma once
 #include "SwapchainCommon.hpp"
+#include "Sync.hpp"
 #include "Traits.hpp"
 
 namespace R1::GAL {
@@ -27,13 +28,14 @@ Image GetSwapchainImage(Swapchain swapchain, unsigned image_idx);
 
 std::tuple<unsigned, SwapchainStatus> AcquireImage(
     Swapchain swapchain,
-    Semaphore signal_semaphore
+    const SemaphoreState* signal_state
 );
 
 SwapchainStatus PresentImage(
     Swapchain swapchain,
     unsigned image_idx,
-    std::span<const Semaphore> wait_semaphores
+    std::span<const SemaphoreState> wait_states,
+    const SemaphoreState* signal_state
 );
 
 // Resize the swapchain to match the native window's dimensions
