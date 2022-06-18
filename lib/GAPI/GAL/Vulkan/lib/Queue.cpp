@@ -1,9 +1,7 @@
-#include "CommandImpl.hpp"
 #include "ContextImpl.hpp"
 #include "QueueImpl.inl"
-#include "VKUtil.hpp"
 
-#include <numeric>
+#include <algorithm>
 #include <ranges>
 
 namespace R1::GAL {
@@ -17,47 +15,15 @@ Queue GetQueue(Context ctx, QueueFamily::ID family, unsigned idx) {
 void QueueSubmit(
     Queue queue, std::span<const QueueSubmitConfig> configs
 ) {
-    static thread_local std::vector<VkSemaphoreSubmitInfo>
-        semaphore_wait_submits;
-    static thread_local std::vector<VkSemaphoreSubmitInfo>
-        semaphore_signal_submits;
-    static thread_local std::vector<VkCommandBufferSubmitInfo>
-        cmd_buffer_submits;
-    static thread_local std::vector<VkSubmitInfo2>
-        submits;
-
-    auto sem_wait_cnt = [&] {
-        auto v = std::views::transform(configs,
-            [] (const QueueSubmitConfig& config) {
-                return config.wait_semaphores.size();
-            });
-        return std::accumulate(v.begin(), v.end(), 0);
-    } ();
-
-    auto sem_signal_cnt = [&] {
-        auto v = std::views::transform(configs,
-            [] (const QueueSubmitConfig& config) {
-                return config.signal_semaphores.size();
-            });
-        return std::accumulate(v.begin(), v.end(), 0);
-    } ();
-
-    auto cmd_buffer_cnt = [&] {
-        auto v = std::views::transform(configs,
-            [] (const QueueSubmitConfig& config) {
-                return config.command_buffers.size();
-            });
-        return std::accumulate(v.begin(), v.end(), 0);
-    } ();
+    static thread_local std::vector<VkSemaphoreSubmitInfo>      semaphore_wait_submits;
+    static thread_local std::vector<VkSemaphoreSubmitInfo>      semaphore_signal_submits;
+    static thread_local std::vector<VkCommandBufferSubmitInfo>  cmd_buffer_submits;
+    static thread_local std::vector<VkSubmitInfo2>              submits;
 
     semaphore_wait_submits.clear();
-    semaphore_wait_submits.reserve(sem_wait_cnt);
     semaphore_signal_submits.clear();
-    semaphore_signal_submits.reserve(sem_signal_cnt);
     cmd_buffer_submits.clear();
-    cmd_buffer_submits.reserve(cmd_buffer_cnt);
-
-    auto v = std::views::transform(configs,
+    std::ranges::for_each(configs, 
         [&] (const QueueSubmitConfig& config) {
             auto wv = std::views::transform(
                 config.wait_semaphores, SemaphoreSubmitToVK);
@@ -65,33 +31,36 @@ void QueueSubmit(
                 config.signal_semaphores, SemaphoreSubmitToVK);
             auto cv = std::views::transform(
                 config.command_buffers, CommandBufferSubmitToVK);
-            VkSubmitInfo2 info {
-                .sType = sType(info),
-                .waitSemaphoreInfoCount =
-                    static_cast<uint32_t>(wv.size()),
-                .pWaitSemaphoreInfos =
-                    semaphore_wait_submits.data() +
-                    semaphore_wait_submits.size(),
-                .commandBufferInfoCount =
-                    static_cast<uint32_t>(cv.size()),
-                .pCommandBufferInfos =
-                    cmd_buffer_submits.data() +
-                    cmd_buffer_submits.size(),
-                .signalSemaphoreInfoCount =
-                    static_cast<uint32_t>(sv.size()),
-                .pSignalSemaphoreInfos =
-                    semaphore_signal_submits.data() +
-                    semaphore_signal_submits.size(),
-            };
             semaphore_wait_submits.insert(semaphore_wait_submits.end(),
                     wv.begin(), wv.end());
             semaphore_signal_submits.insert(semaphore_signal_submits.end(),
                     sv.begin(), sv.end());
             cmd_buffer_submits.insert(cmd_buffer_submits.end(),
                     cv.begin(), cv.end());
-            return info;
-    });
+        });
 
+    auto wp = semaphore_wait_submits.data();
+    auto sp = semaphore_signal_submits.data();
+    auto cp = cmd_buffer_submits.data();
+    auto v = std::views::transform(configs,
+        [&] (const QueueSubmitConfig& config) {
+            unsigned wait_cnt = config.wait_semaphores.size();
+            unsigned signal_cnt = config.signal_semaphores.size();
+            unsigned cmd_cnt = config.command_buffers.size();
+            VkSubmitInfo2 info = {
+                .sType = sType(info),
+                .waitSemaphoreInfoCount = wait_cnt,
+                .pWaitSemaphoreInfos = wp,
+                .commandBufferInfoCount = cmd_cnt,
+                .pCommandBufferInfos = cp,
+                .signalSemaphoreInfoCount = signal_cnt,
+                .pSignalSemaphoreInfos = sp,
+            };
+            wp += wait_cnt;
+            sp += signal_cnt;
+            cp += cmd_cnt;
+            return info;
+        });
     submits.assign(v.begin(), v.end());
 
     auto r = vkQueueSubmit2(
