@@ -1,59 +1,9 @@
 #include "R1/R1.h"
-#include "R1/R1Wayland.h"
-#include "R1/R1Xlib.h"
+#include "R1/R1SDL2.h"
 
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_syswm.h>
 
 #include <iostream>
-
-R1Instance* createInstance(SDL_Window* window) {
-    SDL_SysWMinfo info;
-    SDL_VERSION(&info.version);
-    SDL_GetWindowWMInfo(window, &info);
-    switch(info.subsystem) {
-        case SDL_SYSWM_X11: {
-            std::cout << "Create X11 instance\n";
-            auto dpy = info.info.x11.display;
-            return R1_CreateInstanceXlib(dpy, 0);
-        } case SDL_SYSWM_WAYLAND: {
-            std::cout << "Create Wayland instance\n";
-            auto display = info.info.wl.display;
-            return R1_CreateInstanceWayland(display);
-        } default:
-            return nullptr;
-    }
-}
-
-R1Surface* createSurface(R1Instance* instance, SDL_Window* window) {
-    SDL_SysWMinfo info;
-    SDL_VERSION(&info.version);
-    SDL_GetWindowWMInfo(window, &info);
-    switch(info.subsystem) {
-        case SDL_SYSWM_X11: {
-            std::cout << "Create X11 surface\n";
-            auto dpy = info.info.x11.display;
-            auto win = info.info.x11.window;
-            return R1_CreateSurfaceXlib(
-                instance, dpy, win,
-                [] (void* usrptr, int* w, int* h) {
-                    SDL_GetWindowSize(reinterpret_cast<SDL_Window*>(usrptr), w, h);
-                },
-                window);
-        } case SDL_SYSWM_WAYLAND: {
-            std::cout << "Create Wayland surface\n";
-            auto display = info.info.wl.display;
-            auto surface = info.info.wl.surface;
-            return R1_CreateSurfaceWayland(
-                instance, display, surface,
-                [] (void* usrptr, int* w, int* h) {
-                    SDL_GetWindowSize(reinterpret_cast<SDL_Window*>(usrptr), w, h);
-                },
-                window);
-        } default:
-            return nullptr;
-    }
-}
 
 int main() {
     SDL_Init(SDL_INIT_EVERYTHING);
@@ -61,10 +11,10 @@ int main() {
         "Triangle", 
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
         640, 480,
-        SDL_WINDOW_RESIZABLE
+        SDL_WINDOW_RESIZABLE | R1_GetRequiredWindowFlagsSDL2()
     );
 
-    auto instance = createInstance(window);
+    auto instance = R1_CreateInstanceSDL2(window);
     if (!instance) {
         std::cerr << "Failed to create renderer instance\n";
         return -1;
@@ -80,7 +30,7 @@ int main() {
         std::cerr << "Failed to create renderer context\n";
         return -1;
     }
-    auto surf = createSurface(instance, window);
+    auto surf = R1_CreateSurfaceSDL2(instance, window);
     if (!surf) {
         std::cerr << "Failed to create surface\n";
         return -1;

@@ -29,26 +29,42 @@ target_link_libraries(R1
     PRIVATE R1PrivateInterface GAPI
 )
 
+if (TARGET GAPI_SDL2)
+add_library(R1SDL2
+    R1SDL2.cpp
+)
+target_link_libraries(R1SDL2
+    PUBLIC R1 R1PublicInterface SDL2::SDL2
+    PRIVATE R1PrivateInterface GAPI_SDL2
+)
+endif()
+
+if (TARGET GAPI_Xlib)
 add_library(R1Xlib
     R1Xlib.cpp
 )
 target_link_libraries(R1Xlib
-    PUBLIC R1 R1PublicInterface
+    PUBLIC R1 R1PublicInterface X11::X11
     PRIVATE R1PrivateInterface GAPI_Xlib 
 )
+endif()
 
+if (TARGET GAPI_XCB)
 add_library(R1XCB
     R1XCB.cpp
 )
 target_link_libraries(R1XCB
-    PUBLIC R1 R1PublicInterface
+    PUBLIC R1 R1PublicInterface X11::xcb
     PRIVATE R1PrivateInterface GAPI_XCB 
 )
+endif()
 
+if (TARGET GAPI_Wayland)
 add_library(R1Wayland
     R1Wayland.cpp
 )
 target_link_libraries(R1Wayland
-    PUBLIC R1 R1PublicInterface
+    PUBLIC R1 R1PublicInterface Wayland::Client
     PRIVATE R1PrivateInterface GAPI_Wayland
 )
+endif()

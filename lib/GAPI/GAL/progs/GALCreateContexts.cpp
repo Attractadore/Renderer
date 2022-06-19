@@ -1,9 +1,7 @@
 #include "GAL/GAL.hpp"
-#include "GAL/GALWayland.hpp"
-#include "GAL/GALXlib.hpp"
+#include "GAL/GALSDL2.hpp"
 
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_syswm.h>
 
 #include <iostream>
 
@@ -39,41 +37,16 @@ void printDevices(R1::GAL::Instance instance) {
 
 int main() {
     SDL_Init(SDL_INIT_EVERYTHING);
-
     SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
     auto window = SDL_CreateWindow(
         "SDL window",
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
         640, 480,
-        SDL_WINDOW_HIDDEN
+        SDL_WINDOW_HIDDEN | R1::GAL::SDL2::GetRequiredWindowFlags()
     );
-    SDL_SysWMinfo info;
-    SDL_VERSION(&info.version);
-    SDL_GetWindowWMInfo(window, &info);
-
-    switch (info.subsystem) {
-    case SDL_SYSWM_X11: {
-        std::cout << "Window system is X11\n";
-        auto i = R1::GAL::Xlib::CreateInstance(
-            info.info.x11.display, 0, {}
-        );
-        printDevices(i);
-        R1::GAL::DestroyInstance(i);
-        break;
-    }
-    case SDL_SYSWM_WAYLAND: {
-        std::cout << "Window system is Wayland\n";
-        auto i = R1::GAL::Wayland::CreateInstance(
-            info.info.wl.display, {}
-        );
-        printDevices(i);
-        R1::GAL::DestroyInstance(i);
-        break;
-    }
-    default: {
-        std::cout << "Unknown window system!\n";
-    }}
-
+    auto i = R1::GAL::SDL2::CreateInstance(window, {});
+    printDevices(i);
+    R1::GAL::DestroyInstance(i);
     SDL_DestroyWindow(window);
     SDL_Quit();
 };

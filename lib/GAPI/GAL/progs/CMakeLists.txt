@@ -1,0 +1,28 @@
+if (TARGET GAL_SDL2)
+    add_executable(GALListDevicesSDL2 GALListDevicesSDL2.cpp)
+    target_link_libraries(GALListDevicesSDL2 GAL_SDL2)
+    target_compile_definitions(GALListDevicesSDL2 PRIVATE SDL_MAIN_HANDLED)
+    
+    add_executable(GALCreateContexts GALCreateContexts.cpp)
+    target_link_libraries(GALCreateContexts GAL_SDL2)
+    target_compile_definitions(GALCreateContexts PRIVATE SDL_MAIN_HANDLED)
+endif()
+
+if (TARGET GAL_Xlib)
+    add_executable(GALListDevicesXlib GALListDevicesXlib.cpp)
+    target_link_libraries(GALListDevicesXlib GAL_Xlib SDL2::SDL2)
+    target_compile_definitions(GALListDevicesXlib PRIVATE SDL_MAIN_HANDLED)
+endif()
+
+find_package(X11 COMPONENTS X11_xcb)
+if (TARGET GAL_XCB AND TARGET X11::X11_xcb)
+    add_executable(GALListDevicesXCB GALListDevicesXCB.cpp)
+    target_link_libraries(GALListDevicesXCB GAL_XCB X11::X11_xcb SDL2::SDL2)
+    target_compile_definitions(GALListDevicesXCB PRIVATE SDL_MAIN_HANDLED)
+endif()
+
+if (TARGET GAL_Wayland)
+    add_executable(GALListDevicesWayland GALListDevicesWayland.cpp)
+    target_link_libraries(GALListDevicesWayland GAL_Wayland SDL2::SDL2)
+    target_compile_definitions(GALListDevicesWayland PRIVATE SDL_MAIN_HANDLED)
+endif()

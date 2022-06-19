@@ -1,10 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
-
-find_package(ECM REQUIRED)
-list(APPEND CMAKE_MODULE_PATH ${ECM_FIND_MODULE_DIR})
 find_package(Vulkan REQUIRED)
-find_package(X11 COMPONENTS xcb REQUIRED)
-find_package(Wayland COMPONENTS Client REQUIRED)
 
 add_library(GAL_Vulkan
     CommandImpl.hpp
@@ -38,17 +32,30 @@ target_include_directories(GAL_Vulkan
 target_link_libraries(GAL_Vulkan
     PUBLIC GAL_Common Vulkan::Vulkan VulkanMemoryAllocator)
 
+if (TARGET SDL2::SDL2)
+add_library(GAL_Vulkan_SDL2
+    APISDL2.cpp)
+target_link_libraries(GAL_Vulkan_SDL2
+    PUBLIC GAL_Vulkan SDL2::SDL2)
+endif()
+
+if (TARGET X11::X11)
 add_library(GAL_Vulkan_Xlib
     APIXlib.cpp)
 target_link_libraries(GAL_Vulkan_Xlib
     PUBLIC GAL_Vulkan X11::X11)
+endif()
 
+if (TARGET X11::xcb)
 add_library(GAL_Vulkan_XCB
     APIXCB.cpp)
 target_link_libraries(GAL_Vulkan_XCB
     PUBLIC GAL_Vulkan X11::xcb)
+endif()
 
+if (TARGET Wayland::Client)
 add_library(GAL_Vulkan_Wayland
     APIWayland.cpp)
 target_link_libraries(GAL_Vulkan_Wayland
     PUBLIC GAL_Vulkan Wayland::Client)
+endif()
