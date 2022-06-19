@@ -11,7 +11,7 @@ R1Instance* R1_CreateInstanceXCB(
     int screen
 );
 
-R1Surface* R1_CreateSurfaceXlib(
+R1Surface* R1_CreateSurfaceXCB(
     R1Instance* instance,
     xcb_connection_t* conn,
     xcb_window_t window,
