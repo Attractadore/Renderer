@@ -1,20 +1,25 @@
 #include "R1/R1.h"
-#include "R1/R1SDL2.h"
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_syswm.h>
 
 #include <iostream>
 
-int main() {
+template<typename CreateInstance, typename CreateSurface>
+int RunFromWindow(
+    CreateInstance create_instance,
+    CreateSurface create_surface,
+    Uint32 flags = 0
+) {
     SDL_Init(SDL_INIT_EVERYTHING);
     auto window = SDL_CreateWindow(
         "Triangle", 
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
         640, 480,
-        SDL_WINDOW_RESIZABLE | R1_GetRequiredWindowFlagsSDL2()
+        SDL_WINDOW_RESIZABLE | flags 
     );
 
-    auto instance = R1_CreateInstanceSDL2(window);
+    auto instance = create_instance(window);
     if (!instance) {
         std::cerr << "Failed to create renderer instance\n";
         return -1;
@@ -30,7 +35,7 @@ int main() {
         std::cerr << "Failed to create renderer context\n";
         return -1;
     }
-    auto surf = R1_CreateSurfaceSDL2(instance, window);
+    auto surf = create_surface(instance, window);
     if (!surf) {
         std::cerr << "Failed to create surface\n";
         return -1;
@@ -64,4 +69,38 @@ int main() {
 
     SDL_DestroyWindow(window);
     SDL_Quit();
+
+    return 0;
+}
+
+template<typename CreateInstance, typename CreateSurface>
+int RunFromSysWMInfo(
+    CreateInstance create_instance,
+    CreateSurface create_surface,
+    Uint32 flags = 0
+) {
+    auto create_instance_from_window =
+    [&] (SDL_Window* window) {
+        SDL_SysWMinfo info;
+        SDL_VERSION(&info.version);
+        if (!SDL_GetWindowWMInfo(window, &info)) {
+            std::cerr << "Failed to retrieve WM info\n";
+            return static_cast<R1Instance*>(nullptr);
+        }
+        return create_instance(info);
+    };
+    auto create_surface_from_window =
+    [&] (R1Instance* instance, SDL_Window* window) {
+        SDL_SysWMinfo info;
+        SDL_VERSION(&info.version);
+        if (!SDL_GetWindowWMInfo(window, &info)) {
+            std::cerr << "Failed to retrieve WM info\n";
+            return static_cast<R1Surface*>(nullptr);
+        }
+        return create_surface(instance, info, window);
+    };
+    return RunFromWindow(
+        create_instance_from_window,
+        create_surface_from_window,
+        flags);
 }

@@ -1,5 +1,35 @@
+find_package(SDL2)
+if (TARGET SDL2::SDL2)
+
 if (TARGET R1SDL2)
-    add_executable(DrawTriangle DrawTriangle.cpp)
-    target_link_libraries(DrawTriangle R1SDL2)
-    target_compile_definitions(DrawTriangle PRIVATE SDL_MAIN_HANDLED)
+    add_executable(DrawTriangleSDL2 DrawTriangleSDL2.cpp)
+    target_link_libraries(DrawTriangleSDL2 R1SDL2)
+    target_compile_definitions(DrawTriangleSDL2 PRIVATE SDL_MAIN_HANDLED)
+endif()
+
+if (TARGET R1Xlib)
+    add_executable(DrawTriangleXlib DrawTriangleXlib.cpp)
+    target_link_libraries(DrawTriangleXlib R1Xlib SDL2::SDL2)
+    target_compile_definitions(DrawTriangleXlib PRIVATE SDL_MAIN_HANDLED)
+endif()
+
+find_package(X11 COMPONENTS X11_xcb)
+if (TARGET R1XCB AND TARGET X11::X11_xcb)
+    add_executable(DrawTriangleXCB DrawTriangleXCB.cpp)
+    target_link_libraries(DrawTriangleXCB R1XCB X11::X11_xcb SDL2::SDL2)
+    target_compile_definitions(DrawTriangleXCB PRIVATE SDL_MAIN_HANDLED)
+endif()
+
+if (TARGET R1Wayland)
+    add_executable(DrawTriangleWayland DrawTriangleWayland.cpp)
+    target_link_libraries(DrawTriangleWayland R1Wayland SDL2::SDL2)
+    target_compile_definitions(DrawTriangleWayland PRIVATE SDL_MAIN_HANDLED)
+endif()
+
+if (TARGET R1Win32)
+    add_executable(DrawTriangleWin32 DrawTriangleWin32.cpp)
+    target_link_libraries(DrawTriangleWin32 R1Win32 SDL2::SDL2)
+    target_compile_definitions(DrawTriangleWin32 PRIVATE SDL_MAIN_HANDLED)
+endif()
+
 endif()
