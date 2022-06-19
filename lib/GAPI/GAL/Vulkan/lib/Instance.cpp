@@ -57,9 +57,11 @@ public:
 InstanceDescription GetInstanceDescription() {
     InstanceExtensionProperties ext_props;
     return {
-        .wsi    = ext_props.ExtensionSupported(VK_KHR_SURFACE_EXTENSION_NAME),
-        .xlib   = ext_props.ExtensionSupported(VK_KHR_XLIB_SURFACE_EXTENSION_NAME),
-        .xcb    = ext_props.ExtensionSupported(VK_KHR_XCB_SURFACE_EXTENSION_NAME),
+        .wsi        = ext_props.ExtensionSupported(VK_KHR_SURFACE_EXTENSION_NAME),
+        .xlib       = ext_props.ExtensionSupported(VK_KHR_XLIB_SURFACE_EXTENSION_NAME),
+        .xcb        = ext_props.ExtensionSupported(VK_KHR_XCB_SURFACE_EXTENSION_NAME),
+        .wayland    = ext_props.ExtensionSupported(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME),
+        .win32      = ext_props.ExtensionSupported(VK_KHR_WIN32_SURFACE_EXTENSION_NAME),
     };
 };
 
