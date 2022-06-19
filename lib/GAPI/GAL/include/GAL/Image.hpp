@@ -89,8 +89,7 @@ using ImageAspectFlags  = Flags<ImageAspect>;
 
 enum class ImageMemoryUsage {
     Default,
-    RenderTarget,
-    Swap,
+    Dedicated,
 };
 
 struct ImageConfig {

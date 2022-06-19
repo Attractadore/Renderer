@@ -40,13 +40,11 @@ Image CreateImage(Context ctx, const ImageConfig& config) {
     switch(mem_usg) {
         case Default:
             return { VMA_MEMORY_USAGE_AUTO, 0};
-        case RenderTarget:
+        case Dedicated:
             return {
-                VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, 
+                VMA_MEMORY_USAGE_AUTO, 
                 VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT
             };
-        case Swap:
-            return { VMA_MEMORY_USAGE_AUTO_PREFER_HOST, 0 };
         default:
             assert(!"Unknow image memory usage");
     }} (config.memory_usage);
