@@ -68,3 +68,13 @@ target_link_libraries(R1Wayland
     PRIVATE R1PrivateInterface GAPI_Wayland
 )
 endif()
+
+if (TARGET GAPI_Win32)
+add_library(R1Win32
+    R1Win32.cpp
+)
+target_link_libraries(R1Win32
+    PUBLIC R1 R1PublicInterface
+    PRIVATE R1PrivateInterface GAPI_Win32
+)
+endif()

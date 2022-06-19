@@ -59,3 +59,10 @@ add_library(GAL_Vulkan_Wayland
 target_link_libraries(GAL_Vulkan_Wayland
     PUBLIC GAL_Vulkan Wayland::Client)
 endif()
+
+if (WIN32)
+add_library(GAL_Vulkan_Win32
+    APIWin32.cpp)
+target_link_libraries(GAL_Vulkan_Win32
+    PUBLIC GAL_Vulkan)
+endif()

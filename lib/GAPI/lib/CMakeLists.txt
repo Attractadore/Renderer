@@ -36,3 +36,9 @@ add_library(GAPI_Wayland INTERFACE)
 target_link_libraries(GAPI_Wayland
     INTERFACE GAPIPublicInterface GAL_Wayland)
 endif()
+
+if (TARGET GAL_Win32)
+add_library(GAPI_Win32 INTERFACE)
+target_link_libraries(GAPI_Win32
+    INTERFACE GAPIPublicInterface GAL_Win32)
+endif()
