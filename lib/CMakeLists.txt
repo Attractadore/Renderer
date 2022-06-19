@@ -44,3 +44,11 @@ target_link_libraries(R1XCB
     PUBLIC R1 R1PublicInterface
     PRIVATE R1PrivateInterface GAPI_XCB 
 )
+
+add_library(R1Wayland
+    R1Wayland.cpp
+)
+target_link_libraries(R1Wayland
+    PUBLIC R1 R1PublicInterface
+    PRIVATE R1PrivateInterface GAPI_Wayland
+)

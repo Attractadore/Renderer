@@ -1,4 +1,5 @@
 #include "GAL/GAL.hpp"
+#include "GAL/GALWayland.hpp"
 #include "GAL/GALXlib.hpp"
 
 #include <SDL2/SDL.h>
@@ -52,6 +53,7 @@ int main() {
 
     switch (info.subsystem) {
     case SDL_SYSWM_X11: {
+        std::cout << "Window system is X11\n";
         auto i = R1::GAL::Xlib::CreateInstance(
             info.info.x11.display, 0, {}
         );
@@ -59,8 +61,17 @@ int main() {
         R1::GAL::DestroyInstance(i);
         break;
     }
+    case SDL_SYSWM_WAYLAND: {
+        std::cout << "Window system is Wayland\n";
+        auto i = R1::GAL::Wayland::CreateInstance(
+            info.info.wl.display, {}
+        );
+        printDevices(i);
+        R1::GAL::DestroyInstance(i);
+        break;
+    }
     default: {
-        std::cout << "Window system is not X11!\n";
+        std::cout << "Unknown window system!\n";
     }}
 
     SDL_DestroyWindow(window);

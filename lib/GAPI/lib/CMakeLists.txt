@@ -20,3 +20,7 @@ target_link_libraries(GAPI_Xlib
 add_library(GAPI_XCB INTERFACE)
 target_link_libraries(GAPI_XCB
     INTERFACE GAPIPublicInterface GAL_XCB)
+
+add_library(GAPI_Wayland INTERFACE)
+target_link_libraries(GAPI_Wayland
+    INTERFACE GAPIPublicInterface GAL_Wayland)

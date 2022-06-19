@@ -1,4 +1,5 @@
 #include "R1/R1.h"
+#include "R1/R1Wayland.h"
 #include "R1/R1Xlib.h"
 
 #include <SDL2/SDL.h>
@@ -6,34 +7,52 @@
 
 #include <iostream>
 
-R1Instance* createX11Instance(SDL_Window* window) {
+R1Instance* createInstance(SDL_Window* window) {
     SDL_SysWMinfo info;
     SDL_VERSION(&info.version);
     SDL_GetWindowWMInfo(window, &info);
-    if (info.subsystem != SDL_SYSWM_X11) {
-        return nullptr;
+    switch(info.subsystem) {
+        case SDL_SYSWM_X11: {
+            std::cout << "Create X11 instance\n";
+            auto dpy = info.info.x11.display;
+            return R1_CreateInstanceXlib(dpy, 0);
+        } case SDL_SYSWM_WAYLAND: {
+            std::cout << "Create Wayland instance\n";
+            auto display = info.info.wl.display;
+            return R1_CreateInstanceWayland(display);
+        } default:
+            return nullptr;
     }
-
-    auto dpy = info.info.x11.display;
-    return R1_CreateInstanceXlib(dpy, 0);
 }
 
-R1Surface* createX11Surface(R1Instance* instance, SDL_Window* window) {
+R1Surface* createSurface(R1Instance* instance, SDL_Window* window) {
     SDL_SysWMinfo info;
     SDL_VERSION(&info.version);
     SDL_GetWindowWMInfo(window, &info);
-    if (info.subsystem != SDL_SYSWM_X11) {
-        return nullptr;
+    switch(info.subsystem) {
+        case SDL_SYSWM_X11: {
+            std::cout << "Create X11 surface\n";
+            auto dpy = info.info.x11.display;
+            auto win = info.info.x11.window;
+            return R1_CreateSurfaceXlib(
+                instance, dpy, win,
+                [] (void* usrptr, int* w, int* h) {
+                    SDL_GetWindowSize(reinterpret_cast<SDL_Window*>(usrptr), w, h);
+                },
+                window);
+        } case SDL_SYSWM_WAYLAND: {
+            std::cout << "Create Wayland surface\n";
+            auto display = info.info.wl.display;
+            auto surface = info.info.wl.surface;
+            return R1_CreateSurfaceWayland(
+                instance, display, surface,
+                [] (void* usrptr, int* w, int* h) {
+                    SDL_GetWindowSize(reinterpret_cast<SDL_Window*>(usrptr), w, h);
+                },
+                window);
+        } default:
+            return nullptr;
     }
-
-    auto dpy = info.info.x11.display;
-    auto win = info.info.x11.window;
-    return R1_CreateSurfaceXlib(
-        instance, dpy, win,
-        [] (void* usrptr, int* w, int* h) {
-            SDL_GetWindowSize(reinterpret_cast<SDL_Window*>(usrptr), w, h);
-        },
-        window);
 }
 
 int main() {
@@ -45,9 +64,9 @@ int main() {
         SDL_WINDOW_RESIZABLE
     );
 
-    auto instance = createX11Instance(window);
+    auto instance = createInstance(window);
     if (!instance) {
-        std::cerr << "Failed to create X11 renderer instance\n";
+        std::cerr << "Failed to create renderer instance\n";
         return -1;
     }
     if (!R1_GetDeviceCount(instance)) {
@@ -61,9 +80,9 @@ int main() {
         std::cerr << "Failed to create renderer context\n";
         return -1;
     }
-    auto surf = createX11Surface(instance, window);
+    auto surf = createSurface(instance, window);
     if (!surf) {
-        std::cerr << "Failed to create X11 surface\n";
+        std::cerr << "Failed to create surface\n";
         return -1;
     }
     auto swc = R1_CreateSwapchain(ctx, surf);

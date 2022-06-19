@@ -47,3 +47,8 @@ add_library(GAL_Vulkan_XCB
     APIXCB.cpp)
 target_link_libraries(GAL_Vulkan_XCB
     PUBLIC GAL_Vulkan X11::xcb)
+
+add_library(GAL_Vulkan_Wayland
+    APIWayland.cpp)
+target_link_libraries(GAL_Vulkan_Wayland
+    PUBLIC GAL_Vulkan Wayland::Client)
