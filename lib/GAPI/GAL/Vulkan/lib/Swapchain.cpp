@@ -367,6 +367,13 @@ SwapchainStatus SwapchainImpl::QueuePresent(unsigned image_idx) {
         .pImageIndices = &image_idx,
     };
     auto r = vkQueuePresentKHR(present_queue, &present_info);
+    if (!r) {
+        auto [w, h] = surface_size_cb();
+        const auto& ext = create_info.imageExtent;
+        if (ext.width != w or ext.height != h) {
+            r = VK_ERROR_OUT_OF_DATE_KHR;
+        }
+    }
     switch (r) {
         case VK_SUCCESS:
             return SwapchainStatus::Optimal;
