@@ -242,6 +242,7 @@ void Scene::Draw() {
             .memory_barrier = {
                 .src_stages = GAL::PipelineStage::ColorAttachmentOutput,
                 .dst_stages = GAL::PipelineStage::ColorAttachmentOutput,
+                .dst_accesses = GAL::MemoryAccess::ColorAttachmentWrite,
             },
             .new_layout = GAL::ImageLayout::Attachment,
             .image = img,
