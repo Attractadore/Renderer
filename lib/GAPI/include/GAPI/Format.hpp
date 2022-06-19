@@ -16,22 +16,20 @@ constexpr inline FormatTraits GetFormatTraits(GAL::Format fmt) {
         case RGB8_UNORM:
         case RGBA8_UNORM:
         case BGR8_UNORM:
-        case BGRA8_UNORM: {
+        case BGRA8_UNORM:
             return {
                 .is_color = true,
             };
-        }
         case RGB8_SRGB:
         case RGBA8_SRGB:
         case BGR8_SRGB:
-        case BGRA8_SRGB: {
+        case BGRA8_SRGB:
             return {
                 .is_color = true,
                 .is_srgb = true,
             };
-        }
         default:
-            assert(!"Unknown format");
+            return {};
     }
 }
 }
