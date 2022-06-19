@@ -19,7 +19,6 @@ add_library(GAL_Vulkan
     CommandImpl.inl
     DeviceImpl.inl
     ImageImpl.inl
-    SwapchainImpl.inl
 
     Command.cpp
     Context.cpp
