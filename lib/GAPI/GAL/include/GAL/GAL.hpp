@@ -1,6 +1,7 @@
 #pragma once
 #include "Command.hpp"
 #include "Context.hpp"
+#include "Format.hpp"
 #include "Image.hpp"
 #include "Instance.hpp"
 #include "Pipeline.hpp"

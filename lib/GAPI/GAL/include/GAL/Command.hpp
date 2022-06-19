@@ -8,6 +8,133 @@
 #include "Image.hpp"
 
 namespace R1::GAL {
+namespace Detail {
+template<typename E>
+concept IsCommandPoolConfigOption = requires(E e) {
+    E::Transient;
+    E::AllowCommandBufferReset;
+};
+
+template<typename E>
+concept IsCommandResources = requires(E e) {
+    E::Keep;
+    E::Release;
+};
+
+template<typename E>
+concept IsCommandBufferUsage = requires(E e) {
+    E::OneTimeSubmit;
+    E::Simultaneous;
+};
+
+template<typename E>
+concept IsPipelineStage = requires(E e) {
+    E::DrawIndirect;
+
+    E::IndexInput;
+    E::VertexAttributeInput;
+    E::VertexInput;
+
+    E::VertexShader;
+    E::TesselationControlShader;
+    E::TesselationEvaluationShader;
+    E::GeometryShader;
+    E::PreRasterizationShaders;
+
+    E::FragmentShader;
+    E::EarlyFragmentTests;
+    E::LateFragmentTests;
+    E::ColorAttachmentOutput;
+
+    E::AllGraphics;
+
+    E::ComputeShader;
+    E::AllCompute;
+
+    E::Copy;
+    E::Resolve;
+    E::Blit;
+    E::Clear;
+    E::AllTransfer;
+
+    E::AllCommands;
+};
+
+template<typename E>
+concept IsMemoryAccess = requires(E e) {
+    E::IndirectCommandRead;
+
+    E::IndexRead;
+    E::VertexAttributeRead;
+    E::VertexRead;
+
+    E::ShaderUniformRead;
+    E::ShaderSampledRead;
+    E::ShaderStorageRead;
+    E::ShaderRead;
+
+    E::ShaderStorageWrite;
+    E::ShaderWrite;
+
+    E::ColorAttachmentRead;
+    E::DepthAttachmentRead;
+    E::StencilAttachmentRead;
+    E::DepthStencilAttachmentRead;
+    E::AttachmentRead;
+
+    E::ColorAttachmentWrite;
+    E::DepthAttachmentWrite;
+    E::StencilAttachmentWrite;
+    E::DepthStencilAttachmentWrite;
+    E::AttachmentWrite;
+
+    E::TransferRead;
+    E::TransferWrite;
+
+    E::MemoryRead;
+    E::MemoryWrite;
+};
+
+template<typename E>
+concept IsResolveMode = requires(E e) {
+    E::None;
+    E::SampleZero;
+    E::Average;
+    E::Min;
+    E::Max;
+};
+
+template<typename E>
+concept IsAttachmentLoadOp = requires(E e) {
+    E::Load;
+    E::Clear;
+    E::DontCare; 
+};
+
+template<typename E>
+concept IsAttachmentStoreOp = requires(E e) {
+    E::Store;
+    E::DontCare;
+    E::None;
+};
+
+template<typename E>
+concept IsRenderingConfigOption = requires(E e) {
+    E::Resume;
+    E::Suspend;
+};
+
+static_assert(IsAttachmentLoadOp<AttachmentLoadOp>);
+static_assert(IsAttachmentStoreOp<AttachmentStoreOp>);
+static_assert(IsCommandBufferUsage<CommandBufferUsage>);
+static_assert(IsCommandPoolConfigOption<CommandPoolConfigOption>);
+static_assert(IsCommandResources<CommandResources>);
+static_assert(IsMemoryAccess<MemoryAccess>);
+static_assert(IsPipelineStage<PipelineStage>);
+static_assert(IsRenderingConfigOption<RenderingConfigOption>);
+static_assert(IsResolveMode<ResolveMode>);
+}
+
 using CommandPoolConfigFlags    = Flags<CommandPoolConfigOption>;
 using CommandBufferUsageFlags   = Flags<CommandBufferUsage>;
 using PipelineStageFlags        = Flags<PipelineStage>;

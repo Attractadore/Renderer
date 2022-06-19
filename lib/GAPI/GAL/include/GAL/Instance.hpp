@@ -10,6 +10,27 @@
 #include <vector>
 
 namespace R1::GAL {
+namespace Detail {
+template<typename E>
+concept IsQueueCapability = requires(E e) {
+    E::Graphics;
+    E::Compute;
+    E::Transfer;
+};
+
+template<typename E>
+concept IsDeviceType = requires(E e) {
+    E::Unknown;
+    E::IntegratedGPU;
+    E::DiscreteGPU;
+    E::VirtualGPU;
+    E::CPU;
+};
+
+static_assert(IsQueueCapability<QueueCapability>);
+static_assert(IsDeviceType<DeviceType>);
+}
+
 using QueueCapabilityFlags = Flags<QueueCapability>;
 
 enum QueueFamilyID: unsigned { Unknown = static_cast<unsigned>(-1) };

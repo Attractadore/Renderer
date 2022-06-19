@@ -7,6 +7,150 @@
 #include "Context.hpp"
 
 namespace R1::GAL {
+namespace Detail {
+template<typename E>
+concept IsVertexInputRate = requires(E e) {
+    E::Vertex;
+    E::Instance;
+};
+
+template<typename E>
+concept IsPrimitiveTopology = requires(E e) {
+    E::PointList;
+    E::LineList;
+    E::LineListWithAdjacency;
+    E::LineStrip;
+    E::LineStripWithAdjacency;
+    E::TriangleList;
+    E::TriangleListWithAdjacency;
+    E::TriangleStrip;
+    E::TriangleStripWithAdjacency;
+    E::TriangleFan;
+    E::PatchList;
+
+    E::Points;
+    E::Lines;
+    E::Triangles;
+};
+
+template<typename E>
+concept IsPolygonMode = requires(E e) {
+    E::Fill;
+    E::Line;
+    E::Point;
+};
+
+template<typename E>
+concept IsCullMode = requires(E e) {
+    E::None;
+    E::Front;
+    E::Back;
+    E::FrontAndBack;
+};
+
+template<typename E>
+concept IsFrontFace = requires(E e) {
+    E::CounterClockwise;
+    E::Clockwise; 
+};
+
+template<typename E>
+concept IsCompareOp = requires(E e) {
+    E::Always;    
+    E::Never;
+    E::Equal;
+    E::NotEqual;
+    E::Less;
+    E::LessOrEqual;
+    E::Greater;
+    E::GreaterOrEqual;
+};
+
+template<typename E>
+concept IsStencilOp = requires(E e) {
+    E::Keep;
+    E::Replace;
+    E::Zero;
+    E::Invert;
+    E::IncrementAndClamp;
+    E::IncrementAndWrap;
+    E::DecrementAndClamp;
+    E::DecrementAndWrap;
+};
+
+template<typename E>
+concept IsLogicOp = requires(E e) {
+    E::NoOp;
+    E::Clear;
+    E::Set;    
+    E::Invert;
+    E::Equivalent;
+    E::And;
+    E::AndReverse;
+    E::AndInverted;
+    E::Nand;
+    E::Or;
+    E::OrInverted;
+    E::OrReverse;
+    E::Nor;
+    E::Xor;
+    E::Copy;
+    E::CopyInverted;
+};
+
+template<typename E>
+concept IsColorComponent = requires(E e) {
+    E::R;
+    E::G;
+    E::B;
+    E::A;
+};
+
+template<typename E>
+concept IsBlendFactor = requires(E e) {
+    E::Zero;
+    E::One;
+    E::SrcColor;
+    E::OneMinusSrcColor;
+    E::DstColor;
+    E::OneMinusDstColor;
+    E::SrcAlpha;
+    E::OneMinusSrcAlpha;
+    E::DstAlpha;
+    E::OneMinusDstAlpha;
+    E::ConstColor;
+    E::OneMinusConstColor;
+    E::ConstAlpha;
+    E::OneMinusConstAlpha;
+    E::SrcAlphaSaturate;
+    E::Src1Color;
+    E::OneMinusSrc1Color;
+    E::Src1Alpha;
+    E::OneSrc1Alpha;
+};
+
+template<typename E>
+concept IsBlendOp = requires(E e) {
+    E::Add;
+    E::Subtract;
+    E::ReverseSubtract;
+    E::Min;
+    E::Max;
+};
+
+static_assert(IsVertexInputRate<VertexInputRate>);
+static_assert(IsPrimitiveTopology<PrimitiveTopology>);
+static_assert(IsPolygonMode<PolygonMode>);
+static_assert(IsCullMode<CullMode>);
+static_assert(IsFrontFace<FrontFace>);
+static_assert(IsCompareOp<CompareOp>);
+static_assert(IsStencilOp<StencilOp>);
+static_assert(IsLogicOp<LogicOp>);
+static_assert(IsColorComponent<ColorComponent>);
+static_assert(IsBlendFactor<BlendFactor>);
+static_assert(IsBlendOp<BlendOp>);
+}
+
 using ColorComponentFlags = Flags<ColorComponent>;
 
 struct PipelineLayoutConfig {};

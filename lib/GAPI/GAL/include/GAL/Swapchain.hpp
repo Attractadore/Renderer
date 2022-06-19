@@ -9,6 +9,33 @@
 #include <functional>
 
 namespace R1::GAL {
+namespace Detail {
+template<typename E>
+concept IsColorSpace = requires(E e) {
+    true;
+};
+
+template<typename E>
+concept IsCompositeAlpha = requires(E e) {
+    E::Opaque;
+    E::PreMultiplied;
+    E::PostMultiplied;
+    E::Inherit;
+};
+
+template<typename E>
+concept IsPresentMode = requires(E e) {
+    E::Immediate;
+    E::Mailbox;
+    E::FIFO;
+    E::RelaxedFIFO;
+};
+
+static_assert(IsColorSpace<ColorSpace>);
+static_assert(IsCompositeAlpha<CompositeAlpha>);
+static_assert(IsPresentMode<PresentMode>);
+}
+
 using SurfaceSizeCallback = std::function<std::tuple<unsigned, unsigned>()>;
 
 struct SurfaceFormat {
