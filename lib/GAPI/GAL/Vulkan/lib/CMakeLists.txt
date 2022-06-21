@@ -7,7 +7,10 @@ set(VMA_DYNAMIC_VULKAN_FUNCTIONS TRUE CACHE BOOL "" FORCE)
 add_library(VKUtil INTERFACE
     VKUtil.hpp)
 target_link_libraries(VKUtil
-    INTERFACE VKSType VKDispatchTable VKContextDispatcher)
+    INTERFACE   VKSType
+                VKDispatchTable
+                VKContextDispatcher
+                VulkanMemoryAllocator)
 
 add_library(GAL_Vulkan
     CommandImpl.hpp
@@ -38,7 +41,7 @@ target_compile_features(GAL_Vulkan
 target_include_directories(GAL_Vulkan
     PUBLIC ../include)
 target_link_libraries(GAL_Vulkan
-    PUBLIC GAL_Common Vulkan::Vulkan VulkanMemoryAllocator
+    PUBLIC GAL_Common Vulkan::Vulkan
     PRIVATE VKUtil)
 
 if (TARGET SDL2::SDL2)
@@ -53,14 +56,16 @@ if (TARGET X11::X11)
 add_library(GAL_Vulkan_Xlib
     APIXlib.cpp)
 target_link_libraries(GAL_Vulkan_Xlib
-    PUBLIC GAL_Vulkan X11::X11)
+    PUBLIC GAL_Vulkan X11::X11
+    PRIVATE VKUtil)
 endif()
 
 if (TARGET X11::xcb)
 add_library(GAL_Vulkan_XCB
     APIXCB.cpp)
 target_link_libraries(GAL_Vulkan_XCB
-    PUBLIC GAL_Vulkan X11::xcb)
+    PUBLIC GAL_Vulkan X11::xcb
+    PRIVATE VKUtil)
 endif()
 
 if (TARGET Wayland::Client)

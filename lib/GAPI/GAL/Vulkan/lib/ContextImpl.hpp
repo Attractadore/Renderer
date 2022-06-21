@@ -1,8 +1,8 @@
 #pragma once
+#include "VKContextDispatcher.hpp"
 #include "VKDispatchTable.h"
 #include "VKRAII.hpp"
 #include "VulkanContext.hpp"
-#include "VKContextDispatcher.hpp"
 
 namespace R1::GAL {
 struct ContextImpl: VulkanContextDispatcher<ContextImpl> {
