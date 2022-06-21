@@ -2,6 +2,6 @@
 #include "GAL/Sync.hpp"
 
 namespace R1::GAL {
-VkSemaphore CreateBinarySemaphore(VkDevice dev);
-VkFence CreateFence(VkDevice dev, bool signaled = false);
+VkSemaphore CreateBinarySemaphore(Context ctx);
+VkFence CreateFence(Context ctx, bool signaled = false);
 }

@@ -7,7 +7,7 @@
 namespace R1::GAL {
 namespace {
 VkSemaphore CreateSemaphoreBase(
-    VkDevice dev, VkSemaphoreType type, uint64_t initial_value = 0
+    Context ctx, VkSemaphoreType type, uint64_t initial_value = 0
 ) {
     VkSemaphoreTypeCreateInfo type_info = {
         .sType = SType(type_info),
@@ -20,7 +20,7 @@ VkSemaphore CreateSemaphoreBase(
     };
     VkSemaphore sem;
     ThrowIfFailed(
-        vkCreateSemaphore(dev, &create_info, nullptr, &sem),
+        ctx->CreateSemaphore(&create_info, &sem),
         "Vulkan: Failed to create semaphore");
     return sem;
 }
@@ -28,40 +28,37 @@ VkSemaphore CreateSemaphoreBase(
 
 Semaphore CreateSemaphore(Context ctx, const SemaphoreConfig& config) {
     return CreateSemaphoreBase(
-        ctx->device.get(), VK_SEMAPHORE_TYPE_TIMELINE, config.initial_value);
+        ctx, VK_SEMAPHORE_TYPE_TIMELINE, config.initial_value);
 }
 
-VkSemaphore CreateBinarySemaphore(VkDevice dev) {
-    return CreateSemaphoreBase(dev, VK_SEMAPHORE_TYPE_BINARY);
+VkSemaphore CreateBinarySemaphore(Context ctx) {
+    return CreateSemaphoreBase(ctx, VK_SEMAPHORE_TYPE_BINARY);
 }
 
-VkFence CreateFence(VkDevice dev, bool signaled = false) {
+VkFence CreateFence(Context ctx, bool signaled = false) {
     VkFenceCreateInfo create_info = {
         .sType = SType(create_info),
         .flags = signaled ? VK_FENCE_CREATE_SIGNALED_BIT: 0u,
     };
     VkFence fence;
     ThrowIfFailed(
-        vkCreateFence(dev, &create_info, nullptr, &fence),
+        ctx->CreateFence(&create_info, &fence),
         "Vulkan: Failed to create fence"
     );
     return fence;
 }
 
 void DestroySemaphore(Context ctx, Semaphore sem) {
-    vkDestroySemaphore(ctx->device.get(), sem, nullptr);
+    ctx->DestroySemaphore(sem);
 }
 
 SemaphorePayload GetSemaphorePayloadValue(
     Context ctx, Semaphore semaphore
 ) {
     uint64_t value;
-    auto r = vkGetSemaphoreCounterValue(
-        ctx->device.get(), semaphore, &value);
-    if (r) {
-        throw std::runtime_error{
-            "Vulkan: Failed to get semaphore payload value"};
-    }
+    ThrowIfFailed(
+        ctx->GetSemaphoreCounterValue(semaphore, &value),
+        "Vulkan: Failed to get semaphore payload value");
     return value;
 }
 
@@ -92,8 +89,7 @@ SemaphoreStatus WaitForSemaphores(
         .pSemaphores = wait_semaphores.data(),
         .pValues = wait_values.data(),
     };
-    auto r = vkWaitSemaphores(
-        ctx->device.get(), &wait_info, timeout.count());
+    auto r = ctx->WaitSemaphores(&wait_info, timeout.count());
     switch (r) {
         case VK_SUCCESS:
             return SemaphoreStatus::Ready;
@@ -111,10 +107,8 @@ void SignalSemaphore(Context ctx, const SemaphoreState& signal_state) {
         .semaphore = signal_state.semaphore,
         .value = signal_state.value,
     };
-    auto r = vkSignalSemaphore(ctx->device.get(), &signal_info);
-    if (r) {
-        throw std::runtime_error{
-            "Vulkan: Failed to signal semaphore"};
-    }
+    ThrowIfFailed(
+        ctx->SignalSemaphore(&signal_info),
+        "Vulkan: Failed to signal semaphore");
 }
 }

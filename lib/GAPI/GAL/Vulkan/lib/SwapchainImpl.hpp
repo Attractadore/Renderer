@@ -12,8 +12,7 @@ struct SurfaceImpl {
 Surface CreateSurfaceFromHandle(Instance instance, Vk::Surface handle);
 
 class SwapchainImpl {
-    VkPhysicalDevice            adapter;
-    VkDevice                    device;
+    Context                     ctx;
     VkSwapchainKHR              swapchain;
     struct ImageData {
         ImageImpl               handle;
@@ -30,8 +29,7 @@ class SwapchainImpl {
 
 public:
     SwapchainImpl(
-        VkPhysicalDevice pdev,
-        VkDevice dev,
+        Context ctx,
         VkSurfaceKHR surf,
         SurfaceSizeCallback size_cb,
         const SwapchainConfig& config

@@ -65,12 +65,12 @@ auto FillSurfaceDescriptions(
     return std::unordered_map{v.begin(), v.end()};
 }
 
-VkResult WaitForFenceAndReset(VkDevice dev, VkFence fence) {
-    auto r = vkWaitForFences(dev, 1, &fence, true, UINT64_MAX);
+VkResult WaitForFenceAndReset(Context ctx, VkFence fence) {
+    auto r = ctx->WaitForFences(1, &fence, true, UINT64_MAX);
     if (r) {
         return r;
     }
-    return vkResetFences(dev, 1, &fence);
+    return ctx->ResetFences(1, &fence);
 }
 }
 
@@ -91,13 +91,11 @@ const SurfaceDescription& GetSurfaceDescription(Surface surface, Device device) 
 }
 
 SwapchainImpl::SwapchainImpl(
-    VkPhysicalDevice pdev,
-    VkDevice dev,
+    Context ctx,
     VkSurfaceKHR surf,
     SurfaceSizeCallback size_cb,
     const SwapchainConfig& config
-):  adapter{pdev},
-    device{dev},
+):  ctx{ctx},
     present_queue{config.present_queue},
     surface_size_cb{std::move(size_cb)},
     create_info {
@@ -127,11 +125,9 @@ Swapchain CreateSwapchain(
     SurfaceSizeCallback size_cb,
     const SwapchainConfig& config
 ) {
-    auto pdev = ctx->adapter;
-    auto dev = ctx->device.get();
     auto surf = surface->handle.get();
     auto swc = std::make_unique<SwapchainImpl>(
-        pdev, dev, surf, std::move(size_cb), config);
+        ctx, surf, std::move(size_cb), config);
     swc->Init();
     return swc.release();
 }
@@ -139,7 +135,7 @@ Swapchain CreateSwapchain(
 void SwapchainImpl::Init(
     VkSwapchainKHR old_swapchain
 ) {
-    auto caps = GetVkSurfaceCapabilities(adapter, create_info.surface);
+    auto caps = GetVkSurfaceCapabilities(ctx->adapter, create_info.surface);
 
     create_info.imageExtent = [&] {
         constexpr auto special_value = 0xFFFFFFFF;
@@ -154,24 +150,24 @@ void SwapchainImpl::Init(
     create_info.preTransform = caps.currentTransform;
     create_info.oldSwapchain = old_swapchain;
 
-    ThrowIfFailed(vkCreateSwapchainKHR(
-        device, &create_info, nullptr, &swapchain),
+    ThrowIfFailed(
+        ctx->CreateSwapchainKHR(&create_info, &swapchain),
         "Vulkan: Failed to create swapchain");
 
     auto swapchain_images = Enumerate<VkImage>(
-        device, swapchain, vkGetSwapchainImagesKHR);
+        ctx->GetDevice(), swapchain, ctx->vk.GetSwapchainImagesKHR);
     auto v = std::views::transform(swapchain_images,
         [&](VkImage image) {
             return SwapchainImpl::ImageData {
                 .handle = {
                     .image = image,
                 },
-                .acquire_semaphore = CreateBinarySemaphore(device),
+                .acquire_semaphore = CreateBinarySemaphore(ctx),
                 // Fence 0 will be signaled by AcquireImage
                 // Fences except fence 0 will be waited on by PresentImage 
-                .acquire_fence = CreateFence(device, image != swapchain_images[0]),
-                .present_semaphore = CreateBinarySemaphore(device),
-                .present_fence = CreateFence(device, true),
+                .acquire_fence = CreateFence(ctx, image != swapchain_images[0]),
+                .present_semaphore = CreateBinarySemaphore(ctx),
+                .present_fence = CreateFence(ctx, true),
             };
         });
     images.assign(v.begin(), v.end());
@@ -179,18 +175,13 @@ void SwapchainImpl::Init(
 }
 
 void SwapchainImpl::Clear() {
-    vkDestroySwapchainKHR(
-        device, swapchain, nullptr);
+    ctx->DestroySwapchainKHR(swapchain);
     std::ranges::for_each(images,
         [&] (SwapchainImpl::ImageData& image_data) {
-            vkDestroySemaphore(
-                device, image_data.acquire_semaphore, nullptr);
-            vkDestroyFence(
-                device, image_data.acquire_fence, nullptr);
-            vkDestroySemaphore(
-                device, image_data.present_semaphore, nullptr);
-            vkDestroyFence(
-                device, image_data.present_fence, nullptr);
+            ctx->DestroySemaphore(image_data.acquire_semaphore);
+            ctx->DestroyFence(image_data.acquire_fence);
+            ctx->DestroySemaphore(image_data.present_semaphore);
+            ctx->DestroyFence(image_data.present_fence);
         });
     images.clear();
 }
@@ -227,7 +218,7 @@ std::tuple<unsigned, SwapchainStatus> SwapchainImpl::AcquireImage(
     // because it has already been ensured that it is unsignaled
     // either in PresentImage, or in Init if this is a new swapchain.
     uint32_t image_idx = 0;
-    auto r = vkAcquireNextImageKHR(device, swapchain,
+    auto r = ctx->AcquireNextImageKHR(swapchain,
         UINT64_MAX, GetCurrentAcquireSemaphore(), nullptr, &image_idx); 
     switch (r) {
         case VK_SUCCESS:
@@ -259,7 +250,8 @@ void SwapchainImpl::WaitOnAcquireFence() {
     // But PresentImage is called only once, so no conditional
     // logic is required if hazard prevention is performed there instead.
     acquire_idx = (acquire_idx + 1) % images.size();
-    ThrowIfFailed(WaitForFenceAndReset(device, GetCurrentAcquireFence()),
+    ThrowIfFailed(
+        WaitForFenceAndReset(ctx, GetCurrentAcquireFence()),
         "Vulkan: Failed to avoid acquire semaphore signal hazard");
 }
 
@@ -289,7 +281,7 @@ void SwapchainImpl::SignalAcquireSemaphore(
         submit_info.signalSemaphoreInfoCount = 1;
         submit_info.pSignalSemaphoreInfos = &signal_info;
     }
-    ThrowIfFailed(vkQueueSubmit2(
+    ThrowIfFailed(ctx->QueueSubmit2(
         present_queue, 1, &submit_info, acq_fence),
         "Vulkan: Failed to signal semaphore");
 }
@@ -320,7 +312,8 @@ SwapchainStatus PresentImage(
 void SwapchainImpl::WaitOnPresentFence(unsigned image_idx) {
     // Wait for previous presentation of this image to complete
     // before reusing its semaphore.
-    ThrowIfFailed(WaitForFenceAndReset(device, GetPresentFence(image_idx)),
+    ThrowIfFailed(
+        WaitForFenceAndReset(ctx, GetPresentFence(image_idx)),
         "Vulkan: Failed to avoid present semaphore wait hazard");
 }
 
@@ -351,7 +344,7 @@ void SwapchainImpl::MuxPresentSemaphores(
         .signalSemaphoreInfoCount = 1,
         .pSignalSemaphoreInfos = &signal_info,
     };
-    ThrowIfFailed(vkQueueSubmit2(
+    ThrowIfFailed(ctx->QueueSubmit2(
         present_queue, 1, &submit_info, VK_NULL_HANDLE),
         "Vulkan: Failed to wait for semaphores");
 }
@@ -366,7 +359,7 @@ SwapchainStatus SwapchainImpl::QueuePresent(unsigned image_idx) {
         .pSwapchains = &swapchain,
         .pImageIndices = &image_idx,
     };
-    auto r = vkQueuePresentKHR(present_queue, &present_info);
+    auto r = ctx->QueuePresentKHR(present_queue, &present_info);
     if (!r) {
         auto [w, h] = surface_size_cb();
         const auto& ext = create_info.imageExtent;
@@ -404,14 +397,15 @@ void SwapchainImpl::SignalPresentSemaphore(
         submit_info.signalSemaphoreInfoCount = 1,
         submit_info.pSignalSemaphoreInfos = &signal_info;
     }
-    ThrowIfFailed(vkQueueSubmit2(
+    ThrowIfFailed(ctx->QueueSubmit2(
         present_queue, 1, &submit_info, GetPresentFence(image_idx)),
         "Vulkan: Failed to insert present completion fence");
 }
 
 void SwapchainImpl::Resize() {
-    auto old_handle = Vk::Swapchain{
-        device, std::exchange(swapchain, VK_NULL_HANDLE)};
+    Handle old_handle {
+        std::exchange(swapchain, VK_NULL_HANDLE),
+        [&] (VkSwapchainKHR swc) { ctx->DestroySwapchainKHR(swc); }};
     Clear();
     Init(old_handle.get());
 }
