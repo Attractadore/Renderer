@@ -6,14 +6,13 @@
 
 namespace R1::GAL {
 Queue GetQueue(Context ctx, QueueFamily::ID family, unsigned idx) {
-    VkQueue queue = VK_NULL_HANDLE;
-    vkGetDeviceQueue(
-        ctx->device.get(), static_cast<uint32_t>(family), idx, &queue);
+    VkQueue queue;
+    ctx->GetDeviceQueue(static_cast<uint32_t>(family), idx, &queue);
     return queue;
 }
 
 void QueueSubmit(
-    Queue queue, std::span<const QueueSubmitConfig> configs
+    Context ctx, Queue queue, std::span<const QueueSubmitConfig> configs
 ) {
     static thread_local std::vector<VkSemaphoreSubmitInfo>      semaphore_wait_submits;
     static thread_local std::vector<VkSemaphoreSubmitInfo>      semaphore_signal_submits;
@@ -63,19 +62,14 @@ void QueueSubmit(
         });
     submits.assign(v.begin(), v.end());
 
-    auto r = vkQueueSubmit2(
-        queue, submits.size(), submits.data(), VK_NULL_HANDLE);
-    if (r) {
-        throw std::runtime_error{
-            "Vulkan: Failed to submit work to queue"};
-    }
+    ThrowIfFailed(
+        ctx->QueueSubmit2(queue, submits.size(), submits.data(), VK_NULL_HANDLE),
+        "Vulkan: Failed to submit work to queue");
 };
 
-void QueueWaitIdle(Queue queue) {
-    auto r = vkQueueWaitIdle(queue);
-    if (r) {
-        throw std::runtime_error{
-            "Vulkan: Failed to wait for idle queue"};
-    }
+void QueueWaitIdle(Context ctx, Queue queue) {
+    ThrowIfFailed(
+        ctx->QueueWaitIdle(queue),
+        "Vulkan: Failed to wait for idle queue");
 }
 }

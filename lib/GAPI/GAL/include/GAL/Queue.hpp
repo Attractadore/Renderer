@@ -21,8 +21,8 @@ struct QueueSubmitConfig {
 Queue GetQueue(Context ctx, QueueFamily::ID family, unsigned idx);
 
 void QueueSubmit(
-    Queue queue, std::span<const QueueSubmitConfig> configs
+    Context ctx, Queue queue, std::span<const QueueSubmitConfig> configs
 );
 
-void QueueWaitIdle(Queue queue);
+void QueueWaitIdle(Context ctx, Queue queue);
 }

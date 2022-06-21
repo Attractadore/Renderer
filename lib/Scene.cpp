@@ -346,7 +346,7 @@ void Scene::Draw() {
             .signal_semaphores{&signal_config, 1},
             .command_buffers{&cmd_buffer, 1},
         };
-        GAL::QueueSubmit(pimpl->queue, {&submit_config, 1});
+        GAL::QueueSubmit(pimpl->ctx, pimpl->queue, {&submit_config, 1});
     }
 
     GAL::SemaphoreState wait_state = {
