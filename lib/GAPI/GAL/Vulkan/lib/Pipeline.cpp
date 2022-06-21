@@ -9,37 +9,35 @@
 namespace R1::GAL {
 ShaderModule CreateShaderModule(Context ctx, const ShaderModuleConfig& config) {
     const auto& code = config.code;
-    VkShaderModule module = VK_NULL_HANDLE;
     VkShaderModuleCreateInfo create_info = {
         .sType = SType(create_info),
         .codeSize = code.size(),
         .pCode = reinterpret_cast<const uint32_t*>(code.data()),
     };
-    vkCreateShaderModule(ctx->device.get(), &create_info, nullptr, &module);
-    if (!module) {
-        throw std::runtime_error{"Vulkan: Failed to create shader module"};
-    }
+    VkShaderModule module;
+    ThrowIfFailed(
+        ctx->CreateShaderModule(&create_info, &module),
+        "Vulkan: Failed to create shader module");
     return module;
 }
 
 void DestroyShaderModule(Context ctx, ShaderModule module) {
-    vkDestroyShaderModule(ctx->device.get(), module, nullptr);
+    ctx->DestroyShaderModule(module);
 }
 
 PipelineLayout CreatePipelineLayout(Context ctx, const PipelineLayoutConfig& config) {
     VkPipelineLayoutCreateInfo create_info = {
         .sType = SType(create_info),
     };
-    VkPipelineLayout layout = VK_NULL_HANDLE;
-    vkCreatePipelineLayout(ctx->device.get(), &create_info, nullptr, &layout);
-    if (!layout) {
-        throw std::runtime_error{"Vulkan: Failed to create pipeline layout\n"};
-    }
+    VkPipelineLayout layout;
+    ThrowIfFailed(
+        ctx->CreatePipelineLayout(&create_info, &layout),
+        "Vulkan: Failed to create pipeline layout");
     return layout;
 }
 
 void DestroyPipelineLayout(Context ctx, PipelineLayout layout) {
-    vkDestroyPipelineLayout(ctx->device.get(), layout, nullptr);
+    ctx->DestroyPipelineLayout(layout);
 }
 
 namespace {
@@ -507,19 +505,16 @@ void CreateGraphicsPipelines(
     const GraphicsPipelineConfigs& configs,
     Pipeline* out
 ) {
-    auto cnt = configs.create_infos.size();
-    auto r = vkCreateGraphicsPipelines(
-        ctx->device.get(), pipeline_cache,
-        cnt, configs.create_infos.data(),
-        nullptr,
-        out
-    );
-    if (r != VK_SUCCESS) {
-        throw std::runtime_error{"Vulkan: Failed to create pipelines"};
-    }
+    ThrowIfFailed(
+        ctx->CreateGraphicsPipelines(
+            pipeline_cache,
+            configs.create_infos.size(),
+            configs.create_infos.data(),
+            out),
+        "Vulkan: Failed to create pipelines");
 }
 
 void DestroyPipeline(Context ctx, Pipeline pipeline) {
-    vkDestroyPipeline(ctx->device.get(), pipeline, nullptr);
+    ctx->DestroyPipeline(pipeline);
 }
 }
