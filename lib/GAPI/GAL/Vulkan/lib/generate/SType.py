@@ -117,7 +117,7 @@ def generate_header(types, stypes):
     "}}\n"
     "\n"
     "template<typename S>\n"
-    "constexpr VkStructureType SType(S) {{\n"
+    "constexpr VkStructureType SType(S&&) {{\n"
     "   return SType<S>();\n"
     "}}\n").format(
         format_types_header(types, stypes, template_var),
