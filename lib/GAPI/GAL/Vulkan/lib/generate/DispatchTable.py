@@ -86,7 +86,7 @@ def format_func_header(f, g):
     cond = format_cond(g)
     return (
     "#if {0}\n"
-    "   PFN_{1} {2};\n"
+    "    PFN_{1} {2};\n"
     "#endif // {0}".format(cond, f, f[2:]))
 
 def format_funcs_header(funcs):
