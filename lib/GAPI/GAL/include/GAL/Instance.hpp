@@ -2,6 +2,8 @@
 #if GAL_USE_VULKAN
 #include "VulkanDevice.hpp"
 #include "VulkanInstance.hpp"
+#elif GAL_USE_OPENGL
+#include "OpenGLInstance.hpp"
 #endif
 
 #include "Common/Flags.hpp"
