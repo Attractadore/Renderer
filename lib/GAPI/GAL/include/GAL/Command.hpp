@@ -250,22 +250,40 @@ void FreeCommandBuffers(
     Context ctx, CommandPool pool,
     std::span<CommandBuffer> cmd_buffers
 );
-void ResetCommandBuffer(CommandBuffer cmd_buffer, CommandResources resources);
-
-void BeginCommandBuffer(CommandBuffer cmd_buffer, const CommandBufferBeginConfig& begin_config);
-void EndCommandBuffer(CommandBuffer cmd_buffer);
-
-void CmdPipelineBarrier(
-    CommandBuffer cmd_buffer, const DependencyConfig& config
+void ResetCommandBuffer(
+    Context ctx, CommandPool pool,
+    CommandBuffer cmd_buffer, CommandResources resources
 );
 
-void CmdBeginRendering(CommandBuffer cmd_buffer, const RenderingConfig& config);
-void CmdEndRendering(CommandBuffer cmd_buffer);
+void BeginCommandBuffer(
+    Context ctx,
+    CommandBuffer cmd_buffer, const CommandBufferBeginConfig& begin_config
+);
+void EndCommandBuffer(Context ctx, CommandBuffer cmd_buffer);
 
-void CmdSetViewports(CommandBuffer cmd_buffer, std::span<const Viewport> viewports);
-void CmdSetScissors(CommandBuffer cmd_buffer, std::span<const Rect2D> scissors);
+void CmdPipelineBarrier(
+    Context ctx, CommandBuffer cmd_buffer, const DependencyConfig& config
+);
 
-void CmdBindGraphicsPipeline(CommandBuffer cmd_buffer, Pipeline pipeline);
+void CmdBeginRendering(
+    Context ctx, CommandBuffer cmd_buffer, const RenderingConfig& config
+);
+void CmdEndRendering(Context ctx, CommandBuffer cmd_buffer);
 
-void CmdDraw(CommandBuffer cmd_buffer, const DrawConfig& config);
+void CmdSetViewports(
+    Context ctx,
+    CommandBuffer cmd_buffer, std::span<const Viewport> viewports
+);
+void CmdSetScissors(
+    Context ctx,
+    CommandBuffer cmd_buffer, std::span<const Rect2D> scissors
+);
+
+void CmdBindGraphicsPipeline(
+    Context ctx, CommandBuffer cmd_buffer, Pipeline pipeline
+);
+
+void CmdDraw(
+    Context ctx, CommandBuffer cmd_buffer, const DrawConfig& config
+);
 }

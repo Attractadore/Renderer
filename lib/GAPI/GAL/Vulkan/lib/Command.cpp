@@ -12,35 +12,28 @@ CommandPool CreateCommandPool(
             config.flags.Extract()),
         .queueFamilyIndex = config.queue_family,
     };
-
-    VkCommandPool pool = VK_NULL_HANDLE;
-    vkCreateCommandPool(ctx->device.get(), &create_info, nullptr, &pool);
-    if (!pool) {
-        throw std::runtime_error{
-            "Vulkan: Failed to create command pool"};
-    }
-
+    VkCommandPool pool;
+    ThrowIfFailed(
+        ctx->CreateCommandPool(&create_info, &pool),
+        "Vulkan: Failed to create command pool");
     return pool;
 };
 
 void DestroyCommandPool(Context ctx, CommandPool pool) {
-    vkDestroyCommandPool(ctx->device.get(), pool, nullptr);
+    ctx->DestroyCommandPool(pool);
 }
 
 void ResetCommandPool(
     Context ctx, CommandPool pool, CommandResources resources
 ) {
-    auto r = vkResetCommandPool(
-        ctx->device.get(), pool,
-        static_cast<VkCommandPoolResetFlags>(resources));
-    if (r) {
-        throw std::runtime_error{
-            "Vulkan: Failed to reset command pool"};
-    }
+    ThrowIfFailed(
+        ctx->ResetCommandPool(
+            pool, static_cast<VkCommandPoolResetFlags>(resources)),
+        "Vulkan: Failed to reset command pool");
 };
 
 void TrimCommandPool(Context ctx, CommandPool pool) {
-    vkTrimCommandPool(ctx->device.get(), pool, 0);
+    ctx->TrimCommandPool(pool, 0);
 }
 
 void AllocateCommandBuffers(
@@ -53,36 +46,31 @@ void AllocateCommandBuffers(
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         .commandBufferCount = static_cast<uint32_t>(cmd_buffers.size()),
     };
-
-    auto r = vkAllocateCommandBuffers(
-        ctx->device.get(), &alloc_info, cmd_buffers.data());
-    if (r) {
-        throw std::runtime_error{
-            "Vulkan: Failed to allocate command buffers"};
-    }
+    ThrowIfFailed(
+        ctx->AllocateCommandBuffers(&alloc_info, cmd_buffers.data()),
+        "Vulkan: Failed to allocate command buffers");
 }
 
 void FreeCommandBuffers(
     Context ctx, CommandPool pool,
     std::span<CommandBuffer> cmd_buffers
 ) {
-    vkFreeCommandBuffers(
-        ctx->device.get(), pool, cmd_buffers.size(), cmd_buffers.data());
+    ctx->FreeCommandBuffers(pool, cmd_buffers.size(), cmd_buffers.data());
 }
 
 void ResetCommandBuffer(
+    Context ctx, CommandPool,
     CommandBuffer cmd_buffer, CommandResources resources
 ) {
-    auto r = vkResetCommandBuffer(
-        cmd_buffer,
-        static_cast<VkCommandBufferResetFlags>(resources));
-    if (r) {
-        throw std::runtime_error{
-            "Vulkan: Failed to reset command buffer"};
-    }
+    ThrowIfFailed(
+        ctx->ResetCommandBuffer(
+            cmd_buffer,
+            static_cast<VkCommandBufferResetFlags>(resources)),
+        "Vulkan: Failed to reset command buffer");
 }
 
 void BeginCommandBuffer(
+    Context ctx,
     CommandBuffer cmd_buffer,
     const CommandBufferBeginConfig& begin_config
 ) {
@@ -90,24 +78,21 @@ void BeginCommandBuffer(
         .sType = SType(begin_info),
         .flags = static_cast<VkCommandBufferUsageFlags>(begin_config.usage.Extract()),
     };
-    auto r = vkBeginCommandBuffer(cmd_buffer, &begin_info);
-    if (r) {
-        throw std::runtime_error{
-            "Vulkan: Failed to begin recording command buffer"};
-    }
+    ThrowIfFailed(
+        ctx->BeginCommandBuffer(cmd_buffer, &begin_info),
+        "Vulkan: Failed to begin recording command buffer");
 }
 
-void EndCommandBuffer(
-    CommandBuffer cmd_buffer
+void EndCommandBuffer(Context ctx, CommandBuffer cmd_buffer) {
+    ThrowIfFailed(
+        ctx->EndCommandBuffer(cmd_buffer),
+        "Vulkan: Failed to record command buffer");
+}
+
+void CmdPipelineBarrier(
+    Context ctx,
+    CommandBuffer cmd_buffer, const DependencyConfig& config
 ) {
-    auto r = vkEndCommandBuffer(cmd_buffer);
-    if (r) {
-        throw std::runtime_error{
-            "Vulkan: Failed to record command buffer"};
-    }
-}
-
-void CmdPipelineBarrier(CommandBuffer cmd_buffer, const DependencyConfig& config) {
     static thread_local std::vector<VkMemoryBarrier2> memory_barriers;
     static thread_local std::vector<VkBufferMemoryBarrier2> buffer_barriers;
     static thread_local std::vector<VkImageMemoryBarrier2> image_barriers;
@@ -122,7 +107,8 @@ void CmdPipelineBarrier(CommandBuffer cmd_buffer, const DependencyConfig& config
     image_barriers.assign(iv.begin(), iv.end());
     VkDependencyInfo dep_info = {
         .sType = SType(dep_info),
-        .dependencyFlags = config.by_region ? VK_DEPENDENCY_BY_REGION_BIT: 0u,
+        .dependencyFlags =
+            config.by_region ? VK_DEPENDENCY_BY_REGION_BIT: 0u,
         .memoryBarrierCount =
             static_cast<uint32_t>(memory_barriers.size()),
         .pMemoryBarriers = memory_barriers.data(),
@@ -133,10 +119,11 @@ void CmdPipelineBarrier(CommandBuffer cmd_buffer, const DependencyConfig& config
             static_cast<uint32_t>(image_barriers.size()),
         .pImageMemoryBarriers = image_barriers.data(),
     };
-    vkCmdPipelineBarrier2(cmd_buffer, &dep_info);
+    ctx->CmdPipelineBarrier2(cmd_buffer, &dep_info);
 }
 
 void CmdBeginRendering(
+    Context ctx,
     CommandBuffer cmd_buffer, const RenderingConfig& config
 ) {
     static thread_local std::vector<VkRenderingAttachmentInfo>
@@ -159,38 +146,49 @@ void CmdBeginRendering(
         .pDepthAttachment = &depth_attachment,
         .pStencilAttachment = &stencil_attachment,
     };
-    vkCmdBeginRendering(cmd_buffer, &rendering_info);
+    ctx->CmdBeginRendering(cmd_buffer, &rendering_info);
 }
 
-void CmdEndRendering(CommandBuffer cmd_buffer) {
-    vkCmdEndRendering(cmd_buffer);
+void CmdEndRendering(Context ctx, CommandBuffer cmd_buffer) {
+    ctx->CmdEndRendering(cmd_buffer);
 }
 
 void CmdSetViewports(
+    Context ctx,
     CommandBuffer cmd_buffer, std::span<const Viewport> viewports
 ) {
     static thread_local std::vector<VkViewport> vk_viewports;
     auto v = std::views::transform(viewports, ViewportToVK);
     vk_viewports.assign(v.begin(), v.end());
-    vkCmdSetViewportWithCount(
+    ctx->CmdSetViewportWithCount(
         cmd_buffer, vk_viewports.size(), vk_viewports.data());
 }
 
 void CmdSetScissors(
+    Context ctx,
     CommandBuffer cmd_buffer, std::span<const Rect2D> scissors
 ) {
     static thread_local std::vector<VkRect2D> vk_rects;
     auto v = std::views::transform(scissors, Rect2DToVK);
     vk_rects.assign(v.begin(), v.end());
-    vkCmdSetScissorWithCount(
+    ctx->CmdSetScissorWithCount(
         cmd_buffer, vk_rects.size(), vk_rects.data());
 }
 
-void CmdBindGraphicsPipeline(CommandBuffer cmd_buffer, Pipeline pipeline) {
-    vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+void CmdBindGraphicsPipeline(
+    Context ctx, CommandBuffer cmd_buffer, Pipeline pipeline
+) {
+    ctx->CmdBindPipeline(cmd_buffer,
+        VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 }
 
-void CmdDraw(CommandBuffer cmd_buffer, const DrawConfig& config) {
-    vkCmdDraw(cmd_buffer, config.vertex_count, config.instance_count, config.first_vertex, config.first_instance);
+void CmdDraw(
+    Context ctx, CommandBuffer cmd_buffer, const DrawConfig& config
+) {
+    ctx->CmdDraw(cmd_buffer,
+        config.vertex_count,
+        config.instance_count,
+        config.first_vertex,
+        config.first_instance);
 }
 }

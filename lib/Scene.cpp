@@ -235,7 +235,7 @@ void Scene::Draw() {
     GAL::CommandBufferBeginConfig begin_config = {
         .usage = GAL::CommandBufferUsage::OneTimeSubmit,
     };
-    GAL::BeginCommandBuffer(cmd_buffer, begin_config);
+    GAL::BeginCommandBuffer(ctx, cmd_buffer, begin_config);
 
     {
         GAL::ImageBarrier from_present = {
@@ -257,7 +257,7 @@ void Scene::Draw() {
         GAL::DependencyConfig config = {
             .image_barriers{&from_present, 1},
         };
-        GAL::CmdPipelineBarrier(cmd_buffer, config);
+        GAL::CmdPipelineBarrier(ctx, cmd_buffer, config);
     }
 
     GAL::ClearValue clear_color = {0.2f, 0.2f, 0.8f, 1.0f};
@@ -274,7 +274,7 @@ void Scene::Draw() {
         .color_attachments{&color_attachment, 1},
     };
 
-    GAL::CmdBeginRendering(cmd_buffer, rendering_config);
+    GAL::CmdBeginRendering(ctx, cmd_buffer, rendering_config);
 
     {
         GAL::Viewport viewport = {
@@ -287,18 +287,18 @@ void Scene::Draw() {
             .width = img_w,
             .height = img_h,
         };
-        GAL::CmdSetViewports(cmd_buffer, {&viewport, 1});
-        GAL::CmdSetScissors(cmd_buffer, {&scissor, 1});
+        GAL::CmdSetViewports(ctx, cmd_buffer, {&viewport, 1});
+        GAL::CmdSetScissors(ctx, cmd_buffer, {&scissor, 1});
     }
 
-    GAL::CmdBindGraphicsPipeline(cmd_buffer, pimpl->pipeline);
+    GAL::CmdBindGraphicsPipeline(ctx, cmd_buffer, pimpl->pipeline);
     GAL::DrawConfig draw_config = {
         .vertex_count = 3,
         .instance_count = 1,
     };
-    GAL::CmdDraw(cmd_buffer, draw_config);
+    GAL::CmdDraw(ctx, cmd_buffer, draw_config);
 
-    GAL::CmdEndRendering(cmd_buffer);
+    GAL::CmdEndRendering(ctx, cmd_buffer);
 
     {
         GAL::ImageBarrier to_present = {
@@ -320,10 +320,10 @@ void Scene::Draw() {
         GAL::DependencyConfig config = {
             .image_barriers{&to_present, 1},
         };
-        GAL::CmdPipelineBarrier(cmd_buffer, config);
+        GAL::CmdPipelineBarrier(ctx, cmd_buffer, config);
     }
 
-    GAL::EndCommandBuffer(cmd_buffer);
+    GAL::EndCommandBuffer(ctx, cmd_buffer);
 
     {
         GAL::SemaphoreSubmitConfig wait_config = {
@@ -346,7 +346,7 @@ void Scene::Draw() {
             .signal_semaphores{&signal_config, 1},
             .command_buffers{&cmd_buffer, 1},
         };
-        GAL::QueueSubmit(pimpl->ctx, pimpl->queue, {&submit_config, 1});
+        GAL::QueueSubmit(ctx, pimpl->queue, {&submit_config, 1});
     }
 
     GAL::SemaphoreState wait_state = {
