@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import xml.etree.ElementTree as ET
 from sys import argv
 from pathlib import Path
