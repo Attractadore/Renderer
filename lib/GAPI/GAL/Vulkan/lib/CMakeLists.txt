@@ -36,11 +36,12 @@ target_link_libraries(VKDispatchTable
     PUBLIC Vulkan::Vulkan)
 
 set(VULKAN_STYPE_HPP ${CMAKE_CURRENT_BINARY_DIR}/VKSType/include/VKSType.hpp)
+set(GENERATE_STYPE_PY ${CMAKE_CURRENT_LIST_DIR}/GenerateSType.py)
 add_custom_command(
     OUTPUT ${VULKAN_STYPE_HPP}
-    DEPENDS ${VULKAN_SPEC_XML}
+    DEPENDS ${VULKAN_SPEC_XML} ${GENERATE_STYPE_PY}
     COMMAND Python3::Interpreter ARGS
-            ${CMAKE_CURRENT_LIST_DIR}/GenerateSType.py
+            ${GENERATE_STYPE_PY}
             ${VULKAN_SPEC_XML}
             ${VULKAN_STYPE_HPP}
     VERBATIM)
