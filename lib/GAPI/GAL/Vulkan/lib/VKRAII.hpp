@@ -58,28 +58,6 @@ struct InstanceHandle: InstanceHandleBase<H>{
         return this->get_deleter().get_parent();
     }
 };
-
-template<class H>
-using DeviceHandleBase = ChildHandle<VkDevice, H, DeviceChildHandleDeleter>;
-template<class H>
-struct DeviceHandle: DeviceHandleBase<H> {
-    using DeviceHandleBase<H>::DeviceHandleBase;
-
-    VkDevice get_device() const noexcept {
-        return this->get_deleter().get_parent();
-    }
-};
-
-template<class H>
-using AllocatorHandleBase = ChildHandle<VmaAllocator, H, AllocatorChildHandleDeleter>;
-template<class H>
-struct AllocatorHandle: AllocatorHandleBase<H> {
-    using AllocatorHandleBase<H>::AllocatorHandleBase;
-
-    VmaAllocator get_allocator() const noexcept {
-        return this->get_deleter().get_parent();
-    }
-};
 }
 
 template<> inline constexpr auto Detail::DoRootDeleteF<VkInstance>          = vkDestroyInstance;
@@ -91,16 +69,4 @@ using Allocator     = Detail::RootHandle<VmaAllocator>;
 
 template<> inline constexpr auto Detail::DoInstanceDeleteF<VkSurfaceKHR>    = vkDestroySurfaceKHR;
 using Surface       = Detail::InstanceHandle<VkSurfaceKHR>;
-
-template<> inline constexpr auto Detail::DoDeviceDeleteF<VkImage>           = vkDestroyImage;
-template<> inline constexpr auto Detail::DoDeviceDeleteF<VkSemaphore>       = vkDestroySemaphore;
-template<> inline constexpr auto Detail::DoDeviceDeleteF<VkFence>           = vkDestroyFence;
-template<> inline constexpr auto Detail::DoDeviceDeleteF<VkSwapchainKHR>    = vkDestroySwapchainKHR;
-using Image         = Detail::DeviceHandle<VkImage>;
-using Semaphore     = Detail::DeviceHandle<VkSemaphore>;
-using Fence         = Detail::DeviceHandle<VkFence>;
-using Swapchain     = Detail::DeviceHandle<VkSwapchainKHR>;
-
-template<> inline constexpr auto Detail::DoAllocatorDeleteF<VmaAllocation>  = vmaFreeMemory;
-using Allocation    = Detail::AllocatorHandle<VmaAllocation>;
 }
