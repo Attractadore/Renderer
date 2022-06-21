@@ -4,7 +4,7 @@ add_subdirectory(generate)
 add_library(VKUtil INTERFACE
     VKUtil.hpp)
 target_link_libraries(VKUtil
-    INTERFACE VKSType)
+    INTERFACE VKSType VKDispatchTable VKContextDispatcher)
 
 add_library(GAL_Vulkan
     CommandImpl.hpp
@@ -36,7 +36,7 @@ target_include_directories(GAL_Vulkan
     PUBLIC ../include)
 target_link_libraries(GAL_Vulkan
     PUBLIC GAL_Common Vulkan::Vulkan VulkanMemoryAllocator
-    PRIVATE VKUtil VKDispatchTable)
+    PRIVATE VKUtil)
 
 if (TARGET SDL2::SDL2)
 add_library(GAL_Vulkan_SDL2

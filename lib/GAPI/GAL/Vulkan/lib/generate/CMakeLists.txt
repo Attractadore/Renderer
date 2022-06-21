@@ -49,3 +49,21 @@ target_include_directories(VKSType
     INTERFACE ${VKSType_INCLUDE_DIR})
 target_link_libraries(VKSType
     INTERFACE Vulkan::Vulkan)
+
+set(VULKAN_CONTEXT_DISPATCHER_HPP ${CMAKE_CURRENT_BINARY_DIR}/VKContextDispatcher/include/VKContextDispatcher.hpp)
+set(GENERATE_CONTEXT_DISPATCHER_PY ${CMAKE_CURRENT_LIST_DIR}/ContextDispatcher.py)
+add_custom_command(
+    OUTPUT ${VULKAN_CONTEXT_DISPATCHER_HPP}
+    DEPENDS ${VULKAN_SPEC_XML} ${GENERATE_CONTEXT_DISPATCHER_PY}
+    COMMAND Python3::Interpreter ARGS
+            ${GENERATE_CONTEXT_DISPATCHER_PY}
+            ${VULKAN_SPEC_XML}
+            ${VULKAN_CONTEXT_DISPATCHER_HPP}
+    VERBATIM)
+add_library(VKContextDispatcher INTERFACE
+    ${VULKAN_CONTEXT_DISPATCHER_HPP})
+get_filename_component(VKContextDispatcher_INCLUDE_DIR ${VULKAN_CONTEXT_DISPATCHER_HPP} DIRECTORY)
+target_include_directories(VKContextDispatcher
+    INTERFACE ${VKContextDispatcher_INCLUDE_DIR})
+target_link_libraries(VKContextDispatcher
+    INTERFACE Vulkan::Vulkan)

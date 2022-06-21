@@ -99,7 +99,7 @@ void DestroyContext(Context ctx) {
 
 void ContextWaitIdle(Context ctx) {
     ThrowIfFailed(
-        ctx->vk.DeviceWaitIdle(ctx->device.get()),
+        ctx->DeviceWaitIdle(),
         "Vulkan: Failed to wait for idle context");
 }
 }
