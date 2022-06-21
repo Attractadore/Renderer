@@ -1,6 +1,9 @@
 find_package(Vulkan REQUIRED)
 add_subdirectory(generate)
 
+set(VMA_STATIC_VULKAN_FUNCTIONS FALSE CACHE BOOL "" FORCE)
+set(VMA_DYNAMIC_VULKAN_FUNCTIONS TRUE CACHE BOOL "" FORCE)
+
 add_library(VKUtil INTERFACE
     VKUtil.hpp)
 target_link_libraries(VKUtil

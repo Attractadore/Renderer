@@ -84,16 +84,14 @@ ImageView CreateImageView(Context ctx, Image image, const ImageViewConfig& confi
         .subresourceRange = ImageSubresourceRangeToVK(config.subresource_range),
     };
 
-    VkImageView view = VK_NULL_HANDLE;
-    vkCreateImageView(ctx->device.get(), &create_info, nullptr, &view);
-    if (!view) {
-        throw std::runtime_error{"Vulkan: Failed to create image view"};
-    }
-
+    VkImageView view;
+    ThrowIfFailed(
+        ctx->CreateImageView(&create_info, &view),
+        "Vulkan: Failed to create image view");
     return view;
 }
 
 void DestroyImageView(Context ctx, ImageView view) {
-    vkDestroyImageView(ctx->device.get(), view, nullptr); 
+    ctx->DestroyImageView(view);
 }
 }

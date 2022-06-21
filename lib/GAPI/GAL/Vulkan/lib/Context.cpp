@@ -55,41 +55,47 @@ Vk::Device CreateDevice(
     };
 
     VkDevice dev = VK_NULL_HANDLE;
-    vkCreateDevice(parent->physical_device, &create_info, nullptr, &dev);
+    ThrowIfFailed(
+        vkCreateDevice(parent->physical_device, &create_info, nullptr, &dev),
+        "Vulkan: Failed to create context");
 
     return Vk::Device{dev};
 }
 
-Vk::Allocator CreateAllocator(VkDevice device, Device parent) {
+void CreateContextDevice(
+    Context ctx, const ContextConfig& config, Device parent
+) {
+    ctx->device = CreateDevice(config, parent);
+    LoadVulkanDeviceDispatchTable(&ctx->vk, ctx->device.get());
+}
+
+void CreateContextAllocator(Context ctx, Device parent) {
+    VmaVulkanFunctions funcs = {
+        .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
+        .vkGetDeviceProcAddr = vkGetDeviceProcAddr,
+    };
     VmaAllocatorCreateInfo allocatorCreateInfo = {
         .physicalDevice = parent->physical_device,
-        .device = device,
+        .device = ctx->device.get(),
+        .pAllocationCallbacks = ctx->GetAllocationCallbacks(),
+        .pVulkanFunctions = &funcs,
         .instance = parent->instance,
         .vulkanApiVersion = parent->description.api_version,
     };
-
-    VmaAllocator allocator = nullptr;
-    vmaCreateAllocator(&allocatorCreateInfo, &allocator);
-
-    return Vk::Allocator{allocator};
+    VmaAllocator allocator;
+    ThrowIfFailed(
+        vmaCreateAllocator(&allocatorCreateInfo, &allocator),
+        "Vulkan: Failed to create context");
+    ctx->allocator.reset(allocator);
 }
 }
 
 Context CreateContext(Device parent, const ContextConfig& config) {
-    auto dev = CreateDevice(config, parent);
-    if (!dev) {
-        throw std::runtime_error{"Vulkan: Failed to create context"};
-    }
-    auto alloc = CreateAllocator(dev.get(), parent);
-    if (!alloc) {
-        throw std::runtime_error{"Vulkan: Failed to create context"};
-    }
     auto ctx = std::make_unique<ContextImpl>(ContextImpl{
-        .device = std::move(dev),
         .adapter = parent->physical_device,
-        .allocator = std::move(alloc),
     });
-    LoadVulkanDeviceDispatchTable(&ctx->vk, ctx->device.get());
+    CreateContextDevice(ctx.get(), config, parent);
+    CreateContextAllocator(ctx.get(), parent);
     return ctx.release();
 }
 
