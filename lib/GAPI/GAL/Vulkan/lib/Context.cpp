@@ -89,6 +89,7 @@ Context CreateContext(Device parent, const ContextConfig& config) {
         .adapter = parent->physical_device,
         .allocator = std::move(alloc),
     });
+    LoadVulkanDeviceDispatchTable(&ctx->vk, ctx->device.get());
     return ctx.release();
 }
 
@@ -97,9 +98,8 @@ void DestroyContext(Context ctx) {
 }
 
 void ContextWaitIdle(Context ctx) {
-    auto r = vkDeviceWaitIdle(ctx->device.get());
-    if (r) {
-        throw std::runtime_error{"Vulkan: Failed to wait for idle context"};
-    }
+    ThrowIfFailed(
+        ctx->vk.DeviceWaitIdle(ctx->device.get()),
+        "Vulkan: Failed to wait for idle context");
 }
 }

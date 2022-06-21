@@ -14,6 +14,27 @@ else()
     message(STATUS "Done")
 endif()
 
+set(VULKAN_DISPATCH_TABLE_H ${CMAKE_CURRENT_BINARY_DIR}/VKDispatchTable/include/VKDispatchTable.h)
+set(VULKAN_DISPATCH_TABLE_C ${CMAKE_CURRENT_BINARY_DIR}/VKDispatchTable/lib/VKDispatchTable.c)
+set(GENERATE_DISPATCH_TABLE_PY ${CMAKE_CURRENT_LIST_DIR}/GenerateDispatchTable.py)
+add_custom_command(
+    OUTPUT ${VULKAN_DISPATCH_TABLE_H} ${VULKAN_DISPATCH_TABLE_C}
+    DEPENDS ${VULKAN_SPEC_XML} ${GENERATE_DISPATCH_TABLE_PY}
+    COMMAND Python3::Interpreter ARGS
+            ${GENERATE_DISPATCH_TABLE_PY}
+            ${VULKAN_SPEC_XML}
+            ${VULKAN_DISPATCH_TABLE_H}
+            ${VULKAN_DISPATCH_TABLE_C}
+    VERBATIM)
+add_library(VKDispatchTable
+    ${VULKAN_DISPATCH_TABLE_H}
+    ${VULKAN_DISPATCH_TABLE_C})
+get_filename_component(VKDispatchTable_INCLUDE_DIR ${VULKAN_DISPATCH_TABLE_H} DIRECTORY)
+target_include_directories(VKDispatchTable
+    PUBLIC ${VKDispatchTable_INCLUDE_DIR})
+target_link_libraries(VKDispatchTable
+    PUBLIC Vulkan::Vulkan)
+
 set(VULKAN_STYPE_HPP ${CMAKE_CURRENT_BINARY_DIR}/VKSType/include/VKSType.hpp)
 add_custom_command(
     OUTPUT ${VULKAN_STYPE_HPP}
@@ -65,7 +86,7 @@ target_include_directories(GAL_Vulkan
     PUBLIC ../include)
 target_link_libraries(GAL_Vulkan
     PUBLIC GAL_Common Vulkan::Vulkan VulkanMemoryAllocator
-    PRIVATE VKUtil)
+    PRIVATE VKUtil VKDispatchTable)
 
 if (TARGET SDL2::SDL2)
 add_library(GAL_Vulkan_SDL2
