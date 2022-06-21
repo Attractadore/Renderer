@@ -100,13 +100,12 @@ def format_func_header(f):
     vk_name, ((retval, params), g) = f
     name = vk_name[2:]
     impl_name = "impl"
-    takes_device = params[0][0] == "VkDevice"
-    param_str = format_params(params[1:] if takes_device else params)
-    args_str = None
-    if takes_device:
-        args_str = format_args(("{impl}->GetDevice()",) + tuple(n for t, n in params[1:]), impl_name)
-    else:
-        args_str = format_args((n for t, n in params), impl_name)
+    remap = {
+        "VkDevice": "{impl}->GetDevice()",
+        "const VkAllocationCallbacks*": "{impl}->GetAllocationCallbacks()",
+    }
+    param_str = format_params(((t, n) for t, n in params if t not in remap))
+    args_str = format_args((remap.get(t, n) for t, n in params), impl_name)
     return (
     "#if {cond}\n"
     "    {retval} {name} ({params}) noexcept {{\n"

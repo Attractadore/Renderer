@@ -11,7 +11,8 @@ struct ContextImpl: VulkanContextDispatcher<ContextImpl> {
     Vk::Allocator               allocator;
     VulkanDeviceDispatchTable   vk;
 
-    const VulkanDeviceDispatchTable& GetDispatchTable() const noexcept { return vk; }
+    constexpr const VulkanDeviceDispatchTable& GetDispatchTable() const noexcept { return vk; }
     VkDevice GetDevice() const noexcept { return device.get(); }
+    constexpr const VkAllocationCallbacks* GetAllocationCallbacks() const noexcept { return nullptr; }
 };
 }
