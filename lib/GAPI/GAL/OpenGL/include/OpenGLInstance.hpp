@@ -7,6 +7,6 @@ using DeviceType = Detail::DefaultDeviceType;
 
 struct OpenGLInstance; 
 using Instance = OpenGLInstance*;
-struct OpenGLDevice;
-using Device = OpenGLDevice*;
+struct OpenGLAdapter;
+using Device = OpenGLAdapter*;
 };
