@@ -11,7 +11,7 @@ ShaderModule CreateShaderModule(Context ctx, const ShaderModuleConfig& config) {
     const auto& code = config.code;
     VkShaderModule module = VK_NULL_HANDLE;
     VkShaderModuleCreateInfo create_info = {
-        .sType = sType(create_info),
+        .sType = SType(create_info),
         .codeSize = code.size(),
         .pCode = reinterpret_cast<const uint32_t*>(code.data()),
     };
@@ -28,7 +28,7 @@ void DestroyShaderModule(Context ctx, ShaderModule module) {
 
 PipelineLayout CreatePipelineLayout(Context ctx, const PipelineLayoutConfig& config) {
     VkPipelineLayoutCreateInfo create_info = {
-        .sType = sType(create_info),
+        .sType = SType(create_info),
     };
     VkPipelineLayout layout = VK_NULL_HANDLE;
     vkCreatePipelineLayout(ctx->device.get(), &create_info, nullptr, &layout);
@@ -50,7 +50,7 @@ void fillShaderStage(
 ) {
     entry_point = stage_config.entry_point;
     stage = {
-        .sType = sType(stage),
+        .sType = SType(stage),
         .stage = type,
         .module = stage_config.module,
     };
@@ -415,20 +415,20 @@ GPC& GPC::FinishCurrent() {
     });
     cfg.dynamic_state.dynamicStateCount += 2;
 
-    cfg.rendering.sType = sType(cfg.rendering);
-    cfg.vertex_input_state.sType = sType(cfg.vertex_input_state);
-    cfg.input_assembly_state.sType = sType(cfg.input_assembly_state);
-    cfg.tesselation_state.sType = sType(cfg.tesselation_state);
-    cfg.viewport_state.sType = sType(cfg.viewport_state);
-    cfg.rasterization_state.sType = sType(cfg.rasterization_state);
-    cfg.multisample_state.sType = sType(cfg.multisample_state);
-    cfg.depth_stencil_state.sType = sType(cfg.depth_stencil_state);
-    cfg.color_blend_state.sType = sType(cfg.color_blend_state);
-    cfg.dynamic_state.sType = sType(cfg.dynamic_state);
+    cfg.rendering.sType = SType(cfg.rendering);
+    cfg.vertex_input_state.sType = SType(cfg.vertex_input_state);
+    cfg.input_assembly_state.sType = SType(cfg.input_assembly_state);
+    cfg.tesselation_state.sType = SType(cfg.tesselation_state);
+    cfg.viewport_state.sType = SType(cfg.viewport_state);
+    cfg.rasterization_state.sType = SType(cfg.rasterization_state);
+    cfg.multisample_state.sType = SType(cfg.multisample_state);
+    cfg.depth_stencil_state.sType = SType(cfg.depth_stencil_state);
+    cfg.color_blend_state.sType = SType(cfg.color_blend_state);
+    cfg.dynamic_state.sType = SType(cfg.dynamic_state);
 
     m_configs.configs.emplace_back(std::exchange(m_current_config, {}));
     m_configs.create_infos.emplace_back(VkGraphicsPipelineCreateInfo{
-        .sType = sType<VkGraphicsPipelineCreateInfo>(),
+        .sType = SType<VkGraphicsPipelineCreateInfo>(),
         .layout = m_current_layout,
     });
 

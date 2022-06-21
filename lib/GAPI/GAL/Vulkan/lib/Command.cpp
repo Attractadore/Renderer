@@ -7,7 +7,7 @@ CommandPool CreateCommandPool(
     Context ctx, const CommandPoolConfig& config
 ) {
     VkCommandPoolCreateInfo create_info = {
-        .sType = sType(create_info),
+        .sType = SType(create_info),
         .flags = static_cast<VkCommandPoolCreateFlags>(
             config.flags.Extract()),
         .queueFamilyIndex = config.queue_family,
@@ -48,7 +48,7 @@ void AllocateCommandBuffers(
     std::span<CommandBuffer> cmd_buffers
 ) {
     VkCommandBufferAllocateInfo alloc_info = {
-        .sType = sType(alloc_info),
+        .sType = SType(alloc_info),
         .commandPool = pool,
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         .commandBufferCount = static_cast<uint32_t>(cmd_buffers.size()),
@@ -87,7 +87,7 @@ void BeginCommandBuffer(
     const CommandBufferBeginConfig& begin_config
 ) {
     VkCommandBufferBeginInfo begin_info = {
-        .sType = sType(begin_info),
+        .sType = SType(begin_info),
         .flags = static_cast<VkCommandBufferUsageFlags>(begin_config.usage.Extract()),
     };
     auto r = vkBeginCommandBuffer(cmd_buffer, &begin_info);
@@ -121,7 +121,7 @@ void CmdPipelineBarrier(CommandBuffer cmd_buffer, const DependencyConfig& config
     buffer_barriers.assign(bv.begin(), bv.end());
     image_barriers.assign(iv.begin(), iv.end());
     VkDependencyInfo dep_info = {
-        .sType = sType(dep_info),
+        .sType = SType(dep_info),
         .dependencyFlags = config.by_region ? VK_DEPENDENCY_BY_REGION_BIT: 0u,
         .memoryBarrierCount =
             static_cast<uint32_t>(memory_barriers.size()),
@@ -149,7 +149,7 @@ void CmdBeginRendering(
     auto stencil_attachment =
         RenderingAttachmentToVK(config.stencil_attachment);
     VkRenderingInfo rendering_info = {
-        .sType = sType(rendering_info),
+        .sType = SType(rendering_info),
         .flags = static_cast<VkRenderingFlags>(config.flags.Extract()),
         .renderArea = Rect2DToVK(config.render_area),
         .layerCount = 1,

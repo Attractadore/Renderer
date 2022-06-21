@@ -101,7 +101,7 @@ SwapchainImpl::SwapchainImpl(
     present_queue{config.present_queue},
     surface_size_cb{std::move(size_cb)},
     create_info {
-        .sType = sType(create_info),
+        .sType = SType(create_info),
         .surface = surf,
         .minImageCount = config.image_count,
         .imageFormat = static_cast<VkFormat>(config.format),
@@ -272,14 +272,14 @@ void SwapchainImpl::SignalAcquireSemaphore(
     auto acq_sem = images[acquire_idx].acquire_semaphore;
     auto acq_fence = images[acquire_idx].acquire_fence;
     VkSemaphoreSubmitInfo wait_info = {
-        .sType = sType(wait_info),
+        .sType = SType(wait_info),
         .semaphore = acq_sem,
     };
     VkSemaphoreSubmitInfo signal_info = {
-        .sType = sType(signal_info),
+        .sType = SType(signal_info),
     };
     VkSubmitInfo2 submit_info = {
-        .sType = sType(submit_info),
+        .sType = SType(submit_info),
         .waitSemaphoreInfoCount = 1,
         .pWaitSemaphoreInfos = &wait_info,
     };
@@ -332,7 +332,7 @@ void SwapchainImpl::MuxPresentSemaphores(
     auto v = std::views::transform(wait_states,
         [] (const SemaphoreState& state) {
             VkSemaphoreSubmitInfo info = {
-                .sType = sType(info),
+                .sType = SType(info),
                 .semaphore = state.semaphore,
                 .value = state.value,
             };
@@ -340,11 +340,11 @@ void SwapchainImpl::MuxPresentSemaphores(
         });
     wait_infos.assign(v.begin(), v.end());
     VkSemaphoreSubmitInfo signal_info = {
-        .sType = sType(signal_info),
+        .sType = SType(signal_info),
         .semaphore = GetPresentSemaphore(image_idx),
     };
     VkSubmitInfo2 submit_info = {
-        .sType = sType(submit_info),
+        .sType = SType(submit_info),
         .waitSemaphoreInfoCount =
             static_cast<uint32_t>(wait_infos.size()),
         .pWaitSemaphoreInfos = wait_infos.data(),
@@ -359,7 +359,7 @@ void SwapchainImpl::MuxPresentSemaphores(
 SwapchainStatus SwapchainImpl::QueuePresent(unsigned image_idx) {
     auto pres_sem = GetPresentSemaphore(image_idx);
     VkPresentInfoKHR present_info = {
-        .sType = sType(present_info),
+        .sType = SType(present_info),
         .waitSemaphoreCount = 1,
         .pWaitSemaphores = &pres_sem,
         .swapchainCount = 1,
@@ -393,10 +393,10 @@ void SwapchainImpl::SignalPresentSemaphore(
     // This works because the first sync scope includes all
     // previous commands.
     VkSemaphoreSubmitInfo signal_info = {
-        .sType = sType(signal_info),
+        .sType = SType(signal_info),
     };
     VkSubmitInfo2 submit_info = {
-        .sType = sType(submit_info),
+        .sType = SType(submit_info),
     };
     if (signal_state) {
         signal_info.semaphore = signal_state->semaphore;

@@ -10,12 +10,12 @@ VkSemaphore CreateSemaphoreBase(
     VkDevice dev, VkSemaphoreType type, uint64_t initial_value = 0
 ) {
     VkSemaphoreTypeCreateInfo type_info = {
-        .sType = sType(type_info),
+        .sType = SType(type_info),
         .semaphoreType = type,
         .initialValue = initial_value,
     };
     VkSemaphoreCreateInfo create_info = {
-        .sType = sType(create_info),
+        .sType = SType(create_info),
         .pNext = &type_info,
     };
     VkSemaphore sem;
@@ -37,7 +37,7 @@ VkSemaphore CreateBinarySemaphore(VkDevice dev) {
 
 VkFence CreateFence(VkDevice dev, bool signaled = false) {
     VkFenceCreateInfo create_info = {
-        .sType = sType(create_info),
+        .sType = SType(create_info),
         .flags = signaled ? VK_FENCE_CREATE_SIGNALED_BIT: 0u,
     };
     VkFence fence;
@@ -85,7 +85,7 @@ SemaphoreStatus WaitForSemaphores(
     wait_values.assign(vv.begin(), vv.end());
 
     VkSemaphoreWaitInfo wait_info = {
-        .sType = sType(wait_info),
+        .sType = SType(wait_info),
         .flags = for_all ? 0u: VK_SEMAPHORE_WAIT_ANY_BIT,
         .semaphoreCount =
             static_cast<uint32_t>(wait_semaphores.size()),
@@ -107,7 +107,7 @@ SemaphoreStatus WaitForSemaphores(
 
 void SignalSemaphore(Context ctx, const SemaphoreState& signal_state) {
     VkSemaphoreSignalInfo signal_info = {
-        .sType = sType(signal_info),
+        .sType = SType(signal_info),
         .semaphore = signal_state.semaphore,
         .value = signal_state.value,
     };

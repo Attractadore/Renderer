@@ -48,7 +48,7 @@ void QueueSubmit(
             unsigned signal_cnt = config.signal_semaphores.size();
             unsigned cmd_cnt = config.command_buffers.size();
             VkSubmitInfo2 info = {
-                .sType = sType(info),
+                .sType = SType(info),
                 .waitSemaphoreInfoCount = wait_cnt,
                 .pWaitSemaphoreInfos = wp,
                 .commandBufferInfoCount = cmd_cnt,

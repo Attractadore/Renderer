@@ -72,12 +72,12 @@ VkInstance CreateInstance(
     std::span<const char* const> exts
 ) {
     VkApplicationInfo app_info = {
-        .sType = sType(app_info),
+        .sType = SType(app_info),
         .apiVersion = VK_API_VERSION_1_3,
     };
 
     VkInstanceCreateInfo create_info = {
-        .sType = sType(create_info),
+        .sType = SType(create_info),
         .pApplicationInfo = &app_info,
         .enabledLayerCount = static_cast<uint32_t>(layers.size()),
         .ppEnabledLayerNames = layers.data(),

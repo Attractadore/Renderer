@@ -15,7 +15,7 @@ Vk::Device CreateDevice(
     auto v = std::views::transform(config.queue_config, [&](const auto& qcfg) {
         assert(static_cast<size_t>(qcfg.id) <= dev_desc.queue_families.size());
         VkDeviceQueueCreateInfo create_info = {
-            .sType = sType(create_info),
+            .sType = SType(create_info),
             .queueFamilyIndex =
                 static_cast<uint32_t>(qcfg.id),
             .queueCount = qcfg.count,
@@ -32,19 +32,19 @@ Vk::Device CreateDevice(
     }
 
     VkPhysicalDeviceTimelineSemaphoreFeatures timeline_semaphore_features = {
-        .sType = sType(timeline_semaphore_features),
+        .sType = SType(timeline_semaphore_features),
         .timelineSemaphore = true,
     };
 
     VkPhysicalDeviceVulkan13Features vulkan13_features = {
-        .sType = sType(vulkan13_features),
+        .sType = SType(vulkan13_features),
         .pNext = &timeline_semaphore_features,
         .synchronization2 = true,
         .dynamicRendering = true,
     };
     
     VkDeviceCreateInfo create_info = {
-        .sType = sType(create_info),
+        .sType = SType(create_info),
         .pNext = &vulkan13_features,
         .queueCreateInfoCount =
             static_cast<uint32_t>(queue_create_infos.size()),

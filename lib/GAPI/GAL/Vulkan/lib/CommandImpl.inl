@@ -7,7 +7,7 @@ inline constexpr VkMemoryBarrier2 MemoryBarrierToVK(
     const MemoryBarrier& barrier
 ) {
     VkMemoryBarrier2 bar = {
-        .sType = sType(bar),
+        .sType = SType(bar),
         .srcStageMask = static_cast<VkPipelineStageFlags2>(
             barrier.src_stages.Extract()),
         .srcAccessMask = static_cast<VkPipelineStageFlags2>(
@@ -24,7 +24,7 @@ inline VkBufferMemoryBarrier2 BufferBarrierToVK(
     const BufferBarrier& barrier
 ) {
     VkBufferMemoryBarrier2 bar = {
-        .sType = sType(bar),
+        .sType = SType(bar),
         .srcStageMask = static_cast<VkPipelineStageFlags2>(
             barrier.memory_barrier.src_stages.Extract()),
         .srcAccessMask = static_cast<VkPipelineStageFlags2>(
@@ -45,7 +45,7 @@ inline VkImageMemoryBarrier2 ImageBarrierToVK(
     const ImageBarrier& barrier
 ) {
     VkImageMemoryBarrier2 bar = {
-        .sType = sType(bar),
+        .sType = SType(bar),
         .srcStageMask = static_cast<VkPipelineStageFlags2>(
             barrier.memory_barrier.src_stages.Extract()),
         .srcAccessMask = static_cast<VkPipelineStageFlags2>(
@@ -83,7 +83,7 @@ inline constexpr VkRenderingAttachmentInfo RenderingAttachmentToVK(
     const RenderingAttachment& attachment
 ) {
     VkRenderingAttachmentInfo vk_attachment = {
-        .sType = sType(vk_attachment),
+        .sType = SType(vk_attachment),
         .imageView = attachment.view,
         .imageLayout = static_cast<VkImageLayout>(attachment.layout),
         .resolveMode = static_cast<VkResolveModeFlagBits>(attachment.resolve.mode),

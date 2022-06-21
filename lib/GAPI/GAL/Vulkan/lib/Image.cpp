@@ -5,7 +5,7 @@
 namespace R1::GAL {
 Image CreateImage(Context ctx, const ImageConfig& config) {
     VkImageCreateInfo create_info = {
-        .sType = sType(create_info),
+        .sType = SType(create_info),
         .flags = static_cast<VkImageCreateFlags>(config.flags.Extract()),
         .imageType = static_cast<VkImageType>(config.type),
         .format = static_cast<VkFormat>(config.format),
@@ -71,7 +71,7 @@ void DestroyImage(Context ctx, Image image) {
 
 ImageView CreateImageView(Context ctx, Image image, const ImageViewConfig& config) {
     VkImageViewCreateInfo create_info = {
-        .sType = sType(create_info),
+        .sType = SType(create_info),
         .image = image->image,
         .viewType = static_cast<VkImageViewType>(config.type),
         .format = static_cast<VkFormat>(config.format),
