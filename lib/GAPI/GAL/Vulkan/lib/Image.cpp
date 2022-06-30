@@ -69,6 +69,10 @@ void DestroyImage(Context ctx, Image image) {
     delete img;
 }
 
+VkImage Vulkan::GetVkImage(Image image) {
+    return image->image;
+}
+
 ImageView CreateImageView(Context ctx, Image image, const ImageViewConfig& config) {
     VkImageViewCreateInfo create_info = {
         .sType = SType(create_info),

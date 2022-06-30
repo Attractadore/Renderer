@@ -75,12 +75,19 @@ concept IsImageComponentSwizzle = requires(E e) {
     E::A;
 };
 
+template<typename E>
+concept IsFilter = requires(E e) {
+    E::Nearest;
+    E::Linear;
+};
+
 static_assert(IsImageConfigOption<ImageConfigOption>);
 static_assert(IsImageType<ImageType>);
 static_assert(IsImageUsage<ImageUsage>);
 static_assert(IsImageAspect<ImageAspect>);
 static_assert(IsImageViewType<ImageViewType>);
 static_assert(IsImageComponentSwizzle<ImageComponentSwizzle>);
+static_assert(IsFilter<Filter>);
 };
 
 using ImageConfigFlags  = Flags<ImageConfigOption>;

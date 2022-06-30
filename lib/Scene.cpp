@@ -1,13 +1,17 @@
-#include "Context.hpp"
 #include "Scene.hpp"
-#include "Swapchain.hpp"
 
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
 
+using namespace R1;
+
 namespace R1 {
 namespace {
+GAL::Format SelectColorFormat(GAL::Context ctx) {
+    return GAL::Format::RGBA8_UNORM;
+}
+
 std::vector<std::byte> loadShader(const std::string& path) {
     std::ifstream f{path, std::ios_base::binary};
     auto sz = std::filesystem::file_size(path);
@@ -25,7 +29,7 @@ GAL::Pipeline createPipeline(
     GAL::PipelineLayout layout,
     GAL::ShaderModule vert_module,
     GAL::ShaderModule frag_module,
-    GAL::Format color_fmt
+    GAL::Format image_fmt
 ) {
     GAL::GraphicsPipelineConfigurator gpc;
 
@@ -57,7 +61,7 @@ GAL::Pipeline createPipeline(
     };
     GAL::ColorBlendConfig blend = {};
     GAL::ColorAttachmentConfig att = {
-        .format = color_fmt,
+        .format = image_fmt,
         .color_mask =
             GAL::ColorComponent::R |
             GAL::ColorComponent::G |
@@ -71,33 +75,6 @@ GAL::Pipeline createPipeline(
     GAL::CreateGraphicsPipelines(ctx, nullptr, gpc.FinishAll(), &pipeline);
 
     return pipeline;
-}
-
-GAL::ImageView createSwapchainImageView(
-    GAL::Context ctx, GAL::Format fmt, GAL::Image img 
-) {
-    GAL::ImageViewConfig config = {
-        .type = GAL::ImageViewType::D2,
-        .format = fmt,
-        .subresource_range = {
-            .aspects = GAL::ImageAspect::Color,
-            .first_mip_level = 0,
-            .mip_level_count = 1,
-            .first_array_layer = 0,
-            .array_layer_count = 1,
-        },
-    };
-    return GAL::CreateImageView(ctx, img, config);
-}
-
-std::vector<GAL::ImageView> createSwapchainImageViews(
-    GAL::Context ctx, GAL::Format fmt, GAL::Swapchain swc
-) {
-    std::vector<GAL::ImageView> views(GAL::GetSwapchainImageCount(swc));
-    for (size_t i = 0; i < views.size(); i++) {
-        views[i] = createSwapchainImageView(ctx, fmt, GAL::GetSwapchainImage(swc, i));
-    }
-    return views;
 }
 
 GAL::CommandPool createCommandPool(GAL::Context ctx, GAL::QueueFamily::ID qf) {
@@ -118,119 +95,242 @@ std::vector<GAL::CommandBuffer> createCommandBuffers(
     return cmd_buffers;
 }
 
+GAL::Image CreateImage(
+    GAL::Context ctx,
+    unsigned width,
+    unsigned height,
+    GAL::Format fmt,
+    GAL::ImageUsageFlags usage
+) {
+    GAL::ImageConfig config = {
+        .type = GAL::ImageType::D2,
+        .format = fmt,
+        .width = width,
+        .height = height,
+        .depth = 1,
+        .mip_level_count = 1,
+        .array_layer_count = 1,
+        .sample_count = 1,
+        .usage = usage,
+        .initial_layout = GAL::ImageLayout::Undefined,
+        .memory_usage = GAL::ImageMemoryUsage::Dedicated,
+    };
+    return GAL::CreateImage(ctx, config);
+}
+
+std::vector<GAL::Image> CreateImages(
+    GAL::Context ctx,
+    unsigned count,
+    unsigned width,
+    unsigned height,
+    GAL::Format fmt,
+    GAL::ImageUsageFlags usage
+) {
+    std::vector<GAL::Image> images(count);
+    std::ranges::generate(images,
+        [&] { return CreateImage(ctx, width, height, fmt, usage); });
+    return images;
+}
+
+GAL::ImageView CreateImageView(
+    GAL::Context ctx,
+    GAL::Image img,
+    GAL::Format fmt
+) {
+    GAL::ImageViewConfig config = {
+        .type = GAL::ImageViewType::D2,
+        .format = fmt,
+        .components = {
+            .r = GAL::ImageComponentSwizzle::Identity,
+            .g = GAL::ImageComponentSwizzle::Identity,
+            .b = GAL::ImageComponentSwizzle::Identity,
+            .a = GAL::ImageComponentSwizzle::Identity,
+        },
+        .subresource_range = {
+            .aspects = GAL::ImageAspect::Color,
+            .mip_level_count = 1,
+            .array_layer_count = 1,
+        },
+    };
+    return GAL::CreateImageView(ctx, img, config);
+}
+
+template<std::ranges::input_range R>
+    requires std::same_as<GAL::Image, std::ranges::range_value_t<R>>
+std::vector<GAL::ImageView> CreateImageViews(
+    GAL::Context ctx,
+    R&& images,
+    GAL::Format fmt
+) {
+    std::vector<GAL::ImageView> views(images.size());
+    std::ranges::transform(images, views.begin(),
+        [&] (GAL::Image img) { return CreateImageView(ctx, img, fmt); });
+    return views;
+}
+
+template<std::ranges::input_range R>
+    requires std::same_as<GAL::Image, std::ranges::range_value_t<R>>
+void DestroyImages(GAL::Context ctx, R&& images) {
+    std::ranges::for_each(images, [&] (GAL::Image img) { GAL::DestroyImage(ctx, img); });
+}
+
+template<std::ranges::input_range R>
+    requires std::same_as<GAL::ImageView, std::ranges::range_value_t<R>>
+void DestroyImageViews(GAL::Context ctx, R&& views) {
+    std::ranges::for_each(views, [&] (GAL::ImageView v) { GAL::DestroyImageView(ctx, v); });
+}
+}
 }
 
 struct Scene::Impl {
     GAL::Context                    ctx;
-    GAL::Swapchain                  swapchain;
     GAL::QueueFamily::ID            queue_family;
     GAL::Queue                      queue;
-    GAL::Format                     color_fmt;
-    GAL::Pipeline                   pipeline;
+    GAL::Format                     image_fmt;
+    static constexpr GAL::ImageUsageFlags
+                                    required_image_usage_flags = GAL::ImageUsage::ColorAttachment;
+    GAL::ImageUsageFlags            image_usage_flags;
+    std::vector<GAL::Image>         images;
     std::vector<GAL::ImageView>     image_views;
+    unsigned                        image_width = 0;
+    unsigned                        image_height = 0;
     unsigned                        frame_index = 0;
-    static constexpr auto           frame_count = 2;
+    GAL::Pipeline                   pipeline;
     GAL::CommandPool                command_pool;
     std::vector<GAL::CommandBuffer> command_buffers;
 
-    static constexpr auto           InfiniteTimeout = std::chrono::nanoseconds{UINT64_MAX};
-    static constexpr auto           signal_cnt = 2;
-
     GAL::Semaphore                  semaphore;
 
-    GAL::SemaphorePayload           old_acquire_semaphore_value = 0;
-    GAL::SemaphorePayload           old_draw_semaphore_value = old_acquire_semaphore_value + 1;
-
-    GAL::SemaphorePayload           last_semaphore_value = frame_count * signal_cnt - 1;
-
-    GAL::SemaphorePayload           last_draw_semaphore_value = last_semaphore_value - 1;
-    GAL::SemaphorePayload           last_acquire_semaphore_value = last_draw_semaphore_value - 1;
+    struct Timepoint {
+        GAL::SemaphorePayload       oldest_value, new_value;
+    };
+    Timepoint                       draw_timepoint;
+    Timepoint                       external_timepoint;
+    size_t                          signal_cnt = std::size({
+                                        draw_timepoint,
+                                        external_timepoint});
+    GAL::SemaphorePayload           last_semaphore_value = signal_cnt - 1;
+    static constexpr auto           InfiniteTimeout = std::chrono::nanoseconds{UINT64_MAX};
 
     ~Impl() {
         GAL::ContextWaitIdle(ctx);
         GAL::DestroySemaphore(ctx, semaphore);
         GAL::FreeCommandBuffers(ctx, command_pool, command_buffers);
         GAL::DestroyCommandPool(ctx, command_pool);
-        std::ranges::for_each(image_views, [&] (auto v) { GAL::DestroyImageView(ctx, v); });
         GAL::DestroyPipeline(ctx, pipeline);
+        DestroyImages(ctx, images);
+        DestroyImageViews(ctx, image_views);
     }
 };
 
-Scene::Scene(Context& ctx, Swapchain& swapchain):
-    m_swapchain{swapchain},
+Scene::R1Scene(Context& ctx):
     pimpl{std::make_unique<Impl>()}
 {
-    auto& swc = m_swapchain.get().get();
     pimpl->ctx = ctx.get().get();
-    pimpl->swapchain = swc.get();
     pimpl->queue_family = ctx.get().GetGraphicsQueueFamily();
     pimpl->queue = ctx.get().GetGraphicsQueue();
-    pimpl->color_fmt = swc.GetFormat();
+    pimpl->image_fmt = SelectColorFormat(pimpl->ctx);
     {
         auto vert_code = loadShader("vert.spv");
         auto frag_code = loadShader("frag.spv");
         auto vert_module = GAL::CreateShaderModule(pimpl->ctx, { .code = vert_code } );
         auto frag_module = GAL::CreateShaderModule(pimpl->ctx, { .code = frag_code } );
         auto layout = createPipelineLayout(pimpl->ctx);
-        pimpl->pipeline = createPipeline(pimpl->ctx, layout, vert_module, frag_module, pimpl->color_fmt);
+        pimpl->pipeline = createPipeline(pimpl->ctx, layout, vert_module, frag_module, pimpl->image_fmt);
         GAL::DestroyPipelineLayout(pimpl->ctx, layout);
         GAL::DestroyShaderModule(pimpl->ctx, vert_module);
         GAL::DestroyShaderModule(pimpl->ctx, frag_module);
     }
-    {
-        pimpl->image_views = createSwapchainImageViews(pimpl->ctx, pimpl->color_fmt, pimpl->swapchain);
-    }
     pimpl->command_pool = createCommandPool(
         pimpl->ctx, pimpl->queue_family
     );
-    pimpl->command_buffers = createCommandBuffers(
-        pimpl->ctx, pimpl->command_pool, pimpl->frame_count
-    );
-    pimpl->semaphore = GAL::CreateSemaphore(
-        pimpl->ctx, { .initial_value = pimpl->last_semaphore_value, });
+    pimpl->semaphore = GAL::CreateSemaphore(pimpl->ctx, {.initial_value = pimpl->last_semaphore_value});
 }
 
-void Scene::Draw() {
+void Scene::ConfigOutputImages(
+    unsigned width, unsigned height, unsigned count,
+    GAL::ImageUsageFlags image_usage_flags
+) {
     auto ctx = pimpl->ctx;
-    auto swc = pimpl->swapchain;
+    GAL::ContextWaitIdle(ctx);
+
+    DestroyImages(ctx, pimpl->images);
+    pimpl->image_width = width;
+    pimpl->image_height = height;
+    pimpl->image_usage_flags = image_usage_flags | pimpl->required_image_usage_flags;
+    pimpl->images = CreateImages(ctx,
+        count, pimpl->image_width, pimpl->image_height,
+        pimpl->image_fmt, pimpl->image_usage_flags);
+
+    DestroyImageViews(ctx, pimpl->image_views);
+    pimpl->image_views = CreateImageViews(ctx, pimpl->images, pimpl->image_fmt);
+
+    GAL::FreeCommandBuffers(ctx, pimpl->command_pool, pimpl->command_buffers);
+    pimpl->command_buffers.resize(pimpl->images.size());
+    GAL::AllocateCommandBuffers(ctx, pimpl->command_pool, pimpl->command_buffers);
+
+    pimpl->frame_index = 0;
+
+    // Pretend that count virtual frames have been drawn.
+    // Naturally, all of them are ready, so adjust semaphores
+    // to reflect that.
+    auto pipeline_time = pimpl->signal_cnt * pimpl->images.size();
+    auto oldest_frame_time_offset = pipeline_time - pimpl->signal_cnt;
+    pimpl->last_semaphore_value += pipeline_time;
+    pimpl->external_timepoint.new_value = pimpl->last_semaphore_value;
+    pimpl->external_timepoint.oldest_value = pimpl->external_timepoint.new_value - oldest_frame_time_offset;
+    pimpl->draw_timepoint.new_value     = pimpl->external_timepoint.new_value - 1;
+    pimpl->draw_timepoint.oldest_value     = pimpl->draw_timepoint.new_value - oldest_frame_time_offset;
+    auto sem = pimpl->semaphore;
+    GAL::SignalSemaphore(ctx, { .semaphore = sem, .value = pimpl->last_semaphore_value });
+}
+
+std::tuple<unsigned, unsigned> Scene::GetOutputImageSize() const noexcept {
+    return {pimpl->image_width, pimpl->image_height};
+}
+
+GAL::Format Scene::GetOutputImageFormat() const noexcept {
+    return pimpl->image_fmt;
+}
+
+size_t Scene::GetOutputImageCount() const noexcept {
+    return pimpl->images.size();
+}
+
+GAL::Image Scene::GetOutputImage(size_t idx) const noexcept {
+    return pimpl->images[idx];
+}
+
+size_t Scene::GetCurrentOutputImage() const noexcept {
+    return pimpl->frame_index;
+}
+
+GAL::ImageLayout Scene::GetOutputImageStartLayout() const noexcept {
+    return GAL::ImageLayout::Undefined;
+}
+
+GAL::ImageLayout Scene::GetOutputImageEndLayout() const noexcept {
+    return GAL::ImageLayout::Attachment;
+}
+
+ScenePresentInfo Scene::Draw() {
+    auto ctx = pimpl->ctx;
     auto idx = pimpl->frame_index;
     auto sem = pimpl->semaphore;
 
     {
         GAL::SemaphoreState wait_state = {
             .semaphore = sem,
-            .value = pimpl->old_draw_semaphore_value,
+            .value = pimpl->draw_timepoint.oldest_value,
         };
         GAL::WaitForSemaphores(ctx, {&wait_state, 1}, true, pimpl->InfiniteTimeout);
     }
 
-    auto resize_swapchain = [&] (GAL::SwapchainStatus status) {
-        GAL::ContextWaitIdle(ctx);
-        std::ranges::for_each(pimpl->image_views, [&] (auto v) { GAL::DestroyImageView(ctx, v); });
-        GAL::ResizeSwapchain(swc);
-        pimpl->image_views = createSwapchainImageViews(ctx, pimpl->color_fmt, swc);
-    };
-
-    pimpl->last_acquire_semaphore_value = ++pimpl->last_semaphore_value;
-    auto img_idx = [&] {
-    while(true) {
-        GAL::SemaphoreState signal_state = {
-            .semaphore = sem,
-            .value = pimpl->last_acquire_semaphore_value,
-        };
-        auto [img_idx, status] = GAL::AcquireImage(swc, &signal_state);
-        if (status != GAL::SwapchainStatus::Optimal) {
-            resize_swapchain(status);
-        } else {
-            return img_idx;
-        };
-    }} ();
-
-    auto [img_w, img_h] = GAL::GetSwapchainSize(swc);
-    auto img = GAL::GetSwapchainImage(swc, img_idx);
-    auto view = pimpl->image_views[img_idx];
-
     auto cmd_buffer = pimpl->command_buffers[idx];
+    auto img = pimpl->images[idx];
+    auto view = pimpl->image_views[idx];
+    auto img_w = pimpl->image_width;
+    auto img_h = pimpl->image_height;
 
     GAL::CommandBufferBeginConfig begin_config = {
         .usage = GAL::CommandBufferUsage::OneTimeSubmit,
@@ -300,44 +400,21 @@ void Scene::Draw() {
 
     GAL::CmdEndRendering(ctx, cmd_buffer);
 
-    {
-        GAL::ImageBarrier to_present = {
-            .memory_barrier = {
-                .src_stages = GAL::PipelineStage::ColorAttachmentOutput,
-                .src_accesses = GAL::MemoryAccess::ColorAttachmentWrite,
-            },
-            .old_layout = GAL::ImageLayout::Attachment,
-            .new_layout = GAL::ImageLayout::Present,
-            .image = img,
-            .subresource_range = {
-                .aspects = GAL::ImageAspect::Color,
-                .first_mip_level = 0,
-                .mip_level_count = 1,
-                .first_array_layer = 0,
-                .array_layer_count = 1,
-            },
-        };
-        GAL::DependencyConfig config = {
-            .image_barriers{&to_present, 1},
-        };
-        GAL::CmdPipelineBarrier(ctx, cmd_buffer, config);
-    }
-
     GAL::EndCommandBuffer(ctx, cmd_buffer);
 
     {
+        pimpl->draw_timepoint.new_value = ++pimpl->last_semaphore_value;
         GAL::SemaphoreSubmitConfig wait_config = {
             .state = {
                 .semaphore = sem,
-                .value = pimpl->last_acquire_semaphore_value,
+                .value = pimpl->external_timepoint.oldest_value,
             },
             .stages = GAL::PipelineStage::ColorAttachmentOutput,
         };
-        pimpl->last_draw_semaphore_value = ++pimpl->last_semaphore_value;
         GAL::SemaphoreSubmitConfig signal_config = {
             .state = {
                 .semaphore = sem,
-                .value = pimpl->last_draw_semaphore_value,
+                .value = pimpl->draw_timepoint.new_value,
             },
             .stages = GAL::PipelineStage::ColorAttachmentOutput,
         };
@@ -347,21 +424,18 @@ void Scene::Draw() {
             .command_buffers{&cmd_buffer, 1},
         };
         GAL::QueueSubmit(ctx, pimpl->queue, {&submit_config, 1});
+        pimpl->external_timepoint.new_value = ++pimpl->last_semaphore_value;
     }
 
-    GAL::SemaphoreState wait_state = {
+    pimpl->frame_index = (idx + 1) % pimpl->images.size();
+    pimpl->draw_timepoint.oldest_value += pimpl->signal_cnt;
+    pimpl->external_timepoint.oldest_value += pimpl->signal_cnt;
+
+    return {
         .semaphore = sem,
-        .value = pimpl->last_draw_semaphore_value,
+        .wait_value = pimpl->draw_timepoint.new_value,
+        .signal_value = pimpl->external_timepoint.new_value,
     };
-    auto status = GAL::PresentImage(swc, img_idx, {&wait_state, 1}, nullptr);
-    if (status != GAL::SwapchainStatus::Optimal) {
-        resize_swapchain(status);
-    }
-
-    pimpl->frame_index = (pimpl->frame_index + 1) % pimpl->frame_count;
-    pimpl->old_acquire_semaphore_value += pimpl->signal_cnt;
-    pimpl->old_draw_semaphore_value += pimpl->signal_cnt;
 }
 
-Scene::~Scene() = default;
-}
+Scene::~R1Scene() = default;

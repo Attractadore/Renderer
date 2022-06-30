@@ -18,4 +18,8 @@ enum class DeviceType {
 
 struct DeviceImpl;
 using Device = DeviceImpl*;
+
+namespace Vulkan {
+VkPhysicalDevice GetVkPhysicalDevice(Device device);
+}
 }

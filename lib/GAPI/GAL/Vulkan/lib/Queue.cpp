@@ -1,5 +1,6 @@
 #include "ContextImpl.hpp"
 #include "QueueImpl.inl"
+#include "VulkanQueue.inl"
 
 #include <algorithm>
 #include <ranges>
@@ -11,8 +12,8 @@ Queue GetQueue(Context ctx, QueueFamily::ID family, unsigned idx) {
     return queue;
 }
 
-void QueueSubmit(
-    Context ctx, Queue queue, std::span<const QueueSubmitConfig> configs
+void Vulkan::QueueSubmit(
+    Context ctx, Queue queue, std::span<const QueueSubmitConfig> configs, Fence fence 
 ) {
     static thread_local std::vector<VkSemaphoreSubmitInfo>      semaphore_wait_submits;
     static thread_local std::vector<VkSemaphoreSubmitInfo>      semaphore_signal_submits;
@@ -63,7 +64,7 @@ void QueueSubmit(
     submits.assign(v.begin(), v.end());
 
     ThrowIfFailed(
-        ctx->QueueSubmit2(queue, submits.size(), submits.data(), VK_NULL_HANDLE),
+        ctx->QueueSubmit2(queue, submits.size(), submits.data(), fence),
         "Vulkan: Failed to submit work to queue");
 };
 

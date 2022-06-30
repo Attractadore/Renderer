@@ -10,9 +10,4 @@ struct InstanceImpl {
     Vk::Instance instance;
     std::vector<DeviceImpl> devices;
 };
-
-Vk::Instance CreateVkInstanceWithExtensions(
-    const InstanceConfig& config, std::span<const char* const> exts
-);
-Instance CreateInstanceFromVK(Vk::Instance vk_instance);
 }

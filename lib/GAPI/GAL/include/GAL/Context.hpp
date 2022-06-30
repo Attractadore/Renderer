@@ -15,10 +15,8 @@ struct QueueConfig {
 
 struct ContextConfig {
     std::span<const QueueConfig> queue_config;
-    bool wsi: 1;
 };
 
-Context CreateContext(Device dev, const ContextConfig& config);
 void DestroyContext(Context ctx);
 
 void ContextWaitIdle(Context ctx);

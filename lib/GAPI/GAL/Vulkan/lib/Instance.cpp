@@ -1,7 +1,6 @@
 #include "Common/Declarations.hpp"
 #include "Common/Vector.hpp"
 #include "DeviceImpl.hpp"
-#include "GAL/Context.hpp"
 #include "InstanceImpl.hpp"
 #include "VKUtil.hpp"
 
@@ -54,30 +53,55 @@ public:
         ExtensionProperties{GetDeviceExtensionProperties(dev)} {}
 };
 
-InstanceDescription GetInstanceDescription() {
-    InstanceExtensionProperties ext_props;
-    return {
-        .wsi        = ext_props.ExtensionSupported(VK_KHR_SURFACE_EXTENSION_NAME),
-        .xlib       = ext_props.ExtensionSupported(VK_KHR_XLIB_SURFACE_EXTENSION_NAME),
-        .xcb        = ext_props.ExtensionSupported(VK_KHR_XCB_SURFACE_EXTENSION_NAME),
-        .wayland    = ext_props.ExtensionSupported(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME),
-        .win32      = ext_props.ExtensionSupported(VK_KHR_WIN32_SURFACE_EXTENSION_NAME),
-    };
-};
-
 namespace {
 VkInstance CreateInstance(
-    const InstanceConfig& config,
-    std::span<const char* const> layers,
-    std::span<const char* const> exts
+    const VkInstanceCreateInfo* create_template,
+    std::span<const char* const> req_layers,
+    std::span<const char* const> req_exts
 ) {
+    constexpr auto req_ver = VK_API_VERSION_1_3;
     VkApplicationInfo app_info = {
         .sType = SType(app_info),
-        .apiVersion = VK_API_VERSION_1_3,
+        .pEngineName = "R1",
+        .apiVersion = req_ver,
     };
+
+    if (auto app_info_template = create_template->pApplicationInfo) {
+        if (auto api_ver = app_info_template->apiVersion) {
+            if (VK_API_VERSION_VARIANT(api_ver) != 0) {
+                return VK_NULL_HANDLE;
+            }
+            if (VK_API_VERSION_MAJOR(api_ver) != VK_API_VERSION_MAJOR(req_ver)) {
+                return VK_NULL_HANDLE;
+            }
+            app_info.apiVersion = std::max(app_info.apiVersion, api_ver);
+        }
+
+        app_info.applicationVersion = app_info_template->applicationVersion;
+        app_info.pApplicationName = app_info_template->pApplicationName;
+    }
+
+    auto merge_spans = [] (
+        std::span<const char* const> usr, std::span<const char* const> req
+    ) {
+        std::vector<const char*> result;
+        result.reserve(usr.size() + req.size());
+        result.insert(result.end(), usr.begin(), usr.end());
+        result.insert(result.end(), req.begin(), req.end());
+        return result;
+    };
+
+    std::span<const char* const> usr_layers{
+        create_template->ppEnabledLayerNames, create_template->enabledLayerCount};
+    auto layers = merge_spans(usr_layers, req_layers);
+    std::span<const char* const> usr_exts{
+        create_template->ppEnabledExtensionNames, create_template->enabledExtensionCount};
+    auto exts = merge_spans(usr_exts, req_exts);
 
     VkInstanceCreateInfo create_info = {
         .sType = SType(create_info),
+        .pNext = create_template->pNext,
+        .flags = create_template->flags,
         .pApplicationInfo = &app_info,
         .enabledLayerCount = static_cast<uint32_t>(layers.size()),
         .ppEnabledLayerNames = layers.data(),
@@ -86,7 +110,9 @@ VkInstance CreateInstance(
     };
 
     VkInstance instance = VK_NULL_HANDLE;
-    vkCreateInstance(&create_info, nullptr, &instance);
+    ThrowIfFailed(
+        vkCreateInstance(&create_info, nullptr, &instance),
+        "Vulkan: Failed to create instance");
 
     return instance;
 }
@@ -119,6 +145,7 @@ VKDeviceDescription GetDeviceDescription(VkPhysicalDevice dev) {
 };
 
 std::vector<DeviceImpl> EnumerateDevices(VkInstance instance) {
+    // TODO: filter out devices that don't support required features and extensions
     auto pdevs = Enumerate<VkPhysicalDevice>(instance, vkEnumeratePhysicalDevices);
     auto v = std::views::transform(pdevs,
         [&] (VkPhysicalDevice pdev) {
@@ -130,16 +157,6 @@ std::vector<DeviceImpl> EnumerateDevices(VkInstance instance) {
         }
     );
     return vec_from_range(v);
-}
-
-Vk::Instance CreateVkInstance(
-    const InstanceConfig& config, 
-    std::span<const char* const> layers,
-    std::span<const char* const> exts
-) {
-    return Vk::Instance {
-        CreateInstance(config, layers, exts)
-    };
 }
 
 std::span<const char* const> GetRequiredInstanceLayers() {
@@ -161,24 +178,26 @@ std::span<const char* const> GetRequiredInstanceExtensions() {
 }
 }
 
-Vk::Instance CreateVkInstanceWithExtensions(
-    const InstanceConfig& config, std::span<const char* const> user_exts
+Instance Vulkan::CreateInstanceFromTemplate(
+    PFN_vkGetInstanceProcAddr,
+    const VkInstanceCreateInfo* create_template
 ) {
-    auto layers = GetRequiredInstanceLayers();
-
-    auto req_exts = GetRequiredInstanceExtensions();
-    std::vector exts(req_exts.begin(), req_exts.end());
-    exts.insert(exts.end(), user_exts.begin(), user_exts.end());
-
-    return CreateVkInstance(config, layers, exts);
+    auto instance = std::make_unique<InstanceImpl>();
+    instance->instance.reset(CreateInstance(
+        create_template,
+        GetRequiredInstanceLayers(),
+        GetRequiredInstanceExtensions()));
+    instance->devices = EnumerateDevices(instance->instance.get());
+    // TODO: build a dispatch table
+    return instance.release();
 }
 
-Instance CreateInstanceFromVK(Vk::Instance handle) {
-    auto instance = std::make_unique<InstanceImpl>(InstanceImpl{
-        .instance = std::move(handle),
-    });
-    instance->devices = EnumerateDevices(instance->instance.get());
-    return instance.release();
+VkInstance Vulkan::GetVkInstance(Instance instance) {
+    return instance->instance.get();
+}
+
+VkPhysicalDevice Vulkan::GetVkPhysicalDevice(Device device) {
+    return device->physical_device;
 }
 
 void DestroyInstance(Instance instance) {

@@ -3,11 +3,14 @@
 #include "DeviceImpl.hpp"
 #include "GAL/Context.hpp"
 #include "VKUtil.hpp"
+#include "VulkanContext.inl"
 
 namespace R1::GAL {
 namespace {
-Vk::Device CreateDevice(
-    const ContextConfig& config, Device parent 
+VkDevice CreateDevice(
+    Device parent,
+    const ContextConfig& config,
+    const VkDeviceCreateInfo* create_template
 ) {
     const auto& dev_desc = parent->description.common;
 
@@ -25,12 +28,6 @@ Vk::Device CreateDevice(
     });
     auto queue_create_infos = vec_from_range(v);
 
-    std::vector<const char*> exts;
-    if (config.wsi) {
-        assert(dev_desc.wsi);
-        exts.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-    }
-
     VkPhysicalDeviceTimelineSemaphoreFeatures timeline_semaphore_features = {
         .sType = SType(timeline_semaphore_features),
         .timelineSemaphore = true,
@@ -43,6 +40,7 @@ Vk::Device CreateDevice(
         .dynamicRendering = true,
     };
     
+    // TODO: merge user features with required features
     VkDeviceCreateInfo create_info = {
         .sType = SType(create_info),
         .pNext = &vulkan13_features,
@@ -50,22 +48,26 @@ Vk::Device CreateDevice(
             static_cast<uint32_t>(queue_create_infos.size()),
         .pQueueCreateInfos = queue_create_infos.data(),
         .enabledExtensionCount =
-            static_cast<uint32_t>(exts.size()),
-        .ppEnabledExtensionNames = exts.data(),
+            create_template->enabledExtensionCount,
+        .ppEnabledExtensionNames =
+            create_template->ppEnabledExtensionNames,
     };
 
-    VkDevice dev = VK_NULL_HANDLE;
+    VkDevice dev;
     ThrowIfFailed(
         vkCreateDevice(parent->physical_device, &create_info, nullptr, &dev),
         "Vulkan: Failed to create context");
 
-    return Vk::Device{dev};
+    return dev;
 }
 
 void CreateContextDevice(
-    Context ctx, const ContextConfig& config, Device parent
+    Context ctx,
+    Device parent,
+    const ContextConfig& config,
+    const VkDeviceCreateInfo* create_template
 ) {
-    ctx->device = CreateDevice(config, parent);
+    ctx->device.reset(CreateDevice(parent, config, create_template));
     LoadVulkanDeviceDispatchTable(&ctx->vk, ctx->device.get());
 }
 
@@ -90,13 +92,21 @@ void CreateContextAllocator(Context ctx, Device parent) {
 }
 }
 
-Context CreateContext(Device parent, const ContextConfig& config) {
+Context Vulkan::CreateContextFromTemplate(
+    Device parent,
+    const ContextConfig& config,
+    const VkDeviceCreateInfo* create_template
+) {
     auto ctx = std::make_unique<ContextImpl>(ContextImpl{
         .adapter = parent->physical_device,
     });
-    CreateContextDevice(ctx.get(), config, parent);
+    CreateContextDevice(ctx.get(), parent, config, create_template);
     CreateContextAllocator(ctx.get(), parent);
     return ctx.release();
+}
+
+VkDevice Vulkan::GetVkDevice(Context ctx) {
+    return ctx->device.get();
 }
 
 void DestroyContext(Context ctx) {

@@ -1,6 +1,8 @@
-#include "CommandImpl.hpp"
+#include "CommandImpl.inl"
 #include "Common/Vector.hpp"
 #include "ContextImpl.hpp"
+
+#include <cstring>
 
 namespace R1::GAL {
 CommandPool CreateCommandPool(
@@ -55,7 +57,10 @@ void FreeCommandBuffers(
     Context ctx, CommandPool pool,
     std::span<CommandBuffer> cmd_buffers
 ) {
-    ctx->FreeCommandBuffers(pool, cmd_buffers.size(), cmd_buffers.data());
+    auto cnt = cmd_buffers.size();
+    if (cnt) {
+        ctx->FreeCommandBuffers(pool, cnt, cmd_buffers.data());
+    }
 }
 
 void ResetCommandBuffer(
@@ -190,5 +195,38 @@ void CmdDraw(
         config.instance_count,
         config.first_vertex,
         config.first_instance);
+}
+
+void CmdBlitImage(
+    Context ctx, CommandBuffer cmd_buffer, const ImageBlitConfig& config
+) {
+    static thread_local std::vector<VkImageBlit2> regions;
+
+    auto v = std::views::transform(config.regions,
+        [] (const BlitRegion& reg) {
+            VkImageBlit2 blit = {
+                .sType = SType(blit),
+                .srcSubresource = ImageSubresourceLayersToVK(reg.src_subresource),
+                .dstSubresource = ImageSubresourceLayersToVK(reg.dst_subresource),
+            };
+            std::memcpy(blit.srcOffsets, &reg.src_offsets, sizeof(blit.srcOffsets));
+            std::memcpy(blit.dstOffsets, &reg.dst_offsets, sizeof(blit.dstOffsets));
+            return blit;
+        });
+    regions.assign(v.begin(), v.end());
+
+    VkBlitImageInfo2 blit_info = {
+        .sType = SType(blit_info),
+        .srcImage = config.src_image->image,
+        .srcImageLayout =
+            static_cast<VkImageLayout>(config.src_layout),
+        .dstImage = config.dst_image->image,
+        .dstImageLayout = 
+            static_cast<VkImageLayout>(config.dst_layout),
+        .regionCount = regions.size(),
+        .pRegions = regions.data(),
+        .filter = static_cast<VkFilter>(config.filter),
+    };
+    ctx->CmdBlitImage2(cmd_buffer, &blit_info);
 }
 }

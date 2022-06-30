@@ -31,21 +31,8 @@ Semaphore CreateSemaphore(Context ctx, const SemaphoreConfig& config) {
         ctx, VK_SEMAPHORE_TYPE_TIMELINE, config.initial_value);
 }
 
-VkSemaphore CreateBinarySemaphore(Context ctx) {
+Semaphore Vulkan::CreateBinarySemaphore(Context ctx) {
     return CreateSemaphoreBase(ctx, VK_SEMAPHORE_TYPE_BINARY);
-}
-
-VkFence CreateFence(Context ctx, bool signaled = false) {
-    VkFenceCreateInfo create_info = {
-        .sType = SType(create_info),
-        .flags = signaled ? VK_FENCE_CREATE_SIGNALED_BIT: 0u,
-    };
-    VkFence fence;
-    ThrowIfFailed(
-        ctx->CreateFence(&create_info, &fence),
-        "Vulkan: Failed to create fence"
-    );
-    return fence;
 }
 
 void DestroySemaphore(Context ctx, Semaphore sem) {
@@ -110,5 +97,48 @@ void SignalSemaphore(Context ctx, const SemaphoreState& signal_state) {
     ThrowIfFailed(
         ctx->SignalSemaphore(&signal_info),
         "Vulkan: Failed to signal semaphore");
+}
+
+Vulkan::Fence Vulkan::CreateFence(Context ctx, bool signaled = false) {
+    VkFenceCreateInfo create_info = {
+        .sType = SType(create_info),
+        .flags = signaled ? VK_FENCE_CREATE_SIGNALED_BIT: 0u,
+    };
+    VkFence fence;
+    ThrowIfFailed(
+        ctx->CreateFence(&create_info, &fence),
+        "Vulkan: Failed to create fence"
+    );
+    return fence;
+}
+
+void Vulkan::DestroyFence(Context ctx, Fence fence) {
+    ctx->DestroyFence(fence);
+}
+
+Vulkan::FenceStatus Vulkan::WaitForFences(
+    Context ctx,
+    std::span<const Fence> fences,
+    bool all,
+    std::chrono::nanoseconds timeout
+) {
+    auto r = ctx->WaitForFences(
+        fences.size(), fences.data(), all, timeout.count());
+    using enum Vulkan::FenceStatus;
+    switch (r) {
+        case VK_SUCCESS:
+            return Ready;
+        case VK_TIMEOUT:
+            return NotReady;
+        default:
+            throw std::runtime_error{
+                "Vulkan: Failed to wait for fences"};
+    }
+}
+
+void Vulkan::ResetFences(Context ctx, std::span<const Fence> fences) {
+    ThrowIfFailed(
+        ctx->ResetFences(fences.size(), fences.data()),
+        "Vulkan: Failed to reset fences");
 }
 }

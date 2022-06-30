@@ -209,6 +209,10 @@ struct Rect2D {
     unsigned    width, height;
 };
 
+struct Offset3D {
+    int x, y, z;
+};
+
 struct RenderingAttachment {
     ImageView           view;
     ImageLayout         layout;
@@ -235,6 +239,29 @@ struct DrawConfig {
     unsigned vertex_count;
     unsigned first_instance;
     unsigned instance_count;
+};
+
+struct ImageSubresourceLayers {
+    GAL::ImageAspectFlags   aspects;
+    unsigned                mip_level;
+    unsigned                first_array_layer;
+    unsigned                array_layer_count;
+};
+
+struct BlitRegion {
+    ImageSubresourceLayers    src_subresource;
+    std::array<Offset3D, 2>   src_offsets;
+    ImageSubresourceLayers    dst_subresource;
+    std::array<Offset3D, 2>   dst_offsets;
+};
+
+struct ImageBlitConfig {
+    Image                       src_image;
+    ImageLayout                 src_layout;
+    Image                       dst_image;
+    ImageLayout                 dst_layout;
+    std::span<const BlitRegion> regions;
+    Filter                      filter; 
 };
 
 CommandPool CreateCommandPool(Context ctx, const CommandPoolConfig& config);
@@ -285,5 +312,9 @@ void CmdBindGraphicsPipeline(
 
 void CmdDraw(
     Context ctx, CommandBuffer cmd_buffer, const DrawConfig& config
+);
+
+void CmdBlitImage(
+    Context ctx, CommandBuffer cmd_buffer, const ImageBlitConfig& config
 );
 }

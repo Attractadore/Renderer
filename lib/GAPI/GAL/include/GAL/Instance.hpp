@@ -49,17 +49,6 @@ struct DeviceDescription {
     bool                        wsi: 1;
 };
 
-struct InstanceDescription {
-    bool wsi: 1;
-    bool xlib: 1;
-    bool xcb: 1;
-    bool wayland: 1;
-    bool win32: 1;
-};
-
-struct InstanceConfig {};
-
-InstanceDescription GetInstanceDescription();
 void DestroyInstance(Instance instance);
 
 size_t GetDeviceCount(Instance instance);

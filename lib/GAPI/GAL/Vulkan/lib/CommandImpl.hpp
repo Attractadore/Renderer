@@ -21,6 +21,8 @@ constexpr VkRenderingAttachmentInfo RenderingAttachmentToVK(
 
 constexpr VkViewport ViewportToVK(const Viewport& viewport);
 constexpr VkRect2D Rect2DToVK(const Rect2D& rect);
-}
 
-#include "CommandImpl.inl"
+constexpr VkImageSubresourceLayers ImageSubresourceLayersToVK(
+    const ImageSubresourceLayers& layers
+);
+}

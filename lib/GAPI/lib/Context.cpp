@@ -1,18 +1,18 @@
-#include "Context.hpp"
+#include "ContextImpl.hpp"
 
 namespace R1::GAPI {
-namespace {
-GAL::Context CreateContext(Device& device) {
+ContextConfig ConfigureContext(Device& device) {
+    ContextConfig cfg;
+
     auto graphics_queue = device.FindGraphicsQueueFamily();
     auto compute_queue = device.FindComputeQueueFamily();
     auto transfer_queue = device.FindTransferQueueFamily();
 
     using GAL::QueueFamily::ID::Unknown;
 
-    unsigned config_cnt = 0;
-    std::array<GAL::QueueConfig, 3> queue_configs;
+    auto& queue_configs = cfg.queue_configs;
     auto push_config = [&] (const GAL::QueueConfig& cfg) {
-        queue_configs[config_cnt++] = cfg;
+        queue_configs.push_back(cfg);
     };
     auto push_config_if_found = [&] (const GAL::QueueConfig& cfg) {
         if (cfg.id != Unknown) {
@@ -37,25 +37,16 @@ GAL::Context CreateContext(Device& device) {
         .count = 1,
     });
 
-    // TODO: Should be optional, but currently
-    // there is no support for headless rendering
-    if (!device.GetDescription().wsi) {
-        throw std::runtime_error{
-            "Device doesn't support presentation"};
-    }
-
-    GAL::ContextConfig config {
-        .queue_config = std::span{queue_configs.data(), config_cnt},
-        .wsi = true,
+    cfg.config = {
+        .queue_config = queue_configs,
     };
-
-    return GAL::CreateContext(device.get(), config);
+    
+    return cfg;
 }
-}
 
-Context::Context(Device& device):
+Context::Context(Device& device, HContext ctx):
     m_device{device},
-    m_context{CreateContext(device)}
+    m_context{std::move(ctx)}
 {
     using GAL::QueueFamily::ID::Unknown;
     m_graphics_queue_family = device.FindGraphicsQueueFamily();

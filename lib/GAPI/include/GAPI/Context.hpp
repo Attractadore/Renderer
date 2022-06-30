@@ -16,10 +16,10 @@ class Context {
     GAL::Queue              m_transfer_queue;
 
 public:
-    Context(Device& device);
+    Context(Device& device, HContext ctx);
 
     Device& GetDevice() noexcept { return m_device; }
-    GAL::Context get() noexcept { return m_context.get(); }
+    GAL::Context get() const noexcept { return m_context.get(); }
 
     GAL::QueueFamily::ID GetGraphicsQueueFamily() noexcept { return m_graphics_queue_family; }
     GAL::QueueFamily::ID GetComputeQueueFamily() noexcept { return m_compute_queue_family; }

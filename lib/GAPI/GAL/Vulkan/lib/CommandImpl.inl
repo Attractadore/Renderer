@@ -1,4 +1,5 @@
 #pragma once
+#include "CommandImpl.hpp"
 #include "ImageImpl.hpp"
 #include "VKUtil.hpp"
 
@@ -117,6 +118,18 @@ inline constexpr VkRect2D Rect2DToVK(const Rect2D& rect) {
             .width = rect.width,
             .height = rect.height,
         },
+    };
+}
+
+inline constexpr VkImageSubresourceLayers ImageSubresourceLayersToVK(
+    const ImageSubresourceLayers& layers
+) {
+    return {
+        .aspectMask =
+            static_cast<VkImageAspectFlags>(layers.aspects.Extract()),
+        .mipLevel = layers.mip_level,
+        .baseArrayLayer = layers.first_array_layer,
+        .layerCount = layers.array_layer_count,
     };
 }
 }

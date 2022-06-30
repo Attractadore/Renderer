@@ -62,7 +62,16 @@ enum class ImageComponentSwizzle {
     A           = VK_COMPONENT_SWIZZLE_A,
 };
 
+enum class Filter {
+    Nearest = VK_FILTER_NEAREST,
+    Linear  = VK_FILTER_LINEAR,
+};
+
 struct ImageImpl;
 using Image = ImageImpl*;
 using ImageView = VkImageView;
+
+namespace Vulkan {
+VkImage GetVkImage(Image image);
+}
 }
