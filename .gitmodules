@@ -1,3 +1,6 @@
 [submodule "lib/Vulkan/external/VulkanMemoryAllocator"]
 	path = lib/GAPI/GAL/Vulkan/external/VulkanMemoryAllocator
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
+[submodule "external/SlotMap"]
+	path = external/SlotMap
+	url = https://github.com/Attractadore/SlotMap
