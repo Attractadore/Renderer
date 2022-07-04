@@ -61,8 +61,10 @@ template<> inline constexpr auto Detail::DoRootDeleteF<GAL::Context>    = GAL::D
 using HInstance = Detail::RootHandle<GAL::Instance>;
 using HContext  = Detail::RootHandle<GAL::Context>;
 
+template<> inline constexpr auto GAPI::Detail::DoContextDeleteF<GAL::Buffer>        = GAL::DestroyBuffer;
 template<> inline constexpr auto GAPI::Detail::DoContextDeleteF<GAL::Semaphore>     = GAL::DestroySemaphore;
 template<> inline constexpr auto GAPI::Detail::DoContextDeleteF<GAL::CommandPool>   = GAL::DestroyCommandPool;
+using HBuffer       = Detail::ContextHandle<GAL::Buffer>;
 using HSemaphore    = Detail::ContextHandle<GAL::Semaphore>;
 using HCommandPool  = Detail::ContextHandle<GAL::CommandPool>;
 }

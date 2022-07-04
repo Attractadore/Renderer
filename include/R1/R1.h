@@ -23,6 +23,17 @@ void            R1_DestroyScene(R1Scene* scene);
 size_t          R1_GetSceneOutputImageCount(R1Scene* scene);
 void            R1_DrawSceneToSwapchain(R1Scene* scene, R1Swapchain* swapchain);
 
+typedef struct {
+    const float*    vertices;
+    unsigned        vertex_count;
+} R1MeshConfig;
+
+R1Mesh  R1_CreateMesh(R1Scene* scene, const R1MeshConfig* config);
+void    R1_DestroyMesh(R1Scene* scene, R1Mesh mesh);
+
+R1MeshInstance  R1_CreateMeshInstance(R1Scene* scene, R1Mesh mesh);
+void            R1_DestroyMeshInstance(R1Scene* scene, R1MeshInstance mesh_instance);
+
 #ifdef __cplusplus
 }
 #endif

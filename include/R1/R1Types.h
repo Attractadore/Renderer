@@ -3,11 +3,13 @@
 extern "C" {
 #endif
 
-typedef struct R1Instance   R1Instance;
-typedef struct R1Device     R1Device;
-typedef struct R1Context    R1Context;
-typedef struct R1Scene      R1Scene;
-typedef struct R1Swapchain  R1Swapchain;
+typedef struct R1Instance           R1Instance;
+typedef struct R1Device             R1Device;
+typedef struct R1Context            R1Context;
+typedef struct R1Scene              R1Scene;
+typedef struct R1Swapchain          R1Swapchain;
+typedef struct R1MeshImpl*          R1Mesh;
+typedef struct R1MeshInstanceImpl*  R1MeshInstance;
 
 typedef void (*R1SurfaceSizeCallback)(void* usrptr, int* width, int* height);
 

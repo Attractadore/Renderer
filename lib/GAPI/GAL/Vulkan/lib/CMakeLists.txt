@@ -13,6 +13,7 @@ target_link_libraries(VKUtil
                 VulkanMemoryAllocator)
 
 add_library(GAL_Vulkan
+    BufferImpl.hpp
     CommandImpl.hpp
     ContextImpl.hpp
     DeviceImpl.hpp
@@ -25,6 +26,7 @@ add_library(GAL_Vulkan
     DeviceImpl.inl
     ImageImpl.inl
 
+    Buffer.cpp
     Command.cpp
     Context.cpp
     Image.cpp

@@ -317,4 +317,20 @@ void CmdDraw(
 void CmdBlitImage(
     Context ctx, CommandBuffer cmd_buffer, const ImageBlitConfig& config
 );
+
+struct BufferCopyRegion {
+    size_t src_offset;
+    size_t dst_offset;
+    size_t size;
+};
+
+struct BufferCopyConfig {
+    Buffer                              src;
+    Buffer                              dst;
+    std::span<const BufferCopyRegion>   regions;
+};
+
+void CmdCopyBuffer(
+    Context ctx, CommandBuffer cmd_buffer, const BufferCopyConfig& config
+);
 }

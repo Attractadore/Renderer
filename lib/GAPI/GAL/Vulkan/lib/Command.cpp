@@ -1,3 +1,4 @@
+#include "BufferImpl.hpp"
 #include "CommandImpl.inl"
 #include "Common/Vector.hpp"
 #include "ContextImpl.hpp"
@@ -221,12 +222,42 @@ void CmdBlitImage(
         .srcImageLayout =
             static_cast<VkImageLayout>(config.src_layout),
         .dstImage = config.dst_image->image,
-        .dstImageLayout = 
+        .dstImageLayout =
             static_cast<VkImageLayout>(config.dst_layout),
-        .regionCount = regions.size(),
+        .regionCount =
+            static_cast<uint32_t>(regions.size()),
         .pRegions = regions.data(),
         .filter = static_cast<VkFilter>(config.filter),
     };
     ctx->CmdBlitImage2(cmd_buffer, &blit_info);
+}
+
+void CmdCopyBuffer(
+    Context ctx, CommandBuffer cmd_buffer, const BufferCopyConfig& config
+) {
+    static thread_local std::vector<VkBufferCopy2> regions;
+    regions.resize(config.regions.size());
+    std::transform(
+        config.regions.begin(), config.regions.end(),
+        regions.begin(),
+        [] (const BufferCopyRegion& region) {
+            VkBufferCopy2 copy = {
+                .sType = SType(copy),
+                .srcOffset = region.src_offset,
+                .dstOffset = region.dst_offset,
+                .size = region.size,
+            };
+            return copy;
+        });
+
+    VkCopyBufferInfo2 copy_info = {
+        .sType = SType(copy_info),
+        .srcBuffer = config.src->buffer,
+        .dstBuffer = config.dst->buffer,
+        .regionCount =
+            static_cast<uint32_t>(regions.size()),
+        .pRegions = regions.data(),
+    };
+    ctx->CmdCopyBuffer2(cmd_buffer, &copy_info);
 }
 }

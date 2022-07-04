@@ -4,6 +4,8 @@
 #include <filesystem>
 #include <fstream>
 
+#include <boost/container/static_vector.hpp>
+
 using namespace R1;
 
 namespace R1 {
@@ -245,6 +247,20 @@ Scene::R1Scene(Context& ctx):
         pimpl->ctx, pimpl->queue_family
     );
     pimpl->semaphore = GAL::CreateSemaphore(pimpl->ctx, {.initial_value = pimpl->last_semaphore_value});
+    m_upload_semaphore = GAPI::HSemaphore{pimpl->ctx,
+        GAL::CreateSemaphore(pimpl->ctx,
+            {.initial_value = m_last_upload_time})};
+    m_upload_command_pool = GAPI::HCommandPool{pimpl->ctx,
+        GAL::CreateCommandPool(pimpl->ctx, {
+            .flags = GAL::CommandPoolConfigOption::Transient,
+            .queue_family = pimpl->queue_family,
+        })};
+}
+
+Scene::~R1Scene() {
+    GAL::ContextWaitIdle(pimpl->ctx);
+    FlushUploadQueue();
+    FlushDeleteQueue();
 }
 
 void Scene::ConfigOutputImages(
@@ -317,6 +333,36 @@ ScenePresentInfo Scene::Draw() {
     auto ctx = pimpl->ctx;
     auto idx = pimpl->frame_index;
     auto sem = pimpl->semaphore;
+
+    using boost::container::static_vector;
+
+    static_vector<GAL::SemaphoreSubmitConfig, 1> upload_signal_submits;
+    static_vector<GAL::CommandBuffer, 1> upload_cmd_submits;
+    static_vector<GAL::SemaphoreSubmitConfig, 2> draw_wait_submits;
+    static_vector<GAL::SemaphoreSubmitConfig, 1> draw_signal_submits;
+    static_vector<GAL::CommandBuffer, 1> draw_cmd_submits;
+    static_vector<GAL::QueueSubmitConfig, 2> submits;
+
+    if (not m_mesh_staging_infos.empty()) {
+        PushUploadQueue();
+        upload_signal_submits.emplace_back() = {
+            .state = {
+                .semaphore = m_upload_semaphore.get(),
+                .value = m_last_upload_time,
+            },
+            .stages = GAL::PipelineStage::Copy,
+        };
+        upload_cmd_submits.emplace_back() =
+            m_upload_queue.back().cmd_buffer;
+        submits.emplace_back() = {
+            .signal_semaphores = upload_signal_submits,
+            .command_buffers = upload_cmd_submits,
+        };
+    }
+    FlushUploadQueue();
+
+    PushDeleteQueue();
+    FlushDeleteQueue();
 
     {
         GAL::SemaphoreState wait_state = {
@@ -404,28 +450,38 @@ ScenePresentInfo Scene::Draw() {
 
     {
         pimpl->draw_timepoint.new_value = ++pimpl->last_semaphore_value;
-        GAL::SemaphoreSubmitConfig wait_config = {
+        draw_wait_submits.emplace_back() = {
             .state = {
                 .semaphore = sem,
                 .value = pimpl->external_timepoint.oldest_value,
             },
             .stages = GAL::PipelineStage::ColorAttachmentOutput,
         };
-        GAL::SemaphoreSubmitConfig signal_config = {
+        if (not upload_cmd_submits.empty()) {
+            draw_wait_submits.emplace_back() = {
+                .state = {
+                    .semaphore = m_upload_semaphore.get(),
+                    .value = m_last_upload_time,
+                },
+                .stages = GAL::PipelineStage::VertexAttributeInput,
+            };
+        }
+        draw_signal_submits.emplace_back() = {
             .state = {
                 .semaphore = sem,
                 .value = pimpl->draw_timepoint.new_value,
             },
             .stages = GAL::PipelineStage::ColorAttachmentOutput,
         };
-        GAL::QueueSubmitConfig submit_config = {
-            .wait_semaphores{&wait_config, 1},
-            .signal_semaphores{&signal_config, 1},
-            .command_buffers{&cmd_buffer, 1},
+        draw_cmd_submits.emplace_back(cmd_buffer);
+        submits.emplace_back() = {
+            .wait_semaphores = draw_wait_submits,
+            .signal_semaphores = draw_signal_submits,
+            .command_buffers = draw_cmd_submits,
         };
-        GAL::QueueSubmit(ctx, pimpl->queue, {&submit_config, 1});
         pimpl->external_timepoint.new_value = ++pimpl->last_semaphore_value;
     }
+    GAL::QueueSubmit(ctx, pimpl->queue, submits);
 
     pimpl->frame_index = (idx + 1) % pimpl->images.size();
     pimpl->draw_timepoint.oldest_value += pimpl->signal_cnt;
@@ -438,4 +494,138 @@ ScenePresentInfo Scene::Draw() {
     };
 }
 
-Scene::~R1Scene() = default;
+MeshID Scene::CreateMesh(const MeshConfig& config) {
+    auto ctx = pimpl->ctx;
+    auto ptr =
+        reinterpret_cast<const std::byte*>(config.vertices.data());
+    auto sz = config.vertices.size_bytes();
+    unsigned vert_cnt = config.vertices.size() / 3;
+
+    m_staging_storage.insert(m_staging_storage.end(), ptr, ptr + sz);
+
+    auto&& [key, mesh] = m_meshes.emplace();
+    mesh = {
+        .vertex_count = vert_cnt,
+    };
+    m_mesh_staging_infos.emplace_back() = {
+        .key = key,
+        .vertex_count = vert_cnt,
+    };
+
+    auto id = std::bit_cast<MeshID>(key);
+
+    return id;
+}
+
+void Scene::DestroyMesh(MeshID mesh) {
+    m_mesh_delete_infos.push_back(mesh);
+}
+
+void Scene::PushUploadQueue() {
+    auto ctx = pimpl->ctx;
+    auto upload_time = ++m_last_upload_time;
+
+    auto staging_buffer_sz = m_staging_storage.size();
+
+    auto staging_buffer = GAL::CreateBuffer(ctx, {
+        .size = staging_buffer_sz,
+        .usage = GAL::BufferUsage::TransferSRC,
+        .memory_usage = GAL::BufferMemoryUsage::Staging,
+    });
+    auto mapped_data =
+         reinterpret_cast<std::byte*>(GAL::GetBufferPointer(ctx, staging_buffer));
+    std::ranges::copy(m_staging_storage, mapped_data);
+    m_staging_storage.clear();
+    GAL::FlushBufferRange(ctx, staging_buffer, 0, staging_buffer_sz);
+
+    GAL::CommandBuffer cmd_buffer;
+    GAL::AllocateCommandBuffers(ctx, m_upload_command_pool.get(), {&cmd_buffer, 1});
+
+    GAL::BeginCommandBuffer(ctx, cmd_buffer,
+        {.usage = GAL::CommandBufferUsage::OneTimeSubmit});
+
+    size_t offset = 0;
+    for (const auto& config: m_mesh_staging_infos) {
+        auto size = config.vertex_count * sizeof(float[3]);
+        auto buffer = GAL::CreateBuffer(ctx, {
+            .size = size,
+            .usage =
+                GAL::BufferUsage::TransferDST |
+                GAL::BufferUsage::Vertex,
+            .memory_usage = GAL::BufferMemoryUsage::Device,
+        });
+
+        GAL::BufferCopyRegion region = {
+            .src_offset = offset,
+            .size = size,
+        };
+
+        GAL::CmdCopyBuffer(ctx, cmd_buffer, {
+            .src = staging_buffer,
+            .dst = buffer,
+            .regions = {&region, 1},
+        });
+
+        auto& mesh = m_meshes[config.key];
+        mesh.buffer = buffer;
+        mesh.upload_time = upload_time;
+
+        offset += size;
+    }
+    m_mesh_staging_infos.clear();
+
+    GAL::EndCommandBuffer(ctx, cmd_buffer);
+
+    m_upload_queue.emplace() = {
+        .staging_buffer = staging_buffer,
+        .cmd_buffer = cmd_buffer,
+        .upload_time = upload_time,
+    };
+}
+
+void Scene::FlushUploadQueue() {
+    auto ctx = pimpl->ctx;
+    auto last_uploaded =
+        GAL::GetSemaphorePayloadValue(ctx, m_upload_semaphore.get());
+    while(not m_upload_queue.empty()) {
+        auto& u = m_upload_queue.front();
+        if (u.upload_time > last_uploaded) {
+            break;
+        }
+        GAL::DestroyBuffer(ctx, u.staging_buffer);
+        GAL::FreeCommandBuffers(
+            ctx, m_upload_command_pool.get(), {&u.cmd_buffer, 1});
+        m_upload_queue.pop();
+    }
+}
+
+void Scene::PushDeleteQueue() {
+    for (auto mesh: m_mesh_delete_infos) {
+        auto key = std::bit_cast<MeshKey>(mesh);
+        auto it = m_meshes.find(key);
+        m_delete_queue.emplace() = {
+            .buffer = it->buffer,
+            .upload_time = it->upload_time,
+            .last_used = pimpl->draw_timepoint.new_value,
+        };
+        // TODO: add pop() to SlotMap
+        m_meshes.erase(it);
+    }
+    m_mesh_delete_infos.clear();
+}
+
+void Scene::FlushDeleteQueue() {
+    auto ctx = pimpl->ctx;
+    auto last_uploaded =
+        GAL::GetSemaphorePayloadValue(ctx, m_upload_semaphore.get());
+    auto last_drawn =
+        GAL::GetSemaphorePayloadValue(ctx, pimpl->semaphore);
+    while (not m_delete_queue.empty()) {
+        auto& d = m_delete_queue.front();
+        if (d.last_used > last_drawn or d.upload_time > last_uploaded) {
+            break;
+        }
+        GAL::DestroyBuffer(ctx, d.buffer);
+        m_delete_queue.pop();
+    }
+}
