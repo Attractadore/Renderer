@@ -1,14 +1,21 @@
 #pragma once
-#include <type_traits>
+#include <concepts>
 
 namespace R1 {
 namespace Detail {
+template<typename E>
+concept ScopedEnum = not std::convertible_to<E, std::underlying_type_t<E>>;
+
+enum class TestEnumClass {};
+static_assert(ScopedEnum<TestEnumClass>);
+enum TestEnum {};
+static_assert(not ScopedEnum<TestEnum>);
+
 struct EmptyFlagsT {};
 }
 inline constexpr Detail::EmptyFlagsT EmptyFlags;
 
-template<typename E>
-    requires std::is_enum_v<E>
+template<Detail::ScopedEnum E>
 class Flags {
     E value = E(0);
 
@@ -44,7 +51,7 @@ public:
             static_cast<U>(value) | static_cast<U>(r.value)
         );
     }
-    
+
     constexpr Flags<E>& operator|=(Flags<E> r) noexcept {
         return *this = *this | r;
     }
@@ -76,7 +83,7 @@ public:
     constexpr bool operator==(const Flags<E>&) const noexcept = default;
 };
 
-template<typename E>
+template<Detail::ScopedEnum E>
 constexpr E operator&(E l, E r) {
     using U = std::underlying_type_t<E>;
     return static_cast<E>(
@@ -84,12 +91,12 @@ constexpr E operator&(E l, E r) {
     );
 }
 
-template<typename E>
+template<Detail::ScopedEnum E>
 constexpr E operator&(E l, Flags<E> r) {
     return r & l;
 }
 
-template<typename E>
+template<Detail::ScopedEnum E>
 constexpr Flags<E> operator|(E l, E r) {
     using U = std::underlying_type_t<E>;
     return static_cast<E>(
@@ -97,7 +104,7 @@ constexpr Flags<E> operator|(E l, E r) {
     );
 }
 
-template<typename E>
+template<Detail::ScopedEnum E>
 constexpr Flags<E> operator|(E l, Flags<E> r) {
     return r | l;
 }
