@@ -602,13 +602,12 @@ void Scene::FlushUploadQueue() {
 void Scene::PushDeleteQueue() {
     for (auto mesh: m_mesh_delete_infos) {
         auto key = std::bit_cast<MeshKey>(mesh);
-        auto it = m_meshes.find(key);
+        auto it = m_meshes.access(key);
         m_delete_queue.emplace() = {
             .buffer = it->buffer,
             .upload_time = it->upload_time,
             .last_used = pimpl->draw_timepoint.new_value,
         };
-        // TODO: add pop() to SlotMap
         m_meshes.erase(it);
     }
     m_mesh_delete_infos.clear();
