@@ -10,8 +10,7 @@ namespace R1 {
 GAL::DescriptorSetLayout GAL::CreateDescriptorSetLayout(
     Context ctx, const DescriptorSetLayoutConfig& config
 ) {
-    DefaultSmallVector<VkDescriptorSetLayoutBinding> bindings;
-    bindings.resize(config.bindings.size());
+    DefaultSmallVector<VkDescriptorSetLayoutBinding> bindings(config.bindings.size());
     std::ranges::transform(config.bindings, bindings.begin(),
         [] (const DescriptorSetLayoutBinding& binding) {
             return VkDescriptorSetLayoutBinding {
@@ -41,8 +40,7 @@ void GAL::DestroyDescriptorSetLayout(Context ctx, DescriptorSetLayout layout) {
 GAL::DescriptorPool GAL::CreateDescriptorPool(
     Context ctx, const DescriptorPoolConfig& config
 ) {
-    DefaultSmallVector<VkDescriptorPoolSize> pool_sizes;
-    pool_sizes.resize(config.pool_sizes.size());
+    DefaultSmallVector<VkDescriptorPoolSize> pool_sizes(config.pool_sizes.size());
     std::ranges::transform(config.pool_sizes, pool_sizes.begin(),
         [] (const DescriptorPoolSize& pool_size) {
             return VkDescriptorPoolSize {
@@ -112,8 +110,8 @@ void GAL::UpdateDescriptorSets(
     std::span<const DescriptorSetCopyConfig> copy_configs
 ) {
     DefaultSmallVector<VkDescriptorBufferInfo> buffer_infos;
-    DefaultSmallVector<VkWriteDescriptorSet> writes;
-    DefaultSmallVector<VkCopyDescriptorSet> copies;
+    DefaultSmallVector<VkWriteDescriptorSet> writes(write_configs.size());
+    DefaultSmallVector<VkCopyDescriptorSet> copies(copy_configs.size());
 
     buffer_infos.reserve(
         ranges::accumulate(write_configs, 0, std::plus{},
@@ -122,7 +120,6 @@ void GAL::UpdateDescriptorSets(
         })
     );
 
-    writes.resize(write_configs.size());
     std::ranges::transform(write_configs, writes.begin(),
         [&buffer_infos] (const DescriptorSetWriteConfig& config) {
             auto old_data = buffer_infos.data();
@@ -148,7 +145,6 @@ void GAL::UpdateDescriptorSets(
             return write;
         });
 
-    copies.resize(copy_configs.size());
     std::ranges::transform(copy_configs, copies.begin(),
         [] (const DescriptorSetCopyConfig& config) {
             VkCopyDescriptorSet copy = {

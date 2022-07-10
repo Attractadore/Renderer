@@ -2,6 +2,8 @@
 #include "GAL/Sync.hpp"
 #include "VKUtil.hpp"
 
+#include <algorithm>
+
 namespace R1::GAL {
 namespace {
 VkSemaphore CreateSemaphoreBase(
@@ -51,20 +53,17 @@ SemaphoreStatus WaitForSemaphores(
     Context ctx, std::span<const SemaphoreState> wait_states,
     bool for_all, std::chrono::nanoseconds timeout
 ) {
-    static thread_local std::vector<VkSemaphore> wait_semaphores;
-    static thread_local std::vector<uint64_t> wait_values;
+    DefaultSmallVector<VkSemaphore> wait_semaphores(wait_states.size());
+    DefaultSmallVector<uint64_t> wait_values(wait_states.size());
 
-    auto sv = ranges::views::transform(wait_states,
+    std::ranges::transform(wait_states, wait_semaphores.begin(),
         [] (const SemaphoreState& state) {
             return state.semaphore;
         });
-    auto vv = ranges::views::transform(wait_states,
+    std::ranges::transform(wait_states, wait_values.begin(),
         [] (const SemaphoreState& state) {
             return state.value;
         });
-
-    wait_semaphores.assign(sv.begin(), sv.end());
-    wait_values.assign(vv.begin(), vv.end());
 
     VkSemaphoreWaitInfo wait_info = {
         .sType = SType(wait_info),

@@ -190,7 +190,7 @@ struct ImageBlitConfig {
     Image                       dst_image;
     ImageLayout                 dst_layout;
     std::span<const BlitRegion> regions;
-    Filter                      filter; 
+    Filter                      filter;
 };
 
 CommandPool CreateCommandPool(Context ctx, const CommandPoolConfig& config);

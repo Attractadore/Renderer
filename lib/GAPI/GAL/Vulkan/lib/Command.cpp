@@ -3,6 +3,7 @@
 #include "Common/Vector.hpp"
 #include "ContextImpl.hpp"
 
+#include <algorithm>
 #include <cstring>
 
 namespace R1::GAL {
@@ -96,21 +97,21 @@ void EndCommandBuffer(Context ctx, CommandBuffer cmd_buffer) {
 }
 
 void CmdPipelineBarrier(
-    Context ctx,
-    CommandBuffer cmd_buffer, const DependencyConfig& config
+    Context ctx, CommandBuffer cmd_buffer,
+    const DependencyConfig& config
 ) {
-    static thread_local std::vector<VkMemoryBarrier2> memory_barriers;
-    static thread_local std::vector<VkBufferMemoryBarrier2> buffer_barriers;
-    static thread_local std::vector<VkImageMemoryBarrier2> image_barriers;
-    auto mv = ranges::views::transform(
-            config.memory_barriers, MemoryBarrierToVK);
-    auto bv = ranges::views::transform(
-            config.buffer_barriers, BufferBarrierToVK);
-    auto iv = ranges::views::transform(
-            config.image_barriers, ImageBarrierToVK);
-    memory_barriers.assign(mv.begin(), mv.end());
-    buffer_barriers.assign(bv.begin(), bv.end());
-    image_barriers.assign(iv.begin(), iv.end());
+    DefaultSmallVector<VkMemoryBarrier2>
+        memory_barriers(config.memory_barriers.size());
+    DefaultSmallVector<VkBufferMemoryBarrier2>
+        buffer_barriers(config.buffer_barriers.size());
+    DefaultSmallVector<VkImageMemoryBarrier2>
+        image_barriers(config.image_barriers.size());
+    std::ranges::transform(config.memory_barriers,
+        memory_barriers.begin(), MemoryBarrierToVK);
+    std::ranges::transform(config.buffer_barriers,
+        buffer_barriers.begin(), BufferBarrierToVK);
+    std::ranges::transform(config.image_barriers,
+        image_barriers.begin(), ImageBarrierToVK);
     VkDependencyInfo dep_info = {
         .sType = SType(dep_info),
         .dependencyFlags =
@@ -129,14 +130,13 @@ void CmdPipelineBarrier(
 }
 
 void CmdBeginRendering(
-    Context ctx,
-    CommandBuffer cmd_buffer, const RenderingConfig& config
+    Context ctx, CommandBuffer cmd_buffer,
+    const RenderingConfig& config
 ) {
-    static thread_local std::vector<VkRenderingAttachmentInfo>
-        color_attachments;
-    auto cv = ranges::views::transform(
-        config.color_attachments, RenderingAttachmentToVK);
-    color_attachments.assign(cv.begin(), cv.end());
+    DefaultSmallVector<VkRenderingAttachmentInfo>
+        color_attachments(config.color_attachments.size());
+    std::ranges::transform(config.color_attachments,
+        color_attachments.begin(), RenderingAttachmentToVK);
     auto depth_attachment =
         RenderingAttachmentToVK(config.depth_attachment);
     auto stencil_attachment =
@@ -163,9 +163,8 @@ void CmdSetViewports(
     Context ctx,
     CommandBuffer cmd_buffer, std::span<const Viewport> viewports
 ) {
-    static thread_local std::vector<VkViewport> vk_viewports;
-    auto v = ranges::views::transform(viewports, ViewportToVK);
-    vk_viewports.assign(v.begin(), v.end());
+    DefaultSmallVector<VkViewport> vk_viewports(viewports.size());
+    std::ranges::transform(viewports, vk_viewports.begin(), ViewportToVK);
     ctx->CmdSetViewportWithCount(
         cmd_buffer, vk_viewports.size(), vk_viewports.data());
 }
@@ -174,9 +173,8 @@ void CmdSetScissors(
     Context ctx,
     CommandBuffer cmd_buffer, std::span<const Rect2D> scissors
 ) {
-    static thread_local std::vector<VkRect2D> vk_rects;
-    auto v = ranges::views::transform(scissors, Rect2DToVK);
-    vk_rects.assign(v.begin(), v.end());
+    DefaultSmallVector<VkRect2D> vk_rects(scissors.size());
+    std::ranges::transform(scissors, vk_rects.begin(), Rect2DToVK);
     ctx->CmdSetScissorWithCount(
         cmd_buffer, vk_rects.size(), vk_rects.data());
 }
@@ -201,21 +199,21 @@ void CmdDraw(
 void CmdBlitImage(
     Context ctx, CommandBuffer cmd_buffer, const ImageBlitConfig& config
 ) {
-    static thread_local std::vector<VkImageBlit2> regions;
-
-    auto v = ranges::views::transform(config.regions,
+    DefaultSmallVector<VkImageBlit2> regions(config.regions.size());
+    std::ranges::transform(config.regions, regions.begin(),
         [] (const BlitRegion& reg) {
             VkImageBlit2 blit = {
                 .sType = SType(blit),
                 .srcSubresource = ImageSubresourceLayersToVK(reg.src_subresource),
                 .dstSubresource = ImageSubresourceLayersToVK(reg.dst_subresource),
             };
-            std::memcpy(blit.srcOffsets, &reg.src_offsets, sizeof(blit.srcOffsets));
-            std::memcpy(blit.dstOffsets, &reg.dst_offsets, sizeof(blit.dstOffsets));
+            auto offset_transform = [] (const Offset3D& offset) {
+                return VkOffset3D { offset.x, offset.y, offset.z };
+            };
+            std::ranges::transform(reg.src_offsets, blit.srcOffsets, offset_transform);
+            std::ranges::transform(reg.dst_offsets, blit.dstOffsets, offset_transform);
             return blit;
         });
-    regions.assign(v.begin(), v.end());
-
     VkBlitImageInfo2 blit_info = {
         .sType = SType(blit_info),
         .srcImage = config.src_image->image,
@@ -235,11 +233,8 @@ void CmdBlitImage(
 void CmdCopyBuffer(
     Context ctx, CommandBuffer cmd_buffer, const BufferCopyConfig& config
 ) {
-    static thread_local std::vector<VkBufferCopy2> regions;
-    regions.resize(config.regions.size());
-    std::ranges::transform(
-        config.regions,
-        regions.begin(),
+    DefaultSmallVector<VkBufferCopy2> regions(config.regions.size());
+    std::ranges::transform(config.regions, regions.begin(),
         [] (const BufferCopyRegion& region) {
             VkBufferCopy2 copy = {
                 .sType = SType(copy),
@@ -249,7 +244,6 @@ void CmdCopyBuffer(
             };
             return copy;
         });
-
     VkCopyBufferInfo2 copy_info = {
         .sType = SType(copy_info),
         .srcBuffer = config.src->buffer,
@@ -262,8 +256,7 @@ void CmdCopyBuffer(
 }
 
 void CmdBindVertexBuffers(Context ctx, CommandBuffer cmd_buffer, const VertexBufferBindConfig& config) {
-    static thread_local std::vector<VkBuffer> buffers;
-    buffers.resize(config.buffers.size());
+    DefaultSmallVector<VkBuffer> buffers(config.buffers.size());
     std::ranges::transform(config.buffers, buffers.begin(),
         [] (GAL::Buffer buffer) {
             return buffer->buffer;
