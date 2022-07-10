@@ -3,7 +3,7 @@ project(GAL)
 add_library(GAL_Common INTERFACE)
 target_include_directories(GAL_Common
     INTERFACE include)
-target_compile_definitions(GAL_Common
+target_compile_features(GAL_Common
     INTERFACE cxx_std_20)
 target_link_libraries(GAL_Common
     INTERFACE Common)

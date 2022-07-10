@@ -5,6 +5,7 @@
 
 #include "Common/Flags.hpp"
 #include "Context.hpp"
+#include "Descriptors.hpp"
 
 namespace R1::GAL {
 namespace Detail {
@@ -152,8 +153,6 @@ static_assert(IsBlendOp<BlendOp>);
 }
 
 using ColorComponentFlags = Flags<ColorComponent>;
-
-struct PipelineLayoutConfig {};
 
 struct ShaderModuleConfig {
     std::span<const std::byte> code;
@@ -335,6 +334,10 @@ struct GraphicsPipelineConfigurator: private Detail::GraphicsPipelineConfigurato
 
 ShaderModule CreateShaderModule(Context ctx, const ShaderModuleConfig& config);
 void DestroyShaderModule(Context ctx, ShaderModule module);
+
+struct PipelineLayoutConfig {
+    std::span<const DescriptorSetLayout> descriptor_set_layouts;
+};
 
 PipelineLayout CreatePipelineLayout(Context ctx, const PipelineLayoutConfig& config);
 void DestroyPipelineLayout(Context ctx, PipelineLayout layout);

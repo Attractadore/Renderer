@@ -3,6 +3,9 @@
 #include "R1Types.h"
 #include "Swapchain.hpp"
 #include "Common/SlotMap.hpp"
+#include "GAPI/BufferAllocator.hpp"
+
+#include <glm/mat4x4.hpp>
 
 #include <queue>
 
@@ -20,6 +23,11 @@ enum class MeshInstanceID;
 
 struct MeshConfig {
     std::span<const float> vertices;
+};
+
+struct MeshInstanceConfig {
+    const glm::mat4*    transform;
+    MeshID              mesh;
 };
 }
 
@@ -57,14 +65,53 @@ protected:
 
     std::queue<UploadInfo>          m_upload_queue;
 
-    struct DeleteInfo {
+    struct BufferDeleteInfo {
         R1::GAL::Buffer             buffer;
         R1::GAL::SemaphorePayload   upload_time;
         R1::GAL::SemaphorePayload   last_used;
     };
 
     std::vector<R1::MeshID>         m_mesh_delete_infos;
-    std::queue<DeleteInfo>          m_delete_queue;
+    struct BufferDeleteQueue: std::queue<BufferDeleteInfo> {
+        R1::GAL::SemaphorePayload last_used;
+
+        void push(R1::GAL::Buffer buffer) {
+            emplace() = {
+                .buffer = buffer,
+                .last_used = last_used,
+            };
+        }
+    };
+    BufferDeleteQueue               m_buffer_delete_queue;
+
+    struct MeshInstanceDesc {
+        glm::mat4   transform;
+        MeshKey     mesh;
+    };
+
+    R1::GAPI::SlotMap<MeshInstanceDesc> m_mesh_instances;
+    using MeshInstanceKey = decltype(m_mesh_instances)::key_type;
+
+    struct StreamingBufferUsageTraits {
+        static constexpr R1::GAL::BufferUsageFlags UsageFlags =
+            R1::GAL::BufferUsage::Storage;
+        static constexpr R1::GAL::BufferMemoryUsage MemoryUsage =
+            R1::GAL::BufferMemoryUsage::Streaming;
+    };
+
+    template<typename T>
+    using StreamingBufferAllocator = R1::GAPI::ExclusiveBufferAllocator<
+        T, StreamingBufferUsageTraits, BufferDeleteQueue>;
+    template<typename T>
+    class StreamingBufferVector: public std::vector<T, StreamingBufferAllocator<T>> {
+    public:
+        using std::vector<T, StreamingBufferAllocator<T>>::vector;
+        R1::GAL::Buffer GetBackingBuffer() noexcept {
+            return this->get_allocator().get_backing_buffer(this->data(), this->capacity());
+        }
+    };
+
+    std::vector<StreamingBufferVector<std::byte>>   m_streaming_buffers;
 
 public:
     R1Scene(R1::Context& ctx);
@@ -91,7 +138,7 @@ public:
     R1::MeshID CreateMesh(const R1::MeshConfig& config);
     void DestroyMesh(R1::MeshID mesh);
 
-    R1::MeshInstanceID CreateMeshInstance(R1::MeshID mesh);
+    R1::MeshInstanceID CreateMeshInstance(const R1::MeshInstanceConfig& config);
     void DestroyMeshInstance(R1::MeshInstanceID mesh_instance);
 
 protected:

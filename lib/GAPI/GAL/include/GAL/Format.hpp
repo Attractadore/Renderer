@@ -15,6 +15,11 @@ concept IsFormat = requires(E e) {
     E::BGR8_SRGB;
     E::BGRA8_UNORM;
     E::BGRA8_SRGB;
+    E::Float;
+    E::Float1;
+    E::Float2;
+    E::Float3;
+    E::Float4;
 };
 
 static_assert(IsFormat<Format>);

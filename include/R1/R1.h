@@ -31,7 +31,12 @@ typedef struct {
 R1Mesh  R1_CreateMesh(R1Scene* scene, const R1MeshConfig* config);
 void    R1_DestroyMesh(R1Scene* scene, R1Mesh mesh);
 
-R1MeshInstance  R1_CreateMeshInstance(R1Scene* scene, R1Mesh mesh);
+typedef struct {
+    const float*    transform;
+    R1Mesh          mesh;
+} R1MeshInstanceConfig;
+
+R1MeshInstance  R1_CreateMeshInstance(R1Scene* scene, const R1MeshInstanceConfig* config);
 void            R1_DestroyMeshInstance(R1Scene* scene, R1MeshInstance mesh_instance);
 
 #ifdef __cplusplus

@@ -1,7 +1,14 @@
 #pragma once
 #include "Attractadore/SlotMap.hpp"
 
+#include <vector>
+
 namespace R1::GAPI {
+namespace Detail {
 template<typename T>
-using SlotMap = Attractadore::SlotMap<T, 31, 1>;
+using StdVector = std::vector<T>;
+}
+
+template<typename T>
+using SlotMap = Attractadore::SlotMap<T, unsigned, Detail::StdVector>;
 }

@@ -10,7 +10,7 @@ class ExtensionProperties {
     std::vector<std::string_view>      m_names;
 
     static std::vector<std::string_view> GetExtensionNames(std::span<const VkExtensionProperties> props) {
-        auto v = std::views::transform(props, [] (const auto& ext_prop) {
+        auto v = ranges::views::transform(props, [] (const auto& ext_prop) {
             return std::string_view{ext_prop.extensionName};
         });
         auto ext_prop_name_svs = vec_from_range(v);
@@ -119,7 +119,7 @@ VkInstance CreateInstance(
 
 std::vector<QueueFamily> GetDeviceQueueFamilies(VkPhysicalDevice dev) {
     auto queue_families = Enumerate<VkQueueFamilyProperties>(dev, vkGetPhysicalDeviceQueueFamilyProperties);
-    auto v = std::views::transform(queue_families, [&] (const auto& qf) {
+    auto v = ranges::views::transform(queue_families, [&] (const auto& qf) {
         return QueueFamily {
             .id = static_cast<QueueFamily::ID>(&qf - &queue_families[0]),
             .capabilities = QueueCapabilitiesFromVK(qf.queueFlags),
@@ -147,7 +147,7 @@ VKDeviceDescription GetDeviceDescription(VkPhysicalDevice dev) {
 std::vector<DeviceImpl> EnumerateDevices(VkInstance instance) {
     // TODO: filter out devices that don't support required features and extensions
     auto pdevs = Enumerate<VkPhysicalDevice>(instance, vkEnumeratePhysicalDevices);
-    auto v = std::views::transform(pdevs,
+    auto v = ranges::views::transform(pdevs,
         [&] (VkPhysicalDevice pdev) {
             return DeviceImpl {
                 .instance = instance,

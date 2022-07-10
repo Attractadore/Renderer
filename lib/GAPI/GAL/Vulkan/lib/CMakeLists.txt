@@ -29,6 +29,7 @@ add_library(GAL_Vulkan
     Buffer.cpp
     Command.cpp
     Context.cpp
+    Descriptors.cpp
     Image.cpp
     Instance.cpp
     Pipeline.cpp

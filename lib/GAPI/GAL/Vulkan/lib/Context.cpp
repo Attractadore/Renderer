@@ -15,7 +15,7 @@ VkDevice CreateDevice(
     const auto& dev_desc = parent->description.common;
 
     float priority = 1.0f;
-    auto v = std::views::transform(config.queue_config, [&](const auto& qcfg) {
+    auto v = ranges::views::transform(config.queue_config, [&](const auto& qcfg) {
         assert(static_cast<size_t>(qcfg.id) <= dev_desc.queue_families.size());
         VkDeviceQueueCreateInfo create_info = {
             .sType = SType(create_info),

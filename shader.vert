@@ -1,12 +1,10 @@
 #version 450
+layout(location = 0) in vec3 pos;
 
-const vec2 positions[] = vec2[](
-    vec2( 0.0f,  0.5f),
-    vec2( 0.5f, -0.5f),
-    vec2(-0.5f, -0.5f)
-);
+layout(std430, binding = 0, set = 0) restrict readonly buffer TransformSSBO {
+    mat4[] model;
+};
 
 void main() {
-    vec2 pos = positions[gl_VertexIndex];
-    gl_Position = vec4(pos, 0.0f, 1.0f);
+    gl_Position = model[gl_InstanceIndex] * vec4(pos, 1.0f);
 }

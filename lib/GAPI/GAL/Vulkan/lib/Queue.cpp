@@ -3,7 +3,6 @@
 #include "VulkanQueue.inl"
 
 #include <algorithm>
-#include <ranges>
 
 namespace R1::GAL {
 Queue GetQueue(Context ctx, QueueFamily::ID family, unsigned idx) {
@@ -13,7 +12,7 @@ Queue GetQueue(Context ctx, QueueFamily::ID family, unsigned idx) {
 }
 
 void Vulkan::QueueSubmit(
-    Context ctx, Queue queue, std::span<const QueueSubmitConfig> configs, Fence fence 
+    Context ctx, Queue queue, std::span<const QueueSubmitConfig> configs, Fence fence
 ) {
     static thread_local std::vector<VkSemaphoreSubmitInfo>      semaphore_wait_submits;
     static thread_local std::vector<VkSemaphoreSubmitInfo>      semaphore_signal_submits;
@@ -23,13 +22,13 @@ void Vulkan::QueueSubmit(
     semaphore_wait_submits.clear();
     semaphore_signal_submits.clear();
     cmd_buffer_submits.clear();
-    std::ranges::for_each(configs, 
+    std::ranges::for_each(configs,
         [&] (const QueueSubmitConfig& config) {
-            auto wv = std::views::transform(
+            auto wv = ranges::views::transform(
                 config.wait_semaphores, SemaphoreSubmitToVK);
-            auto sv = std::views::transform(
+            auto sv = ranges::views::transform(
                 config.signal_semaphores, SemaphoreSubmitToVK);
-            auto cv = std::views::transform(
+            auto cv = ranges::views::transform(
                 config.command_buffers, CommandBufferSubmitToVK);
             semaphore_wait_submits.insert(semaphore_wait_submits.end(),
                     wv.begin(), wv.end());
@@ -42,7 +41,7 @@ void Vulkan::QueueSubmit(
     auto wp = semaphore_wait_submits.data();
     auto sp = semaphore_signal_submits.data();
     auto cp = cmd_buffer_submits.data();
-    auto v = std::views::transform(configs,
+    auto v = ranges::views::transform(configs,
         [&] (const QueueSubmitConfig& config) {
             unsigned wait_cnt = config.wait_semaphores.size();
             unsigned signal_cnt = config.signal_semaphores.size();

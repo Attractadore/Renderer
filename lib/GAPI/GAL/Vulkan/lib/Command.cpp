@@ -102,11 +102,11 @@ void CmdPipelineBarrier(
     static thread_local std::vector<VkMemoryBarrier2> memory_barriers;
     static thread_local std::vector<VkBufferMemoryBarrier2> buffer_barriers;
     static thread_local std::vector<VkImageMemoryBarrier2> image_barriers;
-    auto mv = std::views::transform(
+    auto mv = ranges::views::transform(
             config.memory_barriers, MemoryBarrierToVK);
-    auto bv = std::views::transform(
+    auto bv = ranges::views::transform(
             config.buffer_barriers, BufferBarrierToVK);
-    auto iv = std::views::transform(
+    auto iv = ranges::views::transform(
             config.image_barriers, ImageBarrierToVK);
     memory_barriers.assign(mv.begin(), mv.end());
     buffer_barriers.assign(bv.begin(), bv.end());
@@ -134,7 +134,7 @@ void CmdBeginRendering(
 ) {
     static thread_local std::vector<VkRenderingAttachmentInfo>
         color_attachments;
-    auto cv = std::views::transform(
+    auto cv = ranges::views::transform(
         config.color_attachments, RenderingAttachmentToVK);
     color_attachments.assign(cv.begin(), cv.end());
     auto depth_attachment =
@@ -164,7 +164,7 @@ void CmdSetViewports(
     CommandBuffer cmd_buffer, std::span<const Viewport> viewports
 ) {
     static thread_local std::vector<VkViewport> vk_viewports;
-    auto v = std::views::transform(viewports, ViewportToVK);
+    auto v = ranges::views::transform(viewports, ViewportToVK);
     vk_viewports.assign(v.begin(), v.end());
     ctx->CmdSetViewportWithCount(
         cmd_buffer, vk_viewports.size(), vk_viewports.data());
@@ -175,7 +175,7 @@ void CmdSetScissors(
     CommandBuffer cmd_buffer, std::span<const Rect2D> scissors
 ) {
     static thread_local std::vector<VkRect2D> vk_rects;
-    auto v = std::views::transform(scissors, Rect2DToVK);
+    auto v = ranges::views::transform(scissors, Rect2DToVK);
     vk_rects.assign(v.begin(), v.end());
     ctx->CmdSetScissorWithCount(
         cmd_buffer, vk_rects.size(), vk_rects.data());
@@ -203,7 +203,7 @@ void CmdBlitImage(
 ) {
     static thread_local std::vector<VkImageBlit2> regions;
 
-    auto v = std::views::transform(config.regions,
+    auto v = ranges::views::transform(config.regions,
         [] (const BlitRegion& reg) {
             VkImageBlit2 blit = {
                 .sType = SType(blit),
@@ -237,8 +237,8 @@ void CmdCopyBuffer(
 ) {
     static thread_local std::vector<VkBufferCopy2> regions;
     regions.resize(config.regions.size());
-    std::transform(
-        config.regions.begin(), config.regions.end(),
+    std::ranges::transform(
+        config.regions,
         regions.begin(),
         [] (const BufferCopyRegion& region) {
             VkBufferCopy2 copy = {
@@ -259,5 +259,51 @@ void CmdCopyBuffer(
         .pRegions = regions.data(),
     };
     ctx->CmdCopyBuffer2(cmd_buffer, &copy_info);
+}
+
+void CmdBindVertexBuffers(Context ctx, CommandBuffer cmd_buffer, const VertexBufferBindConfig& config) {
+    static thread_local std::vector<VkBuffer> buffers;
+    buffers.resize(config.buffers.size());
+    std::ranges::transform(config.buffers, buffers.begin(),
+        [] (GAL::Buffer buffer) {
+            return buffer->buffer;
+        });
+    static_assert(sizeof(size_t) == sizeof(VkDeviceSize));
+    ctx->CmdBindVertexBuffers2(
+        cmd_buffer,
+        config.first_binding, buffers.size(),
+        buffers.data(),
+        config.offsets.data(),
+        config.sizes.data(),
+        config.strides.data());
+}
+}
+
+namespace R1 {
+namespace GAL {
+namespace {
+void CmdBindDescriptorSets(
+    Context ctx, CommandBuffer cmd_buffer,
+    VkPipelineBindPoint bind_point,
+    const DescriptorSetBindConfig& config
+) {
+    ctx->CmdBindDescriptorSets(
+        cmd_buffer,
+        bind_point,
+        config.layout, config.first_set,
+        config.sets.size(),
+        config.sets.data(),
+        config.dynamic_offsets.size(),
+        config.dynamic_offsets.data());
+}
+}
+}
+
+void GAL::CmdBindGraphicsPipelineDescriptorSets(
+    Context ctx, CommandBuffer cmd_buffer,
+    const DescriptorSetBindConfig& config
+) {
+    CmdBindDescriptorSets(
+        ctx, cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, config);
 }
 }

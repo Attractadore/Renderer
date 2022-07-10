@@ -98,7 +98,7 @@ void SwapchainImpl::Init(
 
     auto swc_images = Enumerate<VkImage>(
         ctx->GetDevice(), swapchain, ctx->vk.GetSwapchainImagesKHR);
-    auto v = std::views::transform(swc_images,
+    auto v = ranges::views::transform(swc_images,
         [] (VkImage image) {
             return ImageImpl {
                 .image = image,

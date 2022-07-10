@@ -5,6 +5,7 @@
 
 #include "Buffer.hpp"
 #include "Pipeline.hpp"
+#include "PipelineStages.hpp"
 #include "Image.hpp"
 
 namespace R1::GAL {
@@ -25,74 +26,6 @@ template<typename E>
 concept IsCommandBufferUsage = requires(E e) {
     E::OneTimeSubmit;
     E::Simultaneous;
-};
-
-template<typename E>
-concept IsPipelineStage = requires(E e) {
-    E::DrawIndirect;
-
-    E::IndexInput;
-    E::VertexAttributeInput;
-    E::VertexInput;
-
-    E::VertexShader;
-    E::TesselationControlShader;
-    E::TesselationEvaluationShader;
-    E::GeometryShader;
-    E::PreRasterizationShaders;
-
-    E::FragmentShader;
-    E::EarlyFragmentTests;
-    E::LateFragmentTests;
-    E::ColorAttachmentOutput;
-
-    E::AllGraphics;
-
-    E::ComputeShader;
-    E::AllCompute;
-
-    E::Copy;
-    E::Resolve;
-    E::Blit;
-    E::Clear;
-    E::AllTransfer;
-
-    E::AllCommands;
-};
-
-template<typename E>
-concept IsMemoryAccess = requires(E e) {
-    E::IndirectCommandRead;
-
-    E::IndexRead;
-    E::VertexAttributeRead;
-    E::VertexRead;
-
-    E::ShaderUniformRead;
-    E::ShaderSampledRead;
-    E::ShaderStorageRead;
-    E::ShaderRead;
-
-    E::ShaderStorageWrite;
-    E::ShaderWrite;
-
-    E::ColorAttachmentRead;
-    E::DepthAttachmentRead;
-    E::StencilAttachmentRead;
-    E::DepthStencilAttachmentRead;
-    E::AttachmentRead;
-
-    E::ColorAttachmentWrite;
-    E::DepthAttachmentWrite;
-    E::StencilAttachmentWrite;
-    E::DepthStencilAttachmentWrite;
-    E::AttachmentWrite;
-
-    E::TransferRead;
-    E::TransferWrite;
-
-    E::MemoryRead;
-    E::MemoryWrite;
 };
 
 template<typename E>
@@ -129,16 +62,12 @@ static_assert(IsAttachmentStoreOp<AttachmentStoreOp>);
 static_assert(IsCommandBufferUsage<CommandBufferUsage>);
 static_assert(IsCommandPoolConfigOption<CommandPoolConfigOption>);
 static_assert(IsCommandResources<CommandResources>);
-static_assert(IsMemoryAccess<MemoryAccess>);
-static_assert(IsPipelineStage<PipelineStage>);
 static_assert(IsRenderingConfigOption<RenderingConfigOption>);
 static_assert(IsResolveMode<ResolveMode>);
 }
 
 using CommandPoolConfigFlags    = Flags<CommandPoolConfigOption>;
 using CommandBufferUsageFlags   = Flags<CommandBufferUsage>;
-using PipelineStageFlags        = Flags<PipelineStage>;
-using MemoryAccessFlags         = Flags<MemoryAccess>;
 using RenderingConfigFlags      = Flags<RenderingConfigOption>;
 
 struct CommandPoolConfig {
@@ -332,5 +261,29 @@ struct BufferCopyConfig {
 
 void CmdCopyBuffer(
     Context ctx, CommandBuffer cmd_buffer, const BufferCopyConfig& config
+);
+
+struct VertexBufferBindConfig {
+    unsigned                        first_binding;
+    std::span<const GAL::Buffer>    buffers;
+    std::span<const size_t>         offsets;
+    std::span<const size_t>         sizes;
+    std::span<const size_t>         strides;
+};
+
+void CmdBindVertexBuffers(
+    Context ctx, CommandBuffer cmd_buffer, const VertexBufferBindConfig& config
+);
+
+struct DescriptorSetBindConfig {
+    PipelineLayout                  layout;
+    unsigned                        first_set;
+    std::span<const DescriptorSet>  sets;
+    std::span<const unsigned>       dynamic_offsets;
+};
+
+void CmdBindGraphicsPipelineDescriptorSets(
+    Context ctx, CommandBuffer cmd_buffer,
+    const DescriptorSetBindConfig& config
 );
 }

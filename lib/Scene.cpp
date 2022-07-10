@@ -1,10 +1,11 @@
+#include "Common/Vector.hpp"
 #include "Scene.hpp"
 
-#include <algorithm>
 #include <filesystem>
 #include <fstream>
 
 #include <boost/container/static_vector.hpp>
+#include <glm/vec3.hpp>
 
 using namespace R1;
 
@@ -22,8 +23,48 @@ std::vector<std::byte> loadShader(const std::string& path) {
     return data;
 }
 
-GAL::PipelineLayout createPipelineLayout(GAL::Context ctx) {
-    return GAL::CreatePipelineLayout(ctx, {});
+GAL::DescriptorSetLayout CreateDescriptorSetLayout(GAL::Context ctx) {
+    GAL::DescriptorSetLayoutBinding binding = {
+        .binding = 0,
+        .type = GAL::DescriptorType::DynamicStorageBuffer,
+        .count = 1,
+        .stages = GAL::ShaderStage::Vertex,
+    };
+    return GAL::CreateDescriptorSetLayout(ctx, {
+        .bindings = {&binding, 1},
+    });
+}
+
+GAL::DescriptorPool CreateDescriptorPool(GAL::Context ctx, unsigned set_count) {
+    GAL::DescriptorPoolSize pool_size = {
+        .type = GAL::DescriptorType::DynamicStorageBuffer,
+        .count = set_count,
+    };
+    return GAL::CreateDescriptorPool(ctx, {
+        .set_count = set_count,
+        .pool_sizes = {&pool_size, 1},
+    });
+}
+
+void AllocateDescriptorSets(
+    GAL::Context ctx, GAL::DescriptorPool pool,
+    GAL::DescriptorSetLayout layout,
+    std::span<GAL::DescriptorSet> sets
+) {
+    static std::vector<GAL::DescriptorSetLayout> layouts;
+    layouts.resize(sets.size());
+    std::ranges::fill(layouts, layout);
+    GAL::AllocateDescriptorSets(ctx, pool, {
+        .layouts = layouts,
+    }, sets);
+}
+
+GAL::PipelineLayout createPipelineLayout(
+    GAL::Context ctx, GAL::DescriptorSetLayout descriptor_set_layout
+) {
+    return GAL::CreatePipelineLayout(ctx, {
+        .descriptor_set_layouts = {&descriptor_set_layout, 1},
+    });
 }
 
 GAL::Pipeline createPipeline(
@@ -41,11 +82,25 @@ GAL::Pipeline createPipeline(
         .module = vert_module,
         .entry_point = "main",
     };
-    GAL::VertexInputConfig vert_input = {};
+    GAL::VertexInputConfig vert_input = {
+    };
     GAL::InputAssemblyConfig input_assembly = {
         .primitive_topology = GAL::PrimitiveTopology::TriangleList,
     };
-    gpc.SetVertexShaderState(vert_stage, vert_input, {}, {}, input_assembly);
+    GAL::VertexInputBindingConfig binding = {
+        .binding = 0,
+        .stride = sizeof(glm::vec3),
+        .input_rate = GAL::VertexInputRate::Vertex,
+    };
+    GAL::VertexInputAttributeConfig attribute = {
+        .location = 0,
+        .binding = 0,
+        .format = GAL::Format::Float3,
+        .offset = 0,
+    };
+    gpc.SetVertexShaderState(
+        vert_stage, vert_input,
+        {&binding, 1}, {&attribute, 1}, input_assembly);
 
     GAL::RasterizationConfig rast = {
         .polygon_mode = GAL::PolygonMode::Fill,
@@ -197,6 +252,10 @@ struct Scene::Impl {
     unsigned                        image_width = 0;
     unsigned                        image_height = 0;
     unsigned                        frame_index = 0;
+    GAL::DescriptorSetLayout        descriptor_set_layout;
+    GAL::DescriptorPool             descriptor_pool;
+    std::vector<GAL::DescriptorSet> descriptor_sets;
+    GAL::PipelineLayout             pipeline_layout;
     GAL::Pipeline                   pipeline;
     GAL::CommandPool                command_pool;
     std::vector<GAL::CommandBuffer> command_buffers;
@@ -220,6 +279,9 @@ struct Scene::Impl {
         GAL::FreeCommandBuffers(ctx, command_pool, command_buffers);
         GAL::DestroyCommandPool(ctx, command_pool);
         GAL::DestroyPipeline(ctx, pipeline);
+        GAL::DestroyPipelineLayout(ctx, pipeline_layout);
+        GAL::DestroyDescriptorPool(ctx, descriptor_pool);
+        GAL::DestroyDescriptorSetLayout(ctx, descriptor_set_layout);
         DestroyImages(ctx, images);
         DestroyImageViews(ctx, image_views);
     }
@@ -237,9 +299,9 @@ Scene::R1Scene(Context& ctx):
         auto frag_code = loadShader("frag.spv");
         auto vert_module = GAL::CreateShaderModule(pimpl->ctx, { .code = vert_code } );
         auto frag_module = GAL::CreateShaderModule(pimpl->ctx, { .code = frag_code } );
-        auto layout = createPipelineLayout(pimpl->ctx);
-        pimpl->pipeline = createPipeline(pimpl->ctx, layout, vert_module, frag_module, pimpl->image_fmt);
-        GAL::DestroyPipelineLayout(pimpl->ctx, layout);
+        pimpl->descriptor_set_layout = CreateDescriptorSetLayout(pimpl->ctx);
+        pimpl->pipeline_layout = createPipelineLayout(pimpl->ctx, pimpl->descriptor_set_layout);
+        pimpl->pipeline = createPipeline(pimpl->ctx, pimpl->pipeline_layout, vert_module, frag_module, pimpl->image_fmt);
         GAL::DestroyShaderModule(pimpl->ctx, vert_module);
         GAL::DestroyShaderModule(pimpl->ctx, frag_module);
     }
@@ -259,8 +321,14 @@ Scene::R1Scene(Context& ctx):
 
 Scene::~R1Scene() {
     GAL::ContextWaitIdle(pimpl->ctx);
+    m_streaming_buffers.clear();
     FlushUploadQueue();
+    PushDeleteQueue();
     FlushDeleteQueue();
+    assert(m_meshes.empty());
+    assert(m_mesh_instances.empty());
+    assert(m_upload_queue.empty());
+    assert(m_buffer_delete_queue.empty());
 }
 
 void Scene::ConfigOutputImages(
@@ -284,6 +352,21 @@ void Scene::ConfigOutputImages(
     GAL::FreeCommandBuffers(ctx, pimpl->command_pool, pimpl->command_buffers);
     pimpl->command_buffers.resize(pimpl->images.size());
     GAL::AllocateCommandBuffers(ctx, pimpl->command_pool, pimpl->command_buffers);
+
+    GAL::DestroyDescriptorPool(ctx, pimpl->descriptor_pool);
+    pimpl->descriptor_pool = CreateDescriptorPool(ctx, pimpl->images.size());
+    pimpl->descriptor_sets.resize(pimpl->images.size());
+    AllocateDescriptorSets(ctx, pimpl->descriptor_pool,
+        pimpl->descriptor_set_layout, pimpl->descriptor_sets);
+
+
+    while(m_streaming_buffers.size() > count) {
+        m_streaming_buffers.pop_back();
+    }
+    while(m_streaming_buffers.size() < count) {
+        m_streaming_buffers.emplace_back(StreamingBufferAllocator<std::byte>(
+            pimpl->ctx, &m_buffer_delete_queue));
+    }
 
     pimpl->frame_index = 0;
 
@@ -333,6 +416,7 @@ ScenePresentInfo Scene::Draw() {
     auto ctx = pimpl->ctx;
     auto idx = pimpl->frame_index;
     auto sem = pimpl->semaphore;
+    auto descriptor_set = pimpl->descriptor_sets[idx];
 
     using boost::container::static_vector;
 
@@ -371,6 +455,39 @@ ScenePresentInfo Scene::Draw() {
         };
         GAL::WaitForSemaphores(ctx, {&wait_state, 1}, true, pimpl->InfiniteTimeout);
     }
+
+    auto index_view = ranges::views::enumerate(
+        m_mesh_instances.values() |
+        ranges::views::transform(
+        [] (const MeshInstanceDesc& desc) {
+            return desc.mesh;
+        })
+    );
+    auto sorted_mesh_instance_data = vec_from_range(index_view);
+    std::ranges::sort(sorted_mesh_instance_data,
+        [] (const auto& l, const auto& r) {
+            return l.second < r.second;
+        });
+
+    auto& streaming_buffer = m_streaming_buffers[idx];
+    streaming_buffer.resize(
+        sizeof(glm::mat4) * sorted_mesh_instance_data.size());
+    { auto ptr = reinterpret_cast<glm::mat4*>(streaming_buffer.data());
+    for (auto&& [idx, mesh]: sorted_mesh_instance_data) {
+        *(ptr++) = m_mesh_instances.values()[idx].transform;
+    } }
+
+    { GAL::DescriptorBufferConfig buffer = {
+        .buffer = streaming_buffer.GetBackingBuffer(),
+        .size = streaming_buffer.size(),
+    };
+    GAL::DescriptorSetWriteConfig write = {
+        .set = descriptor_set,
+        .binding = 0,
+        .type = GAL::DescriptorType::DynamicStorageBuffer,
+        .buffer_configs = {&buffer, 1},
+    };
+    GAL::UpdateDescriptorSets(ctx, {&write, 1}, {}); }
 
     auto cmd_buffer = pimpl->command_buffers[idx];
     auto img = pimpl->images[idx];
@@ -438,11 +555,36 @@ ScenePresentInfo Scene::Draw() {
     }
 
     GAL::CmdBindGraphicsPipeline(ctx, cmd_buffer, pimpl->pipeline);
-    GAL::DrawConfig draw_config = {
-        .vertex_count = 3,
-        .instance_count = 1,
-    };
-    GAL::CmdDraw(ctx, cmd_buffer, draw_config);
+
+    auto mesh_instances_same_meshes = sorted_mesh_instance_data |
+        ranges::views::transform([] (const auto& v) {
+            return v.second;
+        }) |
+        ranges::views::chunk_by(std::ranges::equal_to{});
+
+    { auto ptr = streaming_buffer.data();
+    for (auto&& mesh_instances_same_mesh: mesh_instances_same_meshes) {
+        auto& mesh = m_meshes[mesh_instances_same_mesh.front()];
+        auto buffer = mesh.buffer;
+        size_t offset = 0;
+        GAL::CmdBindVertexBuffers(ctx, cmd_buffer, {
+            .buffers = {&buffer, 1},
+            .offsets = {&offset, 1},
+        });
+        size_t buffer_size = mesh.vertex_count * sizeof(glm::vec3);
+        unsigned dynamic_offset = ptr - streaming_buffer.data();
+        ptr += buffer_size;
+        GAL::CmdBindGraphicsPipelineDescriptorSets(ctx, cmd_buffer, {
+            .layout = pimpl->pipeline_layout,
+            .sets = {&descriptor_set, 1},
+            .dynamic_offsets = {&dynamic_offset, 1},
+        });
+        GAL::CmdDraw(ctx, cmd_buffer, {
+            .vertex_count = mesh.vertex_count,
+            .instance_count =
+                static_cast<unsigned>(mesh_instances_same_mesh.size()),
+        });
+    } }
 
     GAL::CmdEndRendering(ctx, cmd_buffer);
 
@@ -486,6 +628,7 @@ ScenePresentInfo Scene::Draw() {
     pimpl->frame_index = (idx + 1) % pimpl->images.size();
     pimpl->draw_timepoint.oldest_value += pimpl->signal_cnt;
     pimpl->external_timepoint.oldest_value += pimpl->signal_cnt;
+    m_buffer_delete_queue.last_used = pimpl->draw_timepoint.new_value;
 
     return {
         .semaphore = sem,
@@ -519,6 +662,18 @@ MeshID Scene::CreateMesh(const MeshConfig& config) {
 
 void Scene::DestroyMesh(MeshID mesh) {
     m_mesh_delete_infos.push_back(mesh);
+}
+
+MeshInstanceID Scene::CreateMeshInstance(const MeshInstanceConfig& config) {
+    auto&& [key, ref] = m_mesh_instances.emplace();
+    ref.transform = *config.transform;
+    ref.mesh = std::bit_cast<MeshKey>(config.mesh);
+    return std::bit_cast<MeshInstanceID>(key);
+}
+
+void Scene::DestroyMeshInstance(MeshInstanceID mesh_instance) {
+    auto key = std::bit_cast<MeshInstanceKey>(mesh_instance);
+    m_mesh_instances.erase(key);
 }
 
 void Scene::PushUploadQueue() {
@@ -603,9 +758,9 @@ void Scene::PushDeleteQueue() {
     for (auto mesh: m_mesh_delete_infos) {
         auto key = std::bit_cast<MeshKey>(mesh);
         auto it = m_meshes.access(key);
-        m_delete_queue.emplace() = {
-            .buffer = it->buffer,
-            .upload_time = it->upload_time,
+        m_buffer_delete_queue.emplace() = {
+            .buffer = it->second.buffer,
+            .upload_time = it->second.upload_time,
             .last_used = pimpl->draw_timepoint.new_value,
         };
         m_meshes.erase(it);
@@ -619,12 +774,12 @@ void Scene::FlushDeleteQueue() {
         GAL::GetSemaphorePayloadValue(ctx, m_upload_semaphore.get());
     auto last_drawn =
         GAL::GetSemaphorePayloadValue(ctx, pimpl->semaphore);
-    while (not m_delete_queue.empty()) {
-        auto& d = m_delete_queue.front();
+    while (not m_buffer_delete_queue.empty()) {
+        auto& d = m_buffer_delete_queue.front();
         if (d.last_used > last_drawn or d.upload_time > last_uploaded) {
             break;
         }
         GAL::DestroyBuffer(ctx, d.buffer);
-        m_delete_queue.pop();
+        m_buffer_delete_queue.pop();
     }
 }

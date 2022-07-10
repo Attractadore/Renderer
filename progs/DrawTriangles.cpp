@@ -139,12 +139,24 @@ int main() {
         .vertex_count = 3,
     };
     auto tri_mesh = R1_CreateMesh(scene, &mesh_config);
-    glm::mat4 transform{1.0f};
-    R1MeshInstanceConfig mesh_instance_config = {
-        .transform = glm::value_ptr(transform),
-        .mesh = tri_mesh,
-    };
-    auto tri_model = R1_CreateMeshInstance(scene, &mesh_instance_config);
+
+    std::array<glm::mat4, 4> tri_translations = {{
+        glm::translate(glm::mat4{1.0f}, { 0.5f,  0.5f, 0.0f}),
+        glm::translate(glm::mat4{1.0f}, {-0.5f,  0.5f, 0.0f}),
+        glm::translate(glm::mat4{1.0f}, { 0.5f, -0.5f, 0.0f}),
+        glm::translate(glm::mat4{1.0f}, {-0.5f, -0.5f, 0.0f}),
+    }};
+    std::array<R1MeshInstance, 4> tri_models;
+    for (size_t i = 0; i < tri_models.size(); i++) {
+        auto transform =
+            tri_translations[i] *
+            glm::scale(glm::mat4{1.0f}, {0.5f, 0.5f, 0.5f});
+        R1MeshInstanceConfig model_config = {
+            .transform = glm::value_ptr(transform),
+            .mesh = tri_mesh,
+        };
+        tri_models[i] = R1_CreateMeshInstance(scene, &model_config);
+    }
 
     bool quit = false;
     while (!quit) {
@@ -158,7 +170,9 @@ int main() {
         R1_DrawSceneToSwapchain(scene, swc);
     }
 
-    R1_DestroyMeshInstance(scene, tri_model);
+    for (auto tri_model: tri_models) {
+        R1_DestroyMeshInstance(scene, tri_model);
+    }
     R1_DestroyMesh(scene, tri_mesh);
     R1_DestroyScene(scene);
     R1_DestroySwapchain(swc);

@@ -2,8 +2,6 @@
 #include "GAL/Sync.hpp"
 #include "VKUtil.hpp"
 
-#include <ranges>
-
 namespace R1::GAL {
 namespace {
 VkSemaphore CreateSemaphoreBase(
@@ -56,11 +54,11 @@ SemaphoreStatus WaitForSemaphores(
     static thread_local std::vector<VkSemaphore> wait_semaphores;
     static thread_local std::vector<uint64_t> wait_values;
 
-    auto sv = std::views::transform(wait_states,
+    auto sv = ranges::views::transform(wait_states,
         [] (const SemaphoreState& state) {
             return state.semaphore;
         });
-    auto vv = std::views::transform(wait_states,
+    auto vv = ranges::views::transform(wait_states,
         [] (const SemaphoreState& state) {
             return state.value;
         });

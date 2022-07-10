@@ -3,7 +3,6 @@
 #include "VKUtil.hpp"
 
 #include <algorithm>
-#include <ranges>
 #include <utility>
 
 namespace R1::GAL {
@@ -25,9 +24,13 @@ void DestroyShaderModule(Context ctx, ShaderModule module) {
     ctx->DestroyShaderModule(module);
 }
 
-PipelineLayout CreatePipelineLayout(Context ctx, const PipelineLayoutConfig& config) {
+PipelineLayout CreatePipelineLayout(
+    Context ctx, const PipelineLayoutConfig& config
+) {
     VkPipelineLayoutCreateInfo create_info = {
         .sType = SType(create_info),
+        .setLayoutCount = static_cast<uint32_t>(config.descriptor_set_layouts.size()),
+        .pSetLayouts = config.descriptor_set_layouts.data(),
     };
     VkPipelineLayout layout;
     ThrowIfFailed(
@@ -89,7 +92,7 @@ GPC& GPC::SetVertexShaderState(
     };
 
     auto& bindings = m_configs.vertex_input_binding_descriptions;
-    auto vb = std::views::transform(vertex_binding_configs,
+    auto vb = ranges::views::transform(vertex_binding_configs,
         [] (const VertexInputBindingConfig& cfg) {
             return VkVertexInputBindingDescription {
                 .binding = cfg.binding,
@@ -101,7 +104,7 @@ GPC& GPC::SetVertexShaderState(
     bindings.insert(bindings.end(), vb.begin(), vb.end());
 
     auto& attributes = m_configs.vertex_input_attribute_descriptions;
-    auto av = std::views::transform(vertex_attribute_configs,
+    auto av = ranges::views::transform(vertex_attribute_configs,
         [] (const VertexInputAttributeConfig& cfg) {
             return VkVertexInputAttributeDescription {
                 .location = cfg.location,
@@ -293,7 +296,7 @@ GPC& GPC::SetFragmentShaderState(
 
     auto& color_blend_attachments = m_configs.color_blend_attachments;
     cbs.attachmentCount = cai.size();
-    auto bav = std::views::transform(cai,
+    auto bav = ranges::views::transform(cai,
         [] (const auto& ca) {
             return VkPipelineColorBlendAttachmentState {
                 .blendEnable = ca.blend.enabled,
@@ -321,7 +324,7 @@ GPC& GPC::SetFragmentShaderState(
     auto& r = cfg.rendering;
     auto& color_attachment_formats = m_configs.color_attachment_formats;
     r.colorAttachmentCount = cai.size();
-    auto afv = std::views::transform(cai,
+    auto afv = ranges::views::transform(cai,
         [] (const auto& ca) {
             return static_cast<VkFormat>(ca.format);
         }
