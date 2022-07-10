@@ -3,6 +3,12 @@
 extern "C" {
 #endif
 
+#if __STDC_VERSION__ >= 199901L
+#define C_ARRAY_STATIC static
+#else
+#define C_ARRAY_STATIC
+#endif
+
 typedef struct R1Instance           R1Instance;
 typedef struct R1Device             R1Device;
 typedef struct R1Context            R1Context;

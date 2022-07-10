@@ -5,9 +5,11 @@
 #include <fstream>
 
 #include <boost/container/static_vector.hpp>
-#include <glm/vec3.hpp>
+#include <boost/container/small_vector.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 using namespace R1;
+using boost::container::static_vector;
 
 namespace R1 {
 namespace {
@@ -24,25 +26,37 @@ std::vector<std::byte> loadShader(const std::string& path) {
 }
 
 GAL::DescriptorSetLayout CreateDescriptorSetLayout(GAL::Context ctx) {
-    GAL::DescriptorSetLayoutBinding binding = {
-        .binding = 0,
+    std::array<GAL::DescriptorSetLayoutBinding, 2> bindings;
+    bindings[0] = {
+        .binding = GLSL::transform_ssbo_binding,
         .type = GAL::DescriptorType::DynamicStorageBuffer,
         .count = 1,
         .stages = GAL::ShaderStage::Vertex,
     };
+    bindings[1] = {
+        .binding = GLSL::global_ubo_binding,
+        .type = GAL::DescriptorType::UniformBuffer,
+        .count = 1,
+        .stages = GAL::ShaderStage::Vertex,
+    };
     return GAL::CreateDescriptorSetLayout(ctx, {
-        .bindings = {&binding, 1},
+        .bindings = bindings,
     });
 }
 
 GAL::DescriptorPool CreateDescriptorPool(GAL::Context ctx, unsigned set_count) {
-    GAL::DescriptorPoolSize pool_size = {
+    std::array<GAL::DescriptorPoolSize, 2> pool_sizes;
+    pool_sizes[0] = {
         .type = GAL::DescriptorType::DynamicStorageBuffer,
+        .count = set_count,
+    };
+    pool_sizes[1] = {
+        .type = GAL::DescriptorType::UniformBuffer,
         .count = set_count,
     };
     return GAL::CreateDescriptorPool(ctx, {
         .set_count = set_count,
-        .pool_sizes = {&pool_size, 1},
+        .pool_sizes = pool_sizes,
     });
 }
 
@@ -51,12 +65,12 @@ void AllocateDescriptorSets(
     GAL::DescriptorSetLayout layout,
     std::span<GAL::DescriptorSet> sets
 ) {
-    static std::vector<GAL::DescriptorSetLayout> layouts;
-    layouts.resize(sets.size());
+    boost::container::small_vector<GAL::DescriptorSetLayout, 4> layouts(sets.size());
     std::ranges::fill(layouts, layout);
-    GAL::AllocateDescriptorSets(ctx, pool, {
+    auto res = GAL::AllocateDescriptorSets(ctx, pool, {
         .layouts = layouts,
     }, sets);
+    assert(res == GAL::DescriptorSetAllocationResult::Success);
 }
 
 GAL::PipelineLayout createPipelineLayout(
@@ -255,6 +269,8 @@ struct Scene::Impl {
     GAL::DescriptorSetLayout        descriptor_set_layout;
     GAL::DescriptorPool             descriptor_pool;
     std::vector<GAL::DescriptorSet> descriptor_sets;
+    GAPI::HBuffer                   uniform_ring_buffer;
+    GLSL::GlobalUBO*                uniform_ring_buffer_data;
     GAL::PipelineLayout             pipeline_layout;
     GAL::Pipeline                   pipeline;
     GAL::CommandPool                command_pool;
@@ -359,6 +375,14 @@ void Scene::ConfigOutputImages(
     AllocateDescriptorSets(ctx, pimpl->descriptor_pool,
         pimpl->descriptor_set_layout, pimpl->descriptor_sets);
 
+    pimpl->uniform_ring_buffer = GAPI::HBuffer{pimpl->ctx, GAL::CreateBuffer(pimpl->ctx, {
+        .size = sizeof(GLSL::GlobalUBO) * pimpl->images.size(),
+        .usage =
+            GAL::BufferUsage::Uniform,
+        .memory_usage = GAL::BufferMemoryUsage::Streaming,
+    })};
+    pimpl->uniform_ring_buffer_data = reinterpret_cast<GLSL::GlobalUBO*>(
+        GAL::GetBufferPointer(pimpl->ctx, pimpl->uniform_ring_buffer.get()));
 
     while(m_streaming_buffers.size() > count) {
         m_streaming_buffers.pop_back();
@@ -417,6 +441,11 @@ ScenePresentInfo Scene::Draw() {
     auto idx = pimpl->frame_index;
     auto sem = pimpl->semaphore;
     auto descriptor_set = pimpl->descriptor_sets[idx];
+    auto cmd_buffer = pimpl->command_buffers[idx];
+    auto img = pimpl->images[idx];
+    auto img_view = pimpl->image_views[idx];
+    auto img_w = pimpl->image_width;
+    auto img_h = pimpl->image_height;
 
     using boost::container::static_vector;
 
@@ -456,6 +485,17 @@ ScenePresentInfo Scene::Draw() {
         GAL::WaitForSemaphores(ctx, {&wait_state, 1}, true, pimpl->InfiniteTimeout);
     }
 
+    auto& ubo = pimpl->uniform_ring_buffer_data[idx];
+    { auto aspect_ratio = static_cast<float>(img_w) / img_h;
+    // Setup projection matrix for reverse-Z
+    auto fov = glm::min(m_camera.fov / aspect_ratio, glm::radians(170.0f));
+    auto proj = glm::perspectiveZO(fov, aspect_ratio, m_camera.far, m_camera.near);
+    auto view = glm::lookAt(m_camera.position, m_camera.position + m_camera.direction, m_camera.up);
+    GLSL::GlobalUBO staging = {
+        .proj_view = proj * view,
+    };
+    ubo = staging; }
+
     auto index_view = ranges::views::enumerate(
         m_mesh_instances.values() |
         ranges::views::transform(
@@ -477,23 +517,29 @@ ScenePresentInfo Scene::Draw() {
         *(ptr++) = m_mesh_instances.values()[idx].transform;
     } }
 
-    { GAL::DescriptorBufferConfig buffer = {
+    { GAL::DescriptorBufferConfig ssbo_config = {
         .buffer = streaming_buffer.GetBackingBuffer(),
         .size = streaming_buffer.size(),
     };
-    GAL::DescriptorSetWriteConfig write = {
-        .set = descriptor_set,
-        .binding = 0,
-        .type = GAL::DescriptorType::DynamicStorageBuffer,
-        .buffer_configs = {&buffer, 1},
+    GAL::DescriptorBufferConfig ubo_config = {
+        .buffer = pimpl->uniform_ring_buffer.get(),
+        .offset = sizeof(GLSL::GlobalUBO) * idx,
+        .size = sizeof(GLSL::GlobalUBO),
     };
-    GAL::UpdateDescriptorSets(ctx, {&write, 1}, {}); }
-
-    auto cmd_buffer = pimpl->command_buffers[idx];
-    auto img = pimpl->images[idx];
-    auto view = pimpl->image_views[idx];
-    auto img_w = pimpl->image_width;
-    auto img_h = pimpl->image_height;
+    std::array<GAL::DescriptorSetWriteConfig, 2> writes;
+    writes[0] = {
+        .set = descriptor_set,
+        .binding = GLSL::transform_ssbo_binding,
+        .type = GAL::DescriptorType::DynamicStorageBuffer,
+        .buffer_configs = {&ssbo_config, 1},
+    };
+    writes[1] = {
+        .set = descriptor_set,
+        .binding = GLSL::global_ubo_binding,
+        .type = GAL::DescriptorType::UniformBuffer,
+        .buffer_configs = {&ubo_config, 1},
+    };
+    GAL::UpdateDescriptorSets(ctx, writes, {}); }
 
     GAL::CommandBufferBeginConfig begin_config = {
         .usage = GAL::CommandBufferUsage::OneTimeSubmit,
@@ -525,7 +571,7 @@ ScenePresentInfo Scene::Draw() {
 
     GAL::ClearValue clear_color = {0.2f, 0.2f, 0.8f, 1.0f};
     GAL::RenderingAttachment color_attachment = {
-        .view = view,
+        .view = img_view,
         .layout = GAL::ImageLayout::Attachment,
         .load_op = GAL::AttachmentLoadOp::Clear,
         .store_op = GAL::AttachmentStoreOp::Store,
@@ -666,7 +712,7 @@ void Scene::DestroyMesh(MeshID mesh) {
 
 MeshInstanceID Scene::CreateMeshInstance(const MeshInstanceConfig& config) {
     auto&& [key, ref] = m_mesh_instances.emplace();
-    ref.transform = *config.transform;
+    ref.transform = config.transform;
     ref.mesh = std::bit_cast<MeshKey>(config.mesh);
     return std::bit_cast<MeshInstanceID>(key);
 }
@@ -674,6 +720,16 @@ MeshInstanceID Scene::CreateMeshInstance(const MeshInstanceConfig& config) {
 void Scene::DestroyMeshInstance(MeshInstanceID mesh_instance) {
     auto key = std::bit_cast<MeshInstanceKey>(mesh_instance);
     m_mesh_instances.erase(key);
+}
+
+const glm::mat4& Scene::GetMeshInstanceTransform(R1::MeshInstanceID mesh_instance) const noexcept {
+    auto key = std::bit_cast<MeshInstanceKey>(mesh_instance);
+    return m_mesh_instances[key].transform;
+}
+
+glm::mat4& Scene::GetMeshInstanceTransform(R1::MeshInstanceID mesh_instance) noexcept {
+    auto key = std::bit_cast<MeshInstanceKey>(mesh_instance);
+    return m_mesh_instances[key].transform;
 }
 
 void Scene::PushUploadQueue() {

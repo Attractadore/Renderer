@@ -32,12 +32,28 @@ R1Mesh  R1_CreateMesh(R1Scene* scene, const R1MeshConfig* config);
 void    R1_DestroyMesh(R1Scene* scene, R1Mesh mesh);
 
 typedef struct {
-    const float*    transform;
-    R1Mesh          mesh;
+    float   transform[16];
+    R1Mesh  mesh;
 } R1MeshInstanceConfig;
 
 R1MeshInstance  R1_CreateMeshInstance(R1Scene* scene, const R1MeshInstanceConfig* config);
 void            R1_DestroyMeshInstance(R1Scene* scene, R1MeshInstance mesh_instance);
+void            R1_SetMeshInstanceTransform(R1Scene* scene, R1MeshInstance mesh_instance, const float transform[C_ARRAY_STATIC 16]);
+void            R1_GetMeshInstanceTransform(const R1Scene* scene, R1MeshInstance mesh_instance, float transform[C_ARRAY_STATIC 16]);
+
+typedef struct {
+    float position[3];
+    float direction[3];
+    float up[3];
+    float fov;
+} R1CameraConfig;
+
+void            R1_SetCamera(R1Scene* scene, const R1CameraConfig* config);
+void            R1_SetCameraPosition(R1Scene* scene, const float position[C_ARRAY_STATIC 3]);
+void            R1_SetCameraDirection(R1Scene* scene, const float direction[C_ARRAY_STATIC 3]);
+void            R1_SetCameraUp(R1Scene* scene, const float up[C_ARRAY_STATIC 3]);
+void            R1_SetCameraFOV(R1Scene* scene, float fov);
+void            R1_GetCamera(const R1Scene* scene, R1CameraConfig* config);
 
 #ifdef __cplusplus
 }

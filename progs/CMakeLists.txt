@@ -10,4 +10,7 @@ if (TARGET SDL2::SDL2)
 
     add_executable(DrawTriangles DrawTriangles.cpp)
     target_link_libraries(DrawTriangles ProgOptions)
+
+    add_executable(DrawRotatingTriangle DrawRotatingTriangle.cpp)
+    target_link_libraries(DrawRotatingTriangle ProgOptions)
 endif()

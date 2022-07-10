@@ -8,11 +8,12 @@
 #include <glm/mat4x4.hpp>
 
 #include <array>
+#include <chrono>
 #include <iostream>
 #include <vector>
 
 namespace {
-static constexpr auto app_name = "Draw triangle";
+static constexpr auto app_name = "Draw rotating triangle";
 
 PFN_vkGetInstanceProcAddr GetVkGetInstanceProcAddr() {
     return reinterpret_cast<PFN_vkGetInstanceProcAddr>(
@@ -130,9 +131,9 @@ int main() {
     }
 
     std::array<glm::vec3, 3> data = {{
-        { 0.0f,  0.5f, 0.0f},
-        { 0.5f, -0.5f, 0.0f},
-        {-0.5f, -0.5f, 0.0f},
+        { 0.0f,  glm::sqrt(3.0f) / 3.0f, 0.0f},
+        { 0.5f, -glm::sqrt(3.0f) / 6.0f, 0.0f},
+        {-0.5f, -glm::sqrt(3.0f) / 6.0f, 0.0f},
     }};
     R1MeshConfig mesh_config = {
         .vertices = glm::value_ptr(data[0]),
@@ -146,6 +147,7 @@ int main() {
     std::memcpy(mesh_instance_config.transform, &transform, sizeof(transform));
     auto tri_model = R1_CreateMeshInstance(scene, &mesh_instance_config);
 
+    auto start_time = std::chrono::steady_clock::now();
     bool quit = false;
     while (!quit) {
         SDL_Event e;
@@ -154,6 +156,13 @@ int main() {
                 quit = true;
             }
         }
+
+        auto time = std::chrono::steady_clock::now();
+        auto delta_time = std::chrono::duration_cast<std::chrono::duration<float>>(time - start_time).count();
+        constexpr float angular_velocity = glm::radians(180.0f);
+        auto transform =
+            glm::rotate(glm::mat4{1.0f}, delta_time * angular_velocity, {0.0f, 0.0f, -1.0f});
+        R1_SetMeshInstanceTransform(scene, tri_model, glm::value_ptr(transform));
 
         R1_DrawSceneToSwapchain(scene, swc);
     }

@@ -1,11 +1,13 @@
 #pragma once
+#include "Common/SlotMap.hpp"
 #include "Context.hpp"
+#include "GAPI/BufferAllocator.hpp"
 #include "R1Types.h"
 #include "Swapchain.hpp"
-#include "Common/SlotMap.hpp"
-#include "GAPI/BufferAllocator.hpp"
+#include "shaders/Interface.glsl"
 
 #include <glm/mat4x4.hpp>
+#include <glm/trigonometric.hpp>
 
 #include <queue>
 
@@ -26,9 +28,22 @@ struct MeshConfig {
 };
 
 struct MeshInstanceConfig {
-    const glm::mat4*    transform;
-    MeshID              mesh;
+    glm::mat4   transform;
+    MeshID      mesh;
 };
+
+struct Camera {
+    glm::vec3 position = {0.0f, 0.0f, -1.0f};
+    glm::vec3 direction = {0.0f, 0.0f, 1.0f};
+    glm::vec3 up = {0.0f, 1.0f, 0.0f};
+    float fov = glm::radians(80.0f);
+    float near = 0.1f;
+    float far = 100.0f;
+};
+
+namespace GLSL {
+struct GLOBAL_UBO_DEFINITION(GlobalUBO);
+}
 }
 
 class R1Scene {
@@ -113,6 +128,8 @@ protected:
 
     std::vector<StreamingBufferVector<std::byte>>   m_streaming_buffers;
 
+    R1::Camera m_camera;
+
 public:
     R1Scene(R1::Context& ctx);
     R1Scene(const R1Scene&) = delete;
@@ -140,6 +157,12 @@ public:
 
     R1::MeshInstanceID CreateMeshInstance(const R1::MeshInstanceConfig& config);
     void DestroyMeshInstance(R1::MeshInstanceID mesh_instance);
+
+    const glm::mat4& GetMeshInstanceTransform(R1::MeshInstanceID mesh_instance) const noexcept;
+    glm::mat4& GetMeshInstanceTransform(R1::MeshInstanceID mesh_instance) noexcept;
+
+    const R1::Camera& GetCamera() const noexcept { return m_camera; }
+    R1::Camera& GetCamera() noexcept { return m_camera; }
 
 protected:
     void PushUploadQueue();

@@ -105,13 +105,11 @@ struct DescriptorBufferConfig {
 };
 
 struct DescriptorSetWriteConfig {
-    DescriptorSet   set;
-    unsigned        binding;
-    unsigned        first_index;
-    DescriptorType  type;
-    union {
-        std::span<const DescriptorBufferConfig> buffer_configs;
-    };
+    DescriptorSet                           set;
+    unsigned                                binding;
+    unsigned                                first_index;
+    DescriptorType                          type;
+    std::span<const DescriptorBufferConfig> buffer_configs;
 };
 
 struct DescriptorSetCopyConfig {

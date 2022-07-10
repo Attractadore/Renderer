@@ -12,7 +12,7 @@
 #include <vector>
 
 namespace {
-static constexpr auto app_name = "Draw triangle";
+static constexpr auto app_name = "Draw triangles";
 
 PFN_vkGetInstanceProcAddr GetVkGetInstanceProcAddr() {
     return reinterpret_cast<PFN_vkGetInstanceProcAddr>(
@@ -152,9 +152,9 @@ int main() {
             tri_translations[i] *
             glm::scale(glm::mat4{1.0f}, {0.5f, 0.5f, 0.5f});
         R1MeshInstanceConfig model_config = {
-            .transform = glm::value_ptr(transform),
             .mesh = tri_mesh,
         };
+        std::memcpy(model_config.transform, &transform, sizeof(transform));
         tri_models[i] = R1_CreateMeshInstance(scene, &model_config);
     }
 
