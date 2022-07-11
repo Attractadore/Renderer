@@ -12,6 +12,8 @@ enum class Format {
     BGRA8_UNORM = VK_FORMAT_B8G8R8A8_UNORM,
     BGRA8_SRGB  = VK_FORMAT_B8G8R8A8_SRGB,
 
+    D32_FLOAT   = VK_FORMAT_D32_SFLOAT,
+
     Float       = VK_FORMAT_R32_SFLOAT,
     Float1      = Float,
     Float2      = VK_FORMAT_R32G32_SFLOAT,

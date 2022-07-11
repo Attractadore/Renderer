@@ -56,8 +56,11 @@ Buffer CreateBuffer(Context ctx, const BufferConfig& config) {
 }
 
 void DestroyBuffer(Context ctx, Buffer buffer) {
-    vmaDestroyBuffer(ctx->allocator.get(),
-        buffer->buffer, buffer->allocation);
+    if (buffer) {
+        vmaDestroyBuffer(ctx->allocator.get(),
+            buffer->buffer, buffer->allocation);
+        delete buffer;
+    }
 }
 
 void* GetBufferPointer(Context ctx, Buffer buffer) {

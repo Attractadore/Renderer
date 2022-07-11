@@ -126,6 +126,16 @@ GAL::Pipeline createPipeline(
     };
     gpc.SetRasterizationState(rast, ms);
 
+    GAL::DepthTestConfig depth = {
+        .compare_op = GAL::CompareOp::Greater,
+        .enabled = true,
+        .write_enabled = true,
+    };
+    GAL::DepthAttachmentConfig depth_attachment = {
+        .format = GAL::Format::D32_FLOAT,
+    };
+    gpc.SetDepthTestState(depth, depth_attachment);
+
     GAL::ShaderStageConfig frag_stage = {
         .module = frag_module,
         .entry_point = "main",
@@ -239,6 +249,34 @@ std::vector<GAL::ImageView> CreateImageViews(
     return views;
 }
 
+GAL::Image CreateDepthBuffer(
+    GAL::Context ctx,
+    unsigned width,
+    unsigned height
+) {
+    return CreateImage(
+        ctx,
+        width, height,
+        GAL::Format::D32_FLOAT,
+        GAL::ImageUsage::DepthAttachment);
+}
+
+GAL::ImageView CreateDepthBufferView(GAL::Context ctx, GAL::Image depth_buffer) {
+    GAL::ImageViewConfig config = {
+        .type = GAL::ImageViewType::D2,
+        .format = GAL::Format::D32_FLOAT,
+        .components = {
+            .r = GAL::ImageComponentSwizzle::Identity,
+        },
+        .subresource_range = {
+            .aspects = GAL::ImageAspect::Depth,
+            .mip_level_count = 1,
+            .array_layer_count = 1,
+        },
+    };
+    return GAL::CreateImageView(ctx, depth_buffer, config);
+}
+
 template<std::ranges::input_range R>
     requires std::same_as<GAL::Image, std::ranges::range_value_t<R>>
 void DestroyImages(GAL::Context ctx, R&& images) {
@@ -263,6 +301,8 @@ struct Scene::Impl {
     GAL::ImageUsageFlags            image_usage_flags;
     std::vector<GAL::Image>         images;
     std::vector<GAL::ImageView>     image_views;
+    GAL::Image                      depth_buffer;
+    GAL::ImageView                  depth_buffer_view;
     unsigned                        image_width = 0;
     unsigned                        image_height = 0;
     unsigned                        frame_index = 0;
@@ -300,6 +340,8 @@ struct Scene::Impl {
         GAL::DestroyDescriptorSetLayout(ctx, descriptor_set_layout);
         DestroyImages(ctx, images);
         DestroyImageViews(ctx, image_views);
+        GAL::DestroyImage(ctx, depth_buffer);
+        GAL::DestroyImageView(ctx, depth_buffer_view);
     }
 };
 
@@ -364,6 +406,13 @@ void Scene::ConfigOutputImages(
 
     DestroyImageViews(ctx, pimpl->image_views);
     pimpl->image_views = CreateImageViews(ctx, pimpl->images, pimpl->image_fmt);
+
+    GAL::DestroyImage(ctx, pimpl->depth_buffer);
+    pimpl->depth_buffer =
+        CreateDepthBuffer(ctx, pimpl->image_width, pimpl->image_height);
+    GAL::DestroyImageView(ctx, pimpl->depth_buffer_view);
+    pimpl->depth_buffer_view =
+        CreateDepthBufferView(ctx, pimpl->depth_buffer);
 
     GAL::FreeCommandBuffers(ctx, pimpl->command_pool, pimpl->command_buffers);
     pimpl->command_buffers.resize(pimpl->images.size());
@@ -547,7 +596,8 @@ ScenePresentInfo Scene::Draw() {
     GAL::BeginCommandBuffer(ctx, cmd_buffer, begin_config);
 
     {
-        GAL::ImageBarrier from_present = {
+        std::array<GAL::ImageBarrier, 2> image_barriers;
+        image_barriers[0] = {
             .memory_barrier = {
                 .src_stages = GAL::PipelineStage::ColorAttachmentOutput,
                 .dst_stages = GAL::PipelineStage::ColorAttachmentOutput,
@@ -557,19 +607,37 @@ ScenePresentInfo Scene::Draw() {
             .image = img,
             .subresource_range = {
                 .aspects = GAL::ImageAspect::Color,
-                .first_mip_level = 0,
                 .mip_level_count = 1,
-                .first_array_layer = 0,
+                .array_layer_count = 1,
+            },
+        };
+        image_barriers[1] = {
+            .memory_barrier = {
+                .src_stages =
+                    GAL::PipelineStage::EarlyFragmentTests |
+                    GAL::PipelineStage::LateFragmentTests,
+                .dst_stages =
+                    GAL::PipelineStage::EarlyFragmentTests |
+                    GAL::PipelineStage::LateFragmentTests,
+                .dst_accesses =
+                    GAL::MemoryAccess::DepthAttachmentRead |
+                    GAL::MemoryAccess::DepthAttachmentWrite,
+            },
+            .new_layout = GAL::ImageLayout::Attachment,
+            .image = pimpl->depth_buffer,
+            .subresource_range = {
+                .aspects = GAL::ImageAspect::Depth,
+                .mip_level_count = 1,
                 .array_layer_count = 1,
             },
         };
         GAL::DependencyConfig config = {
-            .image_barriers{&from_present, 1},
+            .image_barriers = image_barriers,
         };
         GAL::CmdPipelineBarrier(ctx, cmd_buffer, config);
     }
 
-    GAL::ClearValue clear_color = {0.2f, 0.2f, 0.8f, 1.0f};
+    { GAL::ClearValue clear_color = {0.0f, 0.0f, 0.0f, 1.0f};
     GAL::RenderingAttachment color_attachment = {
         .view = img_view,
         .layout = GAL::ImageLayout::Attachment,
@@ -577,13 +645,20 @@ ScenePresentInfo Scene::Draw() {
         .store_op = GAL::AttachmentStoreOp::Store,
         .clear_value = clear_color,
     };
-
+    GAL::ClearValue clear_depth = { .depth = 0.0f };
+    GAL::RenderingAttachment depth_attachment = {
+        .view = pimpl->depth_buffer_view,
+        .layout = GAL::ImageLayout::Attachment,
+        .load_op = GAL::AttachmentLoadOp::Clear,
+        .store_op = GAL::AttachmentStoreOp::DontCare,
+        .clear_value = clear_depth,
+    };
     GAL::RenderingConfig rendering_config = {
         .render_area = { .width = img_w, .height = img_h },
-        .color_attachments{&color_attachment, 1},
+        .color_attachments = {&color_attachment, 1},
+        .depth_attachment = depth_attachment,
     };
-
-    GAL::CmdBeginRendering(ctx, cmd_buffer, rendering_config);
+    GAL::CmdBeginRendering(ctx, cmd_buffer, rendering_config); }
 
     {
         GAL::Viewport viewport = {

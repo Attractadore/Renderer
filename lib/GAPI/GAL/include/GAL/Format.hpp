@@ -15,6 +15,7 @@ concept IsFormat = requires(E e) {
     E::BGR8_SRGB;
     E::BGRA8_UNORM;
     E::BGRA8_SRGB;
+    E::D32_FLOAT;
     E::Float;
     E::Float1;
     E::Float2;

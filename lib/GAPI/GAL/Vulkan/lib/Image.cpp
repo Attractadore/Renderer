@@ -65,7 +65,9 @@ Image CreateImage(Context ctx, const ImageConfig& config) {
 
 void DestroyImage(Context ctx, Image image) {
     auto img = static_cast<ImageWithAllocation*>(image);
-    vmaDestroyImage(ctx->allocator.get(), img->image, img->allocation);
+    if (img) {
+        vmaDestroyImage(ctx->allocator.get(), img->image, img->allocation);
+    }
     delete img;
 }
 
