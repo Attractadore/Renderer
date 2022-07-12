@@ -5,6 +5,11 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
 
+#include <glm/geometric.hpp>
+#include <glm/vec3.hpp>
+
+#include <array>
+#include <span>
 #include <iostream>
 #include <vector>
 
@@ -193,4 +198,26 @@ inline void AppBase<Derived>::TearDownBase() {
 
     SDL_DestroyWindow(m_window);
     SDL_Quit();
+}
+
+template<size_t VertexCount, typename IndexType, size_t IndexCount>
+    requires (IndexCount % 3 == 0)
+constexpr std::array<glm::vec3, VertexCount> GenerateNormals(
+    const std::array<glm::vec3, VertexCount>& positions,
+    const std::array<IndexType, IndexCount>& indices
+) {
+    std::array<glm::vec3, VertexCount> normals;
+    for (size_t t = 0; t < IndexCount; t += 3) {
+        auto i0 = indices[t + 0];
+        auto i1 = indices[t + 1];
+        auto i2 = indices[t + 2];
+        auto v0 = positions[i0];
+        auto v1 = positions[i1];
+        auto v2 = positions[i2];
+        auto n = glm::normalize(glm::cross(v1 - v0, v2 - v0));
+        normals[i0] = n;
+        normals[i1] = n;
+        normals[i2] = n;
+    }
+    return normals;
 }

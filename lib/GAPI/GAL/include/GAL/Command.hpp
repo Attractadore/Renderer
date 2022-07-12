@@ -57,6 +57,12 @@ concept IsRenderingConfigOption = requires(E e) {
     E::Suspend;
 };
 
+template<typename E>
+concept IsIndexFormat = requires {
+    E::U16;
+    E::U32;
+};
+
 static_assert(IsAttachmentLoadOp<AttachmentLoadOp>);
 static_assert(IsAttachmentStoreOp<AttachmentStoreOp>);
 static_assert(IsCommandBufferUsage<CommandBufferUsage>);
@@ -64,6 +70,7 @@ static_assert(IsCommandPoolConfigOption<CommandPoolConfigOption>);
 static_assert(IsCommandResources<CommandResources>);
 static_assert(IsRenderingConfigOption<RenderingConfigOption>);
 static_assert(IsResolveMode<ResolveMode>);
+static_assert(IsIndexFormat<IndexFormat>);
 }
 
 using CommandPoolConfigFlags    = Flags<CommandPoolConfigOption>;
@@ -163,13 +170,6 @@ struct RenderingConfig {
     RenderingAttachment                     stencil_attachment; 
 };
 
-struct DrawConfig {
-    unsigned first_vertex;
-    unsigned vertex_count;
-    unsigned first_instance;
-    unsigned instance_count;
-};
-
 struct ImageSubresourceLayers {
     GAL::ImageAspectFlags   aspects;
     unsigned                mip_level;
@@ -239,8 +239,27 @@ void CmdBindGraphicsPipeline(
     Context ctx, CommandBuffer cmd_buffer, Pipeline pipeline
 );
 
+struct DrawConfig {
+    unsigned first_vertex;
+    unsigned vertex_count;
+    unsigned first_instance;
+    unsigned instance_count;
+};
+
 void CmdDraw(
     Context ctx, CommandBuffer cmd_buffer, const DrawConfig& config
+);
+
+struct DrawIndexedConfig {
+    unsigned    first_index;
+    unsigned    index_count;
+    int         vertex_offset;
+    unsigned    first_instance;
+    unsigned    instance_count;
+};
+
+void CmdDrawIndexed(
+    Context ctx, CommandBuffer cmd_buffer, const DrawIndexedConfig& config
 );
 
 void CmdBlitImage(
@@ -273,6 +292,16 @@ struct VertexBufferBindConfig {
 
 void CmdBindVertexBuffers(
     Context ctx, CommandBuffer cmd_buffer, const VertexBufferBindConfig& config
+);
+
+struct IndexBufferBindConfig {
+    GAL::Buffer         buffer;
+    size_t              offset;
+    GAL::IndexFormat    index_format;
+};
+
+void CmdBindIndexBuffer(
+    Context ctx, CommandBuffer cmd_buffer, const IndexBufferBindConfig& config
 );
 
 struct DescriptorSetBindConfig {

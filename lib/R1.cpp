@@ -24,8 +24,27 @@ size_t R1_GetSceneOutputImageCount(R1Scene* scene) {
 }
 
 R1Mesh R1_CreateMesh(R1Scene* scene, const R1MeshConfig* config) {
+    unsigned index_size = [] (R1IndexFormat index_format) {
+        switch(index_format) {
+            case R1_INDEX_FORMAT_16:
+                return sizeof(uint16_t);
+            case R1_INDEX_FORMAT_32:
+                return sizeof(uint32_t);
+            default:
+                assert(!"Unknown index format");
+        }
+    } (config->index_format);
     return R1::ToPublic(scene->CreateMesh({
-        .vertices = {config->vertices, 3 * config->vertex_count}
+        .positions = {
+            reinterpret_cast<const glm::vec3*>(config->positions),
+            config->vertex_count},
+        .normals = {
+            reinterpret_cast<const glm::vec3*>(config->normals),
+            config->vertex_count},
+        .index_format = R1::ToPrivate(config->index_format),
+        .indices = {
+            reinterpret_cast<const std::byte*>(config->indices),
+            index_size * config->index_count},
     }));
 }
 

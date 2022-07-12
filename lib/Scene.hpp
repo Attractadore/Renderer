@@ -2,10 +2,11 @@
 #include "Common/SlotMap.hpp"
 #include "Context.hpp"
 #include "GAPI/BufferAllocator.hpp"
-#include "R1Types.h"
+#include "R1.h"
 #include "Swapchain.hpp"
 #include "shaders/Interface.glsl"
 
+#include <boost/container/small_vector.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/trigonometric.hpp>
 
@@ -24,7 +25,10 @@ enum class MeshID;
 enum class MeshInstanceID;
 
 struct MeshConfig {
-    std::span<const float> vertices;
+    std::span<const glm::vec3>  positions;
+    std::span<const glm::vec3>  normals;
+    GAL::IndexFormat            index_format;
+    std::span<const std::byte>  indices;
 };
 
 struct MeshInstanceConfig {
@@ -33,16 +37,16 @@ struct MeshInstanceConfig {
 };
 
 struct Camera {
-    glm::vec3 position = {0.0f, 0.0f, -1.0f};
-    glm::vec3 direction = {0.0f, 0.0f, 1.0f};
-    glm::vec3 up = {0.0f, 1.0f, 0.0f};
-    float fov = glm::radians(80.0f);
-    float near = 0.1f;
-    float far = 100.0f;
+    glm::vec3 position  = {0.0f, 0.0f,  1.0f};
+    glm::vec3 direction = {0.0f, 0.0f, -1.0f};
+    glm::vec3 up        = {0.0f, 1.0f,  0.0f};
+    float fov           = glm::radians(80.0f);
+    float near          = 0.1f;
+    float far           = 100.0f;
 };
 
 namespace GLSL {
-struct GLOBAL_UBO_DEFINITION(GlobalUBO);
+DEFINE_GLSL_INTERFACE_TYPES
 }
 }
 
@@ -51,6 +55,8 @@ class R1Scene {
         R1::GAL::Buffer             buffer;
         R1::GAL::SemaphorePayload   upload_time;
         unsigned                    vertex_count;
+        R1::GAL::IndexFormat        index_format;
+        unsigned                    index_count;
     };
 
 protected:
@@ -63,7 +69,7 @@ protected:
 
     struct MeshStagingInfo {
         MeshKey     key;
-        unsigned    vertex_count;
+        size_t      buffer_size;
     };
 
     std::vector<MeshStagingInfo>    m_mesh_staging_infos;
@@ -126,7 +132,8 @@ protected:
         }
     };
 
-    std::vector<StreamingBufferVector<std::byte>>   m_streaming_buffers;
+    boost::container::small_vector<
+        StreamingBufferVector<R1::GLSL::InstanceMatrices>, 3> m_instance_matrix_ring_buffer;
 
     R1::Camera m_camera;
 

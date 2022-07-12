@@ -1,11 +1,11 @@
 #include "Common/Vector.hpp"
+#include "GAPI/Command.hpp"
 #include "Scene.hpp"
 
 #include <filesystem>
 #include <fstream>
 
 #include <boost/container/static_vector.hpp>
-#include <boost/container/small_vector.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 using namespace R1;
@@ -37,7 +37,9 @@ GAL::DescriptorSetLayout CreateDescriptorSetLayout(GAL::Context ctx) {
         .binding = GLSL::global_ubo_binding,
         .type = GAL::DescriptorType::UniformBuffer,
         .count = 1,
-        .stages = GAL::ShaderStage::Vertex,
+        .stages =
+            GAL::ShaderStage::Vertex |
+            GAL::ShaderStage::Fragment,
     };
     return GAL::CreateDescriptorSetLayout(ctx, {
         .bindings = bindings,
@@ -96,29 +98,38 @@ GAL::Pipeline createPipeline(
         .module = vert_module,
         .entry_point = "main",
     };
-    GAL::VertexInputConfig vert_input = {
-    };
-    GAL::InputAssemblyConfig input_assembly = {
-        .primitive_topology = GAL::PrimitiveTopology::TriangleList,
-    };
-    GAL::VertexInputBindingConfig binding = {
+    GAL::VertexInputConfig vert_input = {};
+    std::array<GAL::VertexInputBindingConfig, 2> bindings;
+    bindings[0] = {
         .binding = 0,
         .stride = sizeof(glm::vec3),
         .input_rate = GAL::VertexInputRate::Vertex,
     };
-    GAL::VertexInputAttributeConfig attribute = {
+    bindings[1] = {
+        .binding = 1,
+        .stride = sizeof(glm::vec3),
+        .input_rate = GAL::VertexInputRate::Vertex,
+    };
+    std::array<GAL::VertexInputAttributeConfig, 2> attributes;
+    attributes[0] = {
         .location = 0,
         .binding = 0,
         .format = GAL::Format::Float3,
-        .offset = 0,
+    };
+    attributes[1] = {
+        .location = 1,
+        .binding = 1,
+        .format = GAL::Format::Float3,
+    };
+    GAL::InputAssemblyConfig input_assembly = {
+        .primitive_topology = GAL::PrimitiveTopology::TriangleList,
     };
     gpc.SetVertexShaderState(
-        vert_stage, vert_input,
-        {&binding, 1}, {&attribute, 1}, input_assembly);
+        vert_stage, vert_input, bindings, attributes, input_assembly);
 
     GAL::RasterizationConfig rast = {
         .polygon_mode = GAL::PolygonMode::Fill,
-        .cull_mode = GAL::CullMode::None,
+        .cull_mode = GAL::CullMode::Back,
         .line_width = 1.0f,
     };
     GAL::MultisampleConfig ms = {
@@ -379,7 +390,7 @@ Scene::R1Scene(Context& ctx):
 
 Scene::~R1Scene() {
     GAL::ContextWaitIdle(pimpl->ctx);
-    m_streaming_buffers.clear();
+    m_instance_matrix_ring_buffer.clear();
     FlushUploadQueue();
     PushDeleteQueue();
     FlushDeleteQueue();
@@ -433,11 +444,11 @@ void Scene::ConfigOutputImages(
     pimpl->uniform_ring_buffer_data = reinterpret_cast<GLSL::GlobalUBO*>(
         GAL::GetBufferPointer(pimpl->ctx, pimpl->uniform_ring_buffer.get()));
 
-    while(m_streaming_buffers.size() > count) {
-        m_streaming_buffers.pop_back();
+    while(m_instance_matrix_ring_buffer.size() > count) {
+        m_instance_matrix_ring_buffer.pop_back();
     }
-    while(m_streaming_buffers.size() < count) {
-        m_streaming_buffers.emplace_back(StreamingBufferAllocator<std::byte>(
+    while(m_instance_matrix_ring_buffer.size() < count) {
+        m_instance_matrix_ring_buffer.emplace_back(StreamingBufferAllocator<GLSL::InstanceMatrices>(
             pimpl->ctx, &m_buffer_delete_queue));
     }
 
@@ -542,6 +553,7 @@ ScenePresentInfo Scene::Draw() {
     auto view = glm::lookAt(m_camera.position, m_camera.position + m_camera.direction, m_camera.up);
     GLSL::GlobalUBO staging = {
         .proj_view = proj * view,
+        .camera_pos = m_camera.position,
     };
     ubo = staging; }
 
@@ -558,17 +570,21 @@ ScenePresentInfo Scene::Draw() {
             return l.second < r.second;
         });
 
-    auto& streaming_buffer = m_streaming_buffers[idx];
-    streaming_buffer.resize(
-        sizeof(glm::mat4) * sorted_mesh_instance_data.size());
-    { auto ptr = reinterpret_cast<glm::mat4*>(streaming_buffer.data());
+    auto& instance_matrices = m_instance_matrix_ring_buffer[idx];
+    instance_matrices.resize(sorted_mesh_instance_data.size());
+    { auto ptr = instance_matrices.data();
     for (auto&& [idx, mesh]: sorted_mesh_instance_data) {
-        *(ptr++) = m_mesh_instances.values()[idx].transform;
+        auto model = m_mesh_instances.values()[idx].transform;
+        GLSL::InstanceMatrices staging = {
+            .model = model,
+            .normal = glm::transpose(glm::inverse(model)),
+        };
+        *(ptr++) = staging;
     } }
 
     { GAL::DescriptorBufferConfig ssbo_config = {
-        .buffer = streaming_buffer.GetBackingBuffer(),
-        .size = streaming_buffer.size(),
+        .buffer = instance_matrices.GetBackingBuffer(),
+        .size = std::span{instance_matrices}.size_bytes(),
     };
     GAL::DescriptorBufferConfig ubo_config = {
         .buffer = pimpl->uniform_ring_buffer.get(),
@@ -683,27 +699,31 @@ ScenePresentInfo Scene::Draw() {
         }) |
         ranges::views::chunk_by(std::ranges::equal_to{});
 
-    { auto ptr = streaming_buffer.data();
+    { auto ptr = instance_matrices.data();
     for (auto&& mesh_instances_same_mesh: mesh_instances_same_meshes) {
         auto& mesh = m_meshes[mesh_instances_same_mesh.front()];
-        auto buffer = mesh.buffer;
-        size_t offset = 0;
+        std::array<GAL::Buffer, 2> buffers = {mesh.buffer, mesh.buffer};
+        std::array<size_t, 2> offsets = {0, sizeof(glm::vec3) * mesh.vertex_count};
         GAL::CmdBindVertexBuffers(ctx, cmd_buffer, {
-            .buffers = {&buffer, 1},
-            .offsets = {&offset, 1},
+            .buffers = buffers,
+            .offsets = offsets,
         });
-        size_t buffer_size = mesh.vertex_count * sizeof(glm::vec3);
-        unsigned dynamic_offset = ptr - streaming_buffer.data();
-        ptr += buffer_size;
+        GAL::CmdBindIndexBuffer(ctx, cmd_buffer, {
+            .buffer = mesh.buffer,
+            .offset = 2 * sizeof(glm::vec3) * mesh.vertex_count,
+            .index_format = mesh.index_format,
+        });
+        unsigned dynamic_offset = std::span{instance_matrices.data(), ptr}.size_bytes();
+        unsigned inst_cnt = mesh_instances_same_mesh.size();
+        ptr += inst_cnt;
         GAL::CmdBindGraphicsPipelineDescriptorSets(ctx, cmd_buffer, {
             .layout = pimpl->pipeline_layout,
             .sets = {&descriptor_set, 1},
             .dynamic_offsets = {&dynamic_offset, 1},
         });
-        GAL::CmdDraw(ctx, cmd_buffer, {
-            .vertex_count = mesh.vertex_count,
-            .instance_count =
-                static_cast<unsigned>(mesh_instances_same_mesh.size()),
+        GAL::CmdDrawIndexed(ctx, cmd_buffer, {
+            .index_count = mesh.index_count,
+            .instance_count = inst_cnt,
         });
     } }
 
@@ -760,20 +780,29 @@ ScenePresentInfo Scene::Draw() {
 
 MeshID Scene::CreateMesh(const MeshConfig& config) {
     auto ctx = pimpl->ctx;
-    auto ptr =
-        reinterpret_cast<const std::byte*>(config.vertices.data());
-    auto sz = config.vertices.size_bytes();
-    unsigned vert_cnt = config.vertices.size() / 3;
+    assert(config.positions.size() == config.normals.size());
 
-    m_staging_storage.insert(m_staging_storage.end(), ptr, ptr + sz);
+    VecAppend(m_staging_storage, std::as_bytes(config.positions));
+    VecAppend(m_staging_storage, std::as_bytes(config.normals));
+    VecAppend(m_staging_storage, config.indices);
+
+    unsigned vert_cnt = config.positions.size();
+    unsigned idx_cnt =
+        config.indices.size() /
+        GAPI::IndexFormatSize(config.index_format);
 
     auto&& [key, mesh] = m_meshes.emplace();
     mesh = {
         .vertex_count = vert_cnt,
+        .index_format = config.index_format,
+        .index_count = idx_cnt,
     };
     m_mesh_staging_infos.emplace_back() = {
         .key = key,
-        .vertex_count = vert_cnt,
+        .buffer_size =
+            config.positions.size_bytes() +
+            config.normals.size_bytes() +
+            config.indices.size_bytes(),
     };
 
     auto id = std::bit_cast<MeshID>(key);
@@ -794,6 +823,8 @@ MeshInstanceID Scene::CreateMeshInstance(const MeshInstanceConfig& config) {
 
 void Scene::DestroyMeshInstance(MeshInstanceID mesh_instance) {
     auto key = std::bit_cast<MeshInstanceKey>(mesh_instance);
+    assert(m_mesh_instances.contains(key) and
+        "The mesh instance you are trying to destroy was not found!");
     m_mesh_instances.erase(key);
 }
 
@@ -832,12 +863,13 @@ void Scene::PushUploadQueue() {
 
     size_t offset = 0;
     for (const auto& config: m_mesh_staging_infos) {
-        auto size = config.vertex_count * sizeof(float[3]);
+        auto size = config.buffer_size;
         auto buffer = GAL::CreateBuffer(ctx, {
             .size = size,
             .usage =
                 GAL::BufferUsage::TransferDST |
-                GAL::BufferUsage::Vertex,
+                GAL::BufferUsage::Vertex |
+                GAL::BufferUsage::Index,
             .memory_usage = GAL::BufferMemoryUsage::Device,
         });
 

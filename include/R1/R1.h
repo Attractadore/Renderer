@@ -23,9 +23,18 @@ void            R1_DestroyScene(R1Scene* scene);
 size_t          R1_GetSceneOutputImageCount(R1Scene* scene);
 void            R1_DrawSceneToSwapchain(R1Scene* scene, R1Swapchain* swapchain);
 
+typedef enum {
+    R1_INDEX_FORMAT_16,
+    R1_INDEX_FORMAT_32,
+} R1IndexFormat;
+
 typedef struct {
-    const float*    vertices;
+    const float*    positions;
+    const float*    normals;
     unsigned        vertex_count;
+    R1IndexFormat   index_format;
+    const void*     indices;
+    unsigned        index_count;
 } R1MeshConfig;
 
 R1Mesh  R1_CreateMesh(R1Scene* scene, const R1MeshConfig* config);

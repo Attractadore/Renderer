@@ -28,18 +28,19 @@ VkDevice CreateDevice(
     });
     auto queue_create_infos = vec_from_range(v);
 
-    VkPhysicalDeviceTimelineSemaphoreFeatures timeline_semaphore_features = {
-        .sType = SType(timeline_semaphore_features),
+    VkPhysicalDeviceVulkan12Features vulkan12_features = {
+        .sType = SType(vulkan12_features),
+        .scalarBlockLayout = true,
         .timelineSemaphore = true,
     };
 
     VkPhysicalDeviceVulkan13Features vulkan13_features = {
         .sType = SType(vulkan13_features),
-        .pNext = &timeline_semaphore_features,
+        .pNext = &vulkan12_features,
         .synchronization2 = true,
         .dynamicRendering = true,
     };
-    
+
     // TODO: merge user features with required features
     VkDeviceCreateInfo create_info = {
         .sType = SType(create_info),

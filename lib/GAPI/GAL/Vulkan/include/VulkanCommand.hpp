@@ -42,6 +42,11 @@ enum class RenderingConfigOption {
     Suspend = VK_RENDERING_SUSPENDING_BIT,
 };
 
+enum class IndexFormat {
+    U16 = VK_INDEX_TYPE_UINT16,
+    U32 = VK_INDEX_TYPE_UINT32,
+};
+
 using CommandPool = VkCommandPool;
 using CommandBuffer = VkCommandBuffer;
 }

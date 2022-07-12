@@ -196,6 +196,17 @@ void CmdDraw(
         config.first_instance);
 }
 
+void CmdDrawIndexed(
+    Context ctx, CommandBuffer cmd_buffer, const DrawIndexedConfig& config
+) {
+    ctx->CmdDrawIndexed(cmd_buffer,
+        config.index_count,
+        config.instance_count,
+        config.first_index,
+        config.vertex_offset,
+        config.first_instance);
+}
+
 void CmdBlitImage(
     Context ctx, CommandBuffer cmd_buffer, const ImageBlitConfig& config
 ) {
@@ -254,25 +265,35 @@ void CmdCopyBuffer(
     };
     ctx->CmdCopyBuffer2(cmd_buffer, &copy_info);
 }
+}
 
-void CmdBindVertexBuffers(Context ctx, CommandBuffer cmd_buffer, const VertexBufferBindConfig& config) {
+namespace R1 {
+void GAL::CmdBindVertexBuffers(
+    Context ctx, CommandBuffer cmd_buffer, const VertexBufferBindConfig& config
+) {
     DefaultSmallVector<VkBuffer> buffers(config.buffers.size());
     std::ranges::transform(config.buffers, buffers.begin(),
         [] (GAL::Buffer buffer) {
             return buffer->buffer;
         });
     static_assert(sizeof(size_t) == sizeof(VkDeviceSize));
-    ctx->CmdBindVertexBuffers2(
-        cmd_buffer,
+    ctx->CmdBindVertexBuffers2(cmd_buffer,
         config.first_binding, buffers.size(),
         buffers.data(),
         config.offsets.data(),
         config.sizes.data(),
         config.strides.data());
 }
+
+void GAL::CmdBindIndexBuffer(
+    Context ctx, CommandBuffer cmd_buffer, const IndexBufferBindConfig& config
+) {
+    ctx->CmdBindIndexBuffer(cmd_buffer,
+        config.buffer->buffer,
+        config.offset,
+        static_cast<VkIndexType>(config.index_format));
 }
 
-namespace R1 {
 namespace GAL {
 namespace {
 void CmdBindDescriptorSets(

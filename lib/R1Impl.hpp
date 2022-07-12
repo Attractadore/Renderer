@@ -47,7 +47,9 @@ template<typename T>
 using PublicT = decltype(GetPublic<T>())::type;
 
 template<typename E>
-concept IsID = std::is_enum_v<E>;
+concept IsID =
+    std::same_as<E, R1::MeshID> or
+    std::same_as<E, R1::MeshInstanceID>;
 };
 
 template<typename T>
@@ -56,6 +58,8 @@ auto ToPublic(T handle) {
     if constexpr (Detail::IsID<T>) {
         auto ptr = static_cast<uintptr_t>(handle);
         return reinterpret_cast<Pub>(ptr);
+    } else if constexpr (std::is_enum_v<Pub> and std::is_enum_v<T>) {
+        return static_cast<Pub>(handle);
     } else {
         return reinterpret_cast<Pub>(handle);
     }
@@ -67,8 +71,22 @@ auto ToPrivate(T handle) {
     if constexpr (Detail::IsID<Pri>) {
         auto ptr = reinterpret_cast<uintptr_t>(handle);
         return static_cast<Pri>(ptr);
+    } else if constexpr (std::is_enum_v<Pri> and std::is_enum_v<T>) {
+        return static_cast<Pri>(handle);
     } else {
         return reinterpret_cast<Pri>(handle);
+    }
+}
+
+inline GAL::IndexFormat ToPrivate(R1IndexFormat fmt) {
+    using enum GAL::IndexFormat;
+    switch(fmt) {
+        case R1_INDEX_FORMAT_16:
+            return U16;
+        case R1_INDEX_FORMAT_32:
+            return U32;
+            default:
+                assert(!"Unknown index format");
     }
 }
 }
