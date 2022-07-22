@@ -1,10 +1,7 @@
 #include "BufferImpl.hpp"
-#include "Common/Vector.hpp"
 #include "ContextImpl.hpp"
 #include "GAL/Descriptors.hpp"
 #include "VKUtil.hpp"
-
-#include <algorithm>
 
 namespace R1 {
 GAL::DescriptorSetLayout GAL::CreateDescriptorSetLayout(
@@ -131,7 +128,7 @@ void GAL::UpdateDescriptorSets(
                         .range = config.size,
                     };
                 });
-            auto it = VecAppend(buffer_infos, v);
+            auto it = buffer_infos.append(v);
             assert(old_data == buffer_infos.data());
             VkWriteDescriptorSet write = {
                .sType = SType(write),

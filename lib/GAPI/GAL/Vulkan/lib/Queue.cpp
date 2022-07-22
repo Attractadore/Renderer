@@ -1,10 +1,7 @@
-#include "Common/Vector.hpp"
 #include "ContextImpl.hpp"
 #include "QueueImpl.inl"
 #include "VKUtil.hpp"
 #include "VulkanQueue.inl"
-
-#include <algorithm>
 
 namespace R1::GAL {
 Queue GetQueue(Context ctx, QueueFamily::ID family, unsigned idx) {
@@ -44,15 +41,15 @@ void Vulkan::QueueSubmit(
                 config.command_buffers, CommandBufferSubmitToVK);
 
             auto old_wdata = semaphore_submits.data();
-            auto wit = VecAppend(semaphore_submits, wv);
+            auto wit = semaphore_submits.append(wv);
             assert(old_wdata == semaphore_submits.data());
 
             auto old_sdata = semaphore_submits.data();
-            auto sit = VecAppend(semaphore_submits, sv);
+            auto sit = semaphore_submits.append(sv);
             assert(old_sdata == semaphore_submits.data());
 
             auto old_cdata = cmd_buffer_submits.data();
-            auto cit = VecAppend(cmd_buffer_submits, cv);
+            auto cit = cmd_buffer_submits.append(cv);
             assert(old_cdata == cmd_buffer_submits.data());
 
             VkSubmitInfo2 info = {

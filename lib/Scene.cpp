@@ -782,9 +782,9 @@ MeshID Scene::CreateMesh(const MeshConfig& config) {
     auto ctx = pimpl->ctx;
     assert(config.positions.size() == config.normals.size());
 
-    VecAppend(m_staging_storage, std::as_bytes(config.positions));
-    VecAppend(m_staging_storage, std::as_bytes(config.normals));
-    VecAppend(m_staging_storage, config.indices);
+    m_staging_storage.append(std::as_bytes(config.positions));
+    m_staging_storage.append(std::as_bytes(config.normals));
+    m_staging_storage.append(config.indices);
 
     unsigned vert_cnt = config.positions.size();
     unsigned idx_cnt =

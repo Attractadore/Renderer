@@ -64,9 +64,9 @@ protected:
     struct Impl;
     std::unique_ptr<Impl> pimpl;
 
-    R1::SlotMap<MeshDesc>     m_meshes;
+    R1::SlotMap<MeshDesc>           m_meshes;
     using MeshKey = decltype(m_meshes)::key_type;
-    std::vector<std::byte>          m_staging_storage;
+    R1::TrivialVector<std::byte>    m_staging_storage;
 
     struct MeshStagingInfo {
         MeshKey     key;

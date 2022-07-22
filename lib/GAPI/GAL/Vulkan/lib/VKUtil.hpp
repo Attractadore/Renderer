@@ -1,7 +1,7 @@
 #pragma once
+#include "Common/Vector.hpp"
 #include "VKSType.hpp"
 
-#include <boost/container/small_vector.hpp>
 #include <vulkan/vulkan.h>
 
 #include <functional>
@@ -82,11 +82,11 @@ inline void ThrowIfFailed(VkResult r, const char* msg) {
 }
 
 // Preallocate 4k for translating data structures to Vulkan
-constexpr size_t DefaultSmallBufferSize = 1 << 12; 
+constexpr size_t DefaultSmallBufferSize = 1 << 12;
 
 template<typename T, size_t Size = DefaultSmallBufferSize>
-constexpr size_t SmallBufferCount = Size / sizeof(T); 
+constexpr size_t SmallBufferCount = Size / sizeof(T);
 
 template<typename T>
-using DefaultSmallVector = boost::container::small_vector<T, SmallBufferCount<T>>;
+using DefaultSmallVector = InlineTrivialVector<T, SmallBufferCount<T>>;
 }

@@ -26,7 +26,7 @@ VkDevice CreateDevice(
         };
         return create_info;
     });
-    auto queue_create_infos = vec_from_range(v);
+    InlineTrivialVector<VkDeviceQueueCreateInfo, 3> queue_create_infos(v);
 
     VkPhysicalDeviceVulkan12Features vulkan12_features = {
         .sType = SType(vulkan12_features),
