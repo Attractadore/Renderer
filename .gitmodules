@@ -4,3 +4,6 @@
 [submodule "external/SlotMap"]
 	path = external/SlotMap
 	url = https://github.com/Attractadore/SlotMap
+[submodule "external/TrivialVector"]
+	path = external/TrivialVector
+	url = https://github.com/Attractadore/TrivialVector.git

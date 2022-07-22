@@ -45,7 +45,9 @@ public:
     }
 
     void deallocate(T* ptr, size_t cnt) {
-        deletion_queue->push(get_backing_buffer(ptr, cnt));
+        if (ptr) {
+            deletion_queue->push(get_backing_buffer(ptr, cnt));
+        }
     }
 
     static GAL::Buffer get_backing_buffer(T* ptr, size_t cnt) {

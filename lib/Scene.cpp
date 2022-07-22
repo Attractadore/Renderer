@@ -571,7 +571,7 @@ ScenePresentInfo Scene::Draw() {
         });
 
     auto& instance_matrices = m_instance_matrix_ring_buffer[idx];
-    instance_matrices.resize(sorted_mesh_instance_data.size());
+    instance_matrices.fit(sorted_mesh_instance_data.size());
     { auto ptr = instance_matrices.data();
     for (auto&& [idx, mesh]: sorted_mesh_instance_data) {
         auto model = m_mesh_instances.values()[idx].transform;
@@ -584,7 +584,7 @@ ScenePresentInfo Scene::Draw() {
 
     { GAL::DescriptorBufferConfig ssbo_config = {
         .buffer = instance_matrices.GetBackingBuffer(),
-        .size = std::span{instance_matrices}.size_bytes(),
+        .size = instance_matrices.size_bytes(),
     };
     GAL::DescriptorBufferConfig ubo_config = {
         .buffer = pimpl->uniform_ring_buffer.get(),

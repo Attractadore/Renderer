@@ -3,7 +3,12 @@
 
 #include <range/v3/all.hpp>
 
+#include "Attractadore/TrivialVector.hpp"
+
 namespace R1 {
+using Attractadore::InlineTrivialVector;
+using Attractadore::TrivialVector;
+
 template<ranges::input_range R>
 constexpr auto VecFromRange(R&& r) {
     auto v = ranges::views::common(r);

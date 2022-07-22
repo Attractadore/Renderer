@@ -8,7 +8,11 @@ target_compile_features(Common
 target_include_directories(Common
     INTERFACE include)
 target_link_libraries(Common
-    INTERFACE Attractadore::SlotMap Boost::container range-v3::range-v3)
+    INTERFACE
+        Attractadore::SlotMap
+        Attractadore::TrivialVector
+        Boost::container
+        range-v3::range-v3)
 target_precompile_headers(Common
     INTERFACE
         <algorithm>

@@ -1,5 +1,6 @@
 #pragma once
 #include "Common/SlotMap.hpp"
+#include "Common/Vector.hpp"
 #include "Context.hpp"
 #include "GAPI/BufferAllocator.hpp"
 #include "R1.h"
@@ -63,7 +64,7 @@ protected:
     struct Impl;
     std::unique_ptr<Impl> pimpl;
 
-    R1::GAPI::SlotMap<MeshDesc>     m_meshes;
+    R1::SlotMap<MeshDesc>     m_meshes;
     using MeshKey = decltype(m_meshes)::key_type;
     std::vector<std::byte>          m_staging_storage;
 
@@ -110,7 +111,7 @@ protected:
         MeshKey     mesh;
     };
 
-    R1::GAPI::SlotMap<MeshInstanceDesc> m_mesh_instances;
+    R1::SlotMap<MeshInstanceDesc> m_mesh_instances;
     using MeshInstanceKey = decltype(m_mesh_instances)::key_type;
 
     struct StreamingBufferUsageTraits {
@@ -124,9 +125,9 @@ protected:
     using StreamingBufferAllocator = R1::GAPI::ExclusiveBufferAllocator<
         T, StreamingBufferUsageTraits, BufferDeleteQueue>;
     template<typename T>
-    class StreamingBufferVector: public std::vector<T, StreamingBufferAllocator<T>> {
+    class StreamingBufferVector: public R1::TrivialVector<T, StreamingBufferAllocator<T>> {
     public:
-        using std::vector<T, StreamingBufferAllocator<T>>::vector;
+        using R1::TrivialVector<T, StreamingBufferAllocator<T>>::TrivialVector;
         R1::GAL::Buffer GetBackingBuffer() noexcept {
             return this->get_allocator().get_backing_buffer(this->data(), this->capacity());
         }

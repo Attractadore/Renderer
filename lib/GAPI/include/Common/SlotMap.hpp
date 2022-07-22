@@ -3,7 +3,7 @@
 
 #include <vector>
 
-namespace R1::GAPI {
+namespace R1 {
 namespace Detail {
 template<typename T>
 using StdVector = std::vector<T>;
